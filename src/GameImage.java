@@ -61,9 +61,10 @@ public class GameImage {
 	
 	public static void loadImage(int imageId, String filename) 
 	{
+		String fullPath = "../img/" + filename;
 		try 
 		{
-	        File file = new File("../img/" + filename);
+	        File file = new File(fullPath);
 			Image newImage = ImageIO.read(file);
 			imgData.put(imageId, newImage);
 			
@@ -71,15 +72,16 @@ public class GameImage {
 		}
 		catch (Exception e)
 		{
-			System.out.println(e.getMessage());
+			System.out.println("Failed to load image " + fullPath + ", exception: " + e.getMessage());
 		}
 	}
 	
 	public static void loadTile(String imageStr, String filename) 
 	{
+		String fullPath = "../img/" + filename;
 		try 
 		{
-	        File file = new File("../img/" + filename);
+	        File file = new File(fullPath);
 			Image newImage = ImageIO.read(file);
 			tileData.put(imageStr, newImage);
 			
@@ -88,7 +90,7 @@ public class GameImage {
 		}
 		catch (Exception e)
 		{
-			System.out.println(e.getMessage());
+			System.out.println("Failed to load tile " + fullPath + ", exception: " +e.getMessage());
 		}
 	}
 	

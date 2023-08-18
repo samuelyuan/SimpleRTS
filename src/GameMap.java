@@ -50,6 +50,7 @@ public class GameMap
 		
 		String[] splitValues = data.get(index).split(" ");
 		int levelNumber = Integer.parseInt(splitValues[0].substring(1, splitValues[0].length() - 1)); //level is in the format #num, so truncate #
+		System.out.println("Level number: " + levelNumber);
 		
 		//a level description is missing, so this is a bug
 		if (numLevel != levelNumber)
@@ -95,6 +96,8 @@ public class GameMap
 		enemyUnitPositions = new HashMap<Point, Integer>();
 		flagPositions = new HashMap<Point, Integer>();
 		
+		System.out.println("Map height: " + height + ", width: " + width);
+
 		for (int y = 0; y < height; y++)
 		{
 			for (int x = 0; x < width; x++)
@@ -104,7 +107,7 @@ public class GameMap
 				int tileId = tileStrToId(tileStr, x , y);
 				mapdata[y][x] = tileId;
 				drawData[y][x] = tileStr;
-				
+
 				//old format
 				//mapdata[y][x] = Integer.parseInt(data.get(tileCounter));
 				tileCounter++;
