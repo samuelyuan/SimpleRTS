@@ -32,12 +32,14 @@ public class StateGameMain extends StateMachine {
 		}
 
 		// set to true, so that it doesn't repeatedly spawn
-		if (gameTimer.getHour() == 12 && isSpawned == false)
+		if (gameTimer.getHour() == 12 && isSpawned == false) {
 			isSpawned = true;
+		}
 
 		// set to false after the hour has passed
-		if (gameTimer.getHour() > 12)
+		if (gameTimer.getHour() > 12) {
 			isSpawned = false;
+		}
 
 		// handle player
 		runFaction(map, GameFlag.FACTION_PLAYER);
@@ -67,10 +69,11 @@ public class StateGameMain extends StateMachine {
 		for (int i = 0; i < unitList.size(); i++) {
 			GameUnit unit = unitList.get(i);
 
-			if (factionId == GameFlag.FACTION_PLAYER)
+			if (factionId == GameFlag.FACTION_PLAYER) {
 				runPlayerLogic(map, unit);
-			else if (factionId == GameFlag.FACTION_ENEMY)
+			} else if (factionId == GameFlag.FACTION_ENEMY) {
 				runEnemyLogic(map, unit);
+			}
 
 			// Determine whether the unit is near the flag
 			GameUnitManager.checkFlagStates(unit, factionId);
@@ -83,10 +86,11 @@ public class StateGameMain extends StateMachine {
 
 		// terminating condition
 		if (GameUnitManager.isFlagsListEmpty(factionId)) {
-			if (factionId == GameFlag.FACTION_PLAYER)
+			if (factionId == GameFlag.FACTION_PLAYER) {
 				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_GAMEOVER); // player loses all flags, game over
-			else if (factionId == GameFlag.FACTION_ENEMY)
+			} else if (factionId == GameFlag.FACTION_ENEMY) {
 				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_NEXTLVL); // enemy loses all flags, win
+			}
 		}
 	}
 
@@ -155,8 +159,9 @@ public class StateGameMain extends StateMachine {
 			// SOUTH
 			else if (isTileAvailable(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId)) {
 				addUnitToMap(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId);
-			} else
+			} else {
 				break;
+			}
 		}
 	}
 
@@ -164,15 +169,16 @@ public class StateGameMain extends StateMachine {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 
 		// if there's a wall, then it's occupied
-		if (map[y][x] == GameMap.TILE_WALL)
+		if (map[y][x] == GameMap.TILE_WALL) {
 			return false;
+		}
 
 		// If a unit is standing on the desired tile, the tile is considered to be
 		// occupied
-		for (int i = 0; i < unitList.size(); i++) {
-			GameUnit unit = unitList.get(i);
-			if (unit.isOnTile(map, x, y))
+		for (GameUnit unit : unitList) {
+			if (unit.isOnTile(map, x, y)) {
 				return false;
+			}
 		}
 
 		return true;
@@ -202,7 +208,7 @@ public class StateGameMain extends StateMachine {
 			GameUnit player = SimpleRTS.playerList.get(i);
 
 			// right mouse click dictates player position
-			if (e.getButton() == MouseEvent.BUTTON3 && player.isPlayerSelected == true) {
+			if (e.getButton() == MouseEvent.BUTTON3 && player.isPlayerSelected) {
 				// offset for scrolling camera
 				player.destination = new Point(e.getX() + SimpleRTS.cameraX, e.getY() + SimpleRTS.cameraY);
 

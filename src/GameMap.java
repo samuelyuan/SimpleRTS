@@ -215,8 +215,9 @@ public class GameMap {
 	public static void saveFile(ArrayList<String> data, File file) {
 		try {
 			PrintWriter out = new PrintWriter(file);
-			for (String str : data)
+			for (String str : data) {
 				out.println(str);
+			}
 			out.close();
 		} catch (Exception e) {
 			e.printStackTrace();

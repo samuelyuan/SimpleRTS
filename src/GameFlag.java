@@ -40,6 +40,10 @@ public class GameFlag {
 		return controlFaction == FACTION_ENEMY;
 	}
 
+	public int getHealth() {
+		return health;
+	}
+
 	public GameFlag() {
 		this(0, 0, GameFlag.FACTION_NEUTRAL);
 	}
@@ -63,9 +67,19 @@ public class GameFlag {
 	}
 
 	public void shiftToFaction(int unitX, int unitY, int factionId) {
-		if (Math.abs(unitX - this.mapX) + Math.abs(unitY - this.mapY) <= FLAG_RADIUS
-				&& controlFaction != factionId) {
+		if (Math.abs(unitX - this.mapX) + Math.abs(unitY - this.mapY) <= FLAG_RADIUS) {
+			// Adjust the health based on the faction's proximity
 			health += (factionId * 2);
+
+			// Ensure the health stays within bounds (-100 to 100)
+			if (health > 100) {
+				health = 100;  // Cap health at 100 for player control
+			} else if (health < -100) {
+				health = -100;  // Cap health at -100 for enemy control
+			}
+
+			// After adjusting health, call handleControl to check and update the faction control
+			handleControl();
 		}
 	}
 

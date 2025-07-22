@@ -69,6 +69,13 @@ public class GameUnit {
 		return health;
 	}
 
+	public void takeDamage(int damage) {
+		this.health -= damage;
+		if (this.health < 0) {
+			this.health = 0; // Ensure health doesn't go below 0 for player units
+		}
+	}
+
 	public boolean isAlive() {
 		return (health > 0);
 	}
@@ -342,7 +349,8 @@ public class GameUnit {
 		int minX = Math.min(entityX1, entityX2);
 		int maxX = Math.max(entityX1, entityX2);
 
-		for (int x = minX + 1; x <= maxX - 1; x++) {
+		// Check the entire row from start to end, including endpoints
+		for (int x = minX; x <= maxX; x++) {
 			if (map[entityY1][x] == GameMap.TILE_WALL)
 				return false;
 		}
@@ -354,6 +362,7 @@ public class GameUnit {
 		int minY = Math.min(entityY1, entityY2);
 		int maxY = Math.max(entityY1, entityY2);
 
+		// Check the entire column from start to end, including endpoints
 		for (int y = minY; y <= maxY; y++) {
 			if (map[y][entityX1] == GameMap.TILE_WALL)
 				return false;

@@ -12,6 +12,14 @@ public class GameFlagManager {
 		flags = new ArrayList<GameFlag>();
 	}
 
+	public int getNumFlagsPlayer() {
+		return numFlagsPlayer;
+	}
+
+	public int getNumFlagsEnemy() {
+		return numFlagsEnemy;
+	}
+
 	public void addPlayerFlag(int x, int y) {
 		flags.add(new GameFlag(x, y, GameFlag.FACTION_PLAYER));
 		numFlagsPlayer++;

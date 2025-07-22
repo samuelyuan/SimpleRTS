@@ -135,20 +135,22 @@ public class GraphicsMain {
 		SimpleRTS.offscr.setColor(Color.BLACK);
 		BufferedImage newImg = null;
 		if (classType == GameUnit.UNIT_ID_LIGHT) {
-			if (isPlayerUnit == true)
+			if (isPlayerUnit) {
 				newImg = (BufferedImage) GameImage.getImage("Unit Light Player", isNight);
-			else
+			} else {
 				newImg = (BufferedImage) GameImage.getImage("Unit Light Enemy", isNight);
+			}
 
 			// calculate direction
 			newImg = newImg.getSubimage(GameMap.TILE_WIDTH * direction, 0, GameMap.TILE_WIDTH, GameMap.TILE_HEIGHT);
 		} else if (classType == GameUnit.UNIT_ID_MEDIUM) {
 			newImg = GraphicsMain.addTeamColorToUnit(GameImage.getImage("Unit Medium"), isPlayerUnit);
 		} else if (classType == GameUnit.UNIT_ID_HEAVY) {
-			if (isPlayerUnit == true)
+			if (isPlayerUnit == true) {
 				newImg = (BufferedImage) GameImage.getImage("Unit Heavy Player", isNight);
-			else
+			} else {
 				newImg = (BufferedImage) GameImage.getImage("Unit Heavy Enemy", isNight);
+			}
 
 			// calculate direction
 			newImg = newImg.getSubimage(GameMap.TILE_WIDTH * direction, 0, GameMap.TILE_WIDTH, GameMap.TILE_HEIGHT);
@@ -168,10 +170,11 @@ public class GraphicsMain {
 		for (int y = 0; y < bImage.getHeight(); y++) {
 			for (int x = 0; x < bImage.getWidth(); x++) {
 				if (bImage.getRGB(x, y) != Color.WHITE.getRGB()) {
-					if (isPlayerUnit == true)
+					if (isPlayerUnit) {
 						bImage.setRGB(x, y, Color.BLUE.getRGB());
-					else
+					} else {
 						bImage.setRGB(x, y, Color.RED.getRGB());
+					}
 				}
 			}
 		}
@@ -203,7 +206,7 @@ public class GraphicsMain {
 	}
 
 	public void drawMouseSelectionBox() {
-		if (Mouse.isPressed == true) {
+		if (Mouse.isPressed) {
 			Mouse.sortSelectionCoordinates();
 
 			SimpleRTS.offscr.setColor(Color.BLACK);

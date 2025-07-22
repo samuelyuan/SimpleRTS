@@ -5,9 +5,11 @@ public class GameFogWar {
 
 	public static void init(int mapHeight, int mapWidth) {
 		visibleData = new boolean[mapHeight][mapWidth];
-		for (int y = 0; y < mapHeight; y++)
-			for (int x = 0; x < mapWidth; x++)
+		for (int y = 0; y < mapHeight; y++) {
+			for (int x = 0; x < mapWidth; x++) {
 				visibleData[y][x] = false;
+			}
+		}
 	}
 
 	public static boolean IsTileVisible(int x, int y) {
@@ -25,12 +27,14 @@ public class GameFogWar {
 			int range = 5;
 
 			for (int dy = -range; dy <= range; dy++) {
-				if (mapY + dy < 0 || mapY + dy >= GameMap.mapdata.length)
+				if (mapY + dy < 0 || mapY + dy >= GameMap.mapdata.length) {
 					continue;
+				}
 
 				for (int dx = -range; dx <= range; dx++) {
-					if (mapX + dx < 0 || mapX + dx >= GameMap.mapdata[0].length)
+					if (mapX + dx < 0 || mapX + dx >= GameMap.mapdata[0].length) {
 						continue;
+					}
 
 					visibleData[mapY + dy][mapX + dx] = true;
 				}

@@ -1,0 +1,79 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'jacoco'  // Add JaCoCo plugin for code coverage
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.mockito:mockito-core:4.6.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+mainClassName = 'SimpleRTS'  // Main class for the applet (you can change this if your entry point is different)
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']  // Main Java source directory
+        }
+    }
+    test {
+        java {
+            srcDirs = ['test']  // Test Java source directory (your "test/" folder)
+        }
+    }
+}
+
+tasks {
+    // Specify the source directory for Java files
+    compileJava {
+        source = fileTree('src')  // This tells Gradle to look directly inside 'src' for .java files
+    }
+
+    // Task to build the applet jar
+    jar {
+        archiveBaseName = 'SimpleRTS'
+        archiveVersion = '1.0.0'
+        manifest {
+            attributes(
+                'Main-Class': 'SimpleRTS'  // This is the entry point for your applet
+            )
+        }
+        from sourceSets.main.output
+    }
+
+    // Task to run unit tests
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events 'passed', 'skipped', 'failed'  // Log results of the tests
+        }
+    }
+
+    // JaCoCo task to generate code coverage report
+    jacocoTestReport {
+        dependsOn test  // Run tests before generating the coverage report
+        reports {
+            html {
+                destination file("$buildDir/reports/jacoco/test/html")  // Define where the HTML report should be generated
+            }
+            xml {
+                enabled true  // Enable XML report for integration with CI tools
+                destination file("$buildDir/reports/jacoco/test/xml")  // Define where the XML report should be generated
+            }
+        }
+    }
+}
+
+// Task to build the applet and jar
+task buildAppAndJar {
+    dependsOn build, jar
+}

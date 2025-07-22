@@ -59,12 +59,13 @@ public class GameUnitManager {
 	}
 
 	public static boolean isFlagsListEmpty(int factionId) {
-		if (factionId == GameFlag.FACTION_PLAYER)
+		if (factionId == GameFlag.FACTION_PLAYER) {
 			return flagManager.isPlayerFlagsEmpty();
-		else if (factionId == GameFlag.FACTION_ENEMY)
+		} else if (factionId == GameFlag.FACTION_ENEMY) {
 			return flagManager.isEnemyFlagsEmpty();
-		else
+		} else {
 			return true;
+		}
 	}
 
 	public static void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
