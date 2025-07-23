@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import org.mockito.Mockito;
 
@@ -100,25 +101,29 @@ public class GameFlagTest {
     }
 
     @Test
-    public void testDraw() {
-        // Create a BufferedImage to simulate the graphics context for drawing
-        BufferedImage bufferedImage = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = bufferedImage.createGraphics(); // Get the Graphics2D object
+    public void testUpdateColor() {
+        playerFlag.updateColor();
+        assertEquals(Color.BLUE, playerFlag.getFlagColor(), "Player flag should be blue");
 
-        // Test that the draw method changes color based on faction
-        // Mock SimpleRTS.offscr to use the Graphics2D object for drawing
-        SimpleRTS.offscr = g2d;
+        enemyFlag.updateColor();
+        assertEquals(Color.RED, enemyFlag.getFlagColor(), "Enemy flag should be red");
 
-        // Test player flag (should be blue)
-        playerFlag.draw();
-        assertEquals(Color.BLUE.getRGB(), g2d.getColor().getRGB(), "Player flag should draw in blue");
+        neutralFlag.updateColor();
+        assertEquals(Color.GRAY, neutralFlag.getFlagColor(), "Neutral flag should be gray");
+    }
 
-        // Test enemy flag (should be red)
-        enemyFlag.draw();
-        assertEquals(Color.RED.getRGB(), g2d.getColor().getRGB(), "Enemy flag should draw in red");
+    @Test
+    public void testUpdateBoundingBox() {
+        playerFlag.updateBoundingBox();
+        assertEquals(new Rectangle(2, 6, 48, 6), playerFlag.getBoundingBox(),
+                "Player flag bounding box should be correct");
 
-        // Test neutral flag (should be gray)
-        neutralFlag.draw();
-        assertEquals(Color.GRAY.getRGB(), g2d.getColor().getRGB(), "Neutral flag should draw in gray");
+        enemyFlag.updateBoundingBox();
+        assertEquals(new Rectangle(52, 56, 48, 6), enemyFlag.getBoundingBox(),
+                "Enemy flag bounding box should be correct");
+
+        neutralFlag.updateBoundingBox();
+        assertEquals(new Rectangle(102, 106, 0, 6), neutralFlag.getBoundingBox(),
+                "Neutral flag bounding box should be correct");
     }
 }

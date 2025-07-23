@@ -1,44 +1,52 @@
 import java.awt.Point;
+import java.util.List;
 
 public class GameFogWar {
-	private static boolean[][] visibleData;
+    private boolean[][] visibleData;
 
-	public static void init(int mapHeight, int mapWidth) {
-		visibleData = new boolean[mapHeight][mapWidth];
-		for (int y = 0; y < mapHeight; y++) {
-			for (int x = 0; x < mapWidth; x++) {
-				visibleData[y][x] = false;
-			}
-		}
-	}
+    public GameFogWar(int mapHeight, int mapWidth) {
+        reset(mapHeight, mapWidth);
+    }
 
-	public static boolean IsTileVisible(int x, int y) {
-		return visibleData[y][x];
-	}
+    public boolean[][] getVisibleData() {
+        return visibleData;
+    }
 
-	public static void calculateFogOfWar() {
-		// calculate fog of war
-		for (int i = 0; i < SimpleRTS.playerList.size(); i++) {
-			Point location = SimpleRTS.playerList.get(i).getCurrentPoint();
-			Point mapPoint = SimpleRTS.playerList.get(i).getMapPoint(location);
-			int mapX = (int) mapPoint.getX();
-			int mapY = (int) mapPoint.getY();
+    public boolean isTileVisible(int x, int y) {
+        return visibleData[y][x];
+    }
 
-			int range = 5;
+    public void calculateFogOfWar(List<GameUnit> playerList, int[][] mapdata) {
+        for (GameUnit player : playerList) {
+            Point location = player.getCurrentPoint();
+            Point mapPoint = player.getMapPoint(location);
+            int mapX = (int) mapPoint.getX();
+            int mapY = (int) mapPoint.getY();
 
-			for (int dy = -range; dy <= range; dy++) {
-				if (mapY + dy < 0 || mapY + dy >= GameMap.mapdata.length) {
-					continue;
-				}
+            int range = 5;
 
-				for (int dx = -range; dx <= range; dx++) {
-					if (mapX + dx < 0 || mapX + dx >= GameMap.mapdata[0].length) {
-						continue;
-					}
+            for (int dy = -range; dy <= range; dy++) {
+                if (mapY + dy < 0 || mapY + dy >= mapdata.length) {
+                    continue;
+                }
 
-					visibleData[mapY + dy][mapX + dx] = true;
-				}
-			}
-		}
-	}
+                for (int dx = -range; dx <= range; dx++) {
+                    if (mapX + dx < 0 || mapX + dx >= mapdata[0].length) {
+                        continue;
+                    }
+
+                    visibleData[mapY + dy][mapX + dx] = true;
+                }
+            }
+        }
+    }
+
+    public void reset(int mapHeight, int mapWidth) {
+        visibleData = new boolean[mapHeight][mapWidth];
+        for (int y = 0; y < mapHeight; y++) {
+            for (int x = 0; x < mapWidth; x++) {
+                visibleData[y][x] = false;
+            }
+        }
+    }
 }

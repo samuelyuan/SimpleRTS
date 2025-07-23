@@ -4,10 +4,17 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.AbstractMap.SimpleEntry;
+
+import map.TileConverter;
 
 public class GraphicsMain {
 	private static boolean isNight;
+	private static GameFogWar fogWar;
 
 	// helper functions
 	public static void drawImageOnScreen(Image img, int x, int y, int width, int height) {
@@ -21,11 +28,21 @@ public class GraphicsMain {
 			SimpleRTS.offscr.drawRect(x - SimpleRTS.cameraX, y - SimpleRTS.cameraY, width, height);
 	}
 
+	public static void drawInstruction(DrawingInstruction instr) {
+		Rectangle r = instr.rect;
+		SimpleRTS.offscr.setColor(instr.color);
+		if (instr.fill) {
+			SimpleRTS.offscr.fillRect(r.x - SimpleRTS.cameraX, r.y - SimpleRTS.cameraY, r.width, r.height);
+		} else {
+			SimpleRTS.offscr.drawRect(r.x - SimpleRTS.cameraX, r.y - SimpleRTS.cameraY, r.width, r.height);
+		}
+	}
+
 	public void drawGraphics(GameTime gameTimer) {
 		// draw according to a day/night cycle
 		isNight = gameTimer.isNight();
 
-		GameFogWar.calculateFogOfWar();
+		fogWar.calculateFogOfWar(SimpleRTS.playerList, GameMap.mapdata);
 
 		// Draw the map first
 		drawMapTiles(GameMap.getDrawData());
@@ -48,16 +65,29 @@ public class GraphicsMain {
 		drawLeftPanel(gameTimer);
 	}
 
-	public void renderFog(String[][] mapData) {
+	public static List<DrawingInstruction> getFogInstructions(String[][] mapData) {
+		List<DrawingInstruction> fogRects = new ArrayList<>();
+
 		for (int y = 0; y < mapData.length; y++) {
 			for (int x = 0; x < mapData[y].length; x++) {
-				if (GameFogWar.IsTileVisible(x, y) == false) {
-					SimpleRTS.offscr.setColor(new Color(226, 226, 226));
-					GraphicsMain.drawRectOnScreen(x * GameMap.TILE_WIDTH, y * GameMap.TILE_HEIGHT,
-							GameMap.TILE_WIDTH, GameMap.TILE_HEIGHT, true);
-					continue;
+				if (!fogWar.isTileVisible(x, y)) {
+					Rectangle rect = new Rectangle(
+						x * GameMap.TILE_WIDTH,
+						y * GameMap.TILE_HEIGHT,
+						GameMap.TILE_WIDTH,
+						GameMap.TILE_HEIGHT
+					);
+					fogRects.add(new DrawingInstruction(rect, new Color(226, 226, 226), true));
 				}
 			}
+		}
+
+		return fogRects;
+	}
+
+	public void renderFog(String[][] mapData) {
+		for (DrawingInstruction instr : getFogInstructions(mapData)) {
+			drawInstruction(instr);
 		}
 	}
 
@@ -182,7 +212,7 @@ public class GraphicsMain {
 		return bImage;
 	}
 
-	public static void drawHealthBar(int health, Point current) {
+	public static DrawingInstruction getHealthBarInstruction(int health, Point current) {
 		Color healthColor;
 		if (health > 75) {
 			healthColor = Color.GREEN;
@@ -193,25 +223,44 @@ public class GraphicsMain {
 		} else if (health > 0) {
 			healthColor = Color.RED;
 		} else {
-			return; // Do not draw the health bar if health is 0 or less
+			return null; // Do not draw the health bar
 		}
 
-		SimpleRTS.offscr.setColor(healthColor);
-		GraphicsMain.drawRectOnScreen(
+		Rectangle rect = new Rectangle(
 				current.x + 2,
 				current.y + GameMap.TILE_HEIGHT / 8,
 				(int) ((double) (GameMap.TILE_WIDTH - 2) / 100.0 * health),
-				GameMap.TILE_HEIGHT / 8,
-				true);
+				GameMap.TILE_HEIGHT / 8);
+
+		return new DrawingInstruction(rect, healthColor, true);
+	}
+
+	public static void drawHealthBar(int health, Point current) {
+		DrawingInstruction instr = getHealthBarInstruction(health, current);
+		if (instr != null) {
+			drawInstruction(instr);
+		}
+	}
+
+	public static DrawingInstruction getMouseSelectionInstruction() {
+		if (!Mouse.isPressed)
+			return null;
+
+		Mouse.sortSelectionCoordinates(); // ensures coordinates are ordered
+
+		Rectangle rect = new Rectangle(
+				Mouse.boxX1 + SimpleRTS.cameraX,
+				Mouse.boxY1 + SimpleRTS.cameraY,
+				Mouse.boxX2 - Mouse.boxX1,
+				Mouse.boxY2 - Mouse.boxY1);
+
+		return new DrawingInstruction(rect, Color.BLACK, false); // Not filled, it's an outline
 	}
 
 	public void drawMouseSelectionBox() {
-		if (Mouse.isPressed) {
-			Mouse.sortSelectionCoordinates();
-
-			SimpleRTS.offscr.setColor(Color.BLACK);
-			SimpleRTS.offscr.drawRect(Mouse.boxX1, Mouse.boxY1,
-					Mouse.boxX2 - Mouse.boxX1, Mouse.boxY2 - Mouse.boxY1);
+		DrawingInstruction instr = getMouseSelectionInstruction();
+		if (instr != null) {
+			drawInstruction(instr);
 		}
 	}
 
@@ -222,7 +271,7 @@ public class GraphicsMain {
 				int imgTileWidth = 8;
 				int imgTileHeight = 8;
 				int tile = GameMap.mapdata[y][x];
-				String tileStr = GameMap.convertTileIntToStr(tile);
+				String tileStr = TileConverter.tileIntToStr(tile);
 
 				// scale the image before drawing
 				Image tileImg = GameImage.getImage(tileStr);
@@ -269,5 +318,13 @@ public class GraphicsMain {
 				SimpleRTS.screenHeight - 100 + 25);
 		GameFont.printString("" + gameTimer.getHour() + ":00", SimpleRTS.screenWidth / 2 - 25,
 				SimpleRTS.screenHeight - 100 + 50);
+	}
+
+	public static void resetFogOfWar(int mapHeight, int mapWidth) {
+		if (fogWar == null) {
+			fogWar = new GameFogWar(mapHeight, mapWidth);
+		} else {
+			fogWar.reset(mapHeight, mapWidth);
+		}
 	}
 }
