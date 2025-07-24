@@ -1,5 +1,6 @@
-import java.awt.Point;
 import java.awt.event.MouseEvent;
+
+import graphics.Point;
 
 public class Mouse {
 	// mouse data

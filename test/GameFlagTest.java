@@ -1,12 +1,12 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import java.awt.Color;
+import graphics.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import org.mockito.Mockito;
+import graphics.Rect;
 
 public class GameFlagTest {
 
@@ -101,29 +101,21 @@ public class GameFlagTest {
     }
 
     @Test
-    public void testUpdateColor() {
-        playerFlag.updateColor();
-        assertEquals(Color.BLUE, playerFlag.getFlagColor(), "Player flag should be blue");
-
-        enemyFlag.updateColor();
-        assertEquals(Color.RED, enemyFlag.getFlagColor(), "Enemy flag should be red");
-
-        neutralFlag.updateColor();
-        assertEquals(Color.GRAY, neutralFlag.getFlagColor(), "Neutral flag should be gray");
-    }
+    public void testGetColorForFaction() {
+		assertEquals(Color.BLUE, playerFlag.getColorForFaction(), "Player flag should be blue");
+		assertEquals(Color.RED, enemyFlag.getColorForFaction(), "Enemy flag should be red");
+		assertEquals(Color.GRAY, neutralFlag.getColorForFaction(), "Neutral flag should be gray");
+	}
 
     @Test
-    public void testUpdateBoundingBox() {
-        playerFlag.updateBoundingBox();
-        assertEquals(new Rectangle(2, 6, 48, 6), playerFlag.getBoundingBox(),
+    public void testGetBoundingBoxForState() {
+        assertEquals(new Rect(2, 6, 48, 6), playerFlag.getBoundingBoxForState(),
                 "Player flag bounding box should be correct");
 
-        enemyFlag.updateBoundingBox();
-        assertEquals(new Rectangle(52, 56, 48, 6), enemyFlag.getBoundingBox(),
+        assertEquals(new Rect(52, 56, 48, 6), enemyFlag.getBoundingBoxForState(),
                 "Enemy flag bounding box should be correct");
 
-        neutralFlag.updateBoundingBox();
-        assertEquals(new Rectangle(102, 106, 0, 6), neutralFlag.getBoundingBox(),
+        assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(),
                 "Neutral flag bounding box should be correct");
     }
 }

@@ -1,4 +1,4 @@
-import java.awt.Point;
+import graphics.Point;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -92,8 +92,10 @@ public class PathUnit {
 				continue;
 
 			if (map[playerMapDest.y + dy][playerMapDest.x + dx] == 0) {
-				newDest.x = (playerMapDest.x + dx) * GameMap.TILE_WIDTH;
-				newDest.y = (playerMapDest.y + dy) * GameMap.TILE_HEIGHT;
+				newDest = new Point(
+					(playerMapDest.x + dx) * GameMap.TILE_WIDTH,
+					(playerMapDest.y + dy) * GameMap.TILE_HEIGHT
+				);
 				break;
 			}
 		}

@@ -1,5 +1,7 @@
-import java.awt.Point;
 import java.util.ArrayList;
+
+import graphics.Point;
+import map.TileConverter;
 
 public class GameUnit {
 	// public int state, waypointNum, waypointX, waypointY;
@@ -143,43 +145,46 @@ public class GameUnit {
 	 */
 	private int currentMapEndX = 0, currentMapEndY = 0;
 
-	public void findPath(int[][] map) {
+	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
 		Point mapStart = getMapPoint(this.currentPosition);
 		Point mapEnd = getMapPoint(this.destination);
 
-		// If the units are ordered to start moving, then begin calculating paths
-		if (pathUnit.getIsMoving() == true) {
-			// generate path only once
-			if (pathUnit.findPath(map, mapStart, mapEnd)) {
-				// erase current position from map if current pos isn't wall or flag
-				if (map[mapStart.y][mapStart.x] != GameMap.TILE_WALL
-						&& map[mapStart.y][mapStart.x] != 8 && map[mapStart.y][mapStart.x] != 9)
-					map[mapStart.y][mapStart.x] = 0;
+		if (!pathUnit.getIsMoving()) return;
 
-				// add end position to the map
-				if (map[mapEnd.y][mapEnd.x] != GameMap.TILE_WALL
-						&& map[mapEnd.y][mapEnd.x] != 8 && map[mapEnd.y][mapEnd.x] != 9)
-					map[mapEnd.y][mapEnd.x] = classType + 1;
-
-				currentMapEndX = mapEnd.x;
-				currentMapEndY = mapEnd.y;
-				// System.out.println(printMap(map));
-			}
-
-			// If path is found, then begin moving
-			if (pathUnit.isPathFound()) {
-				// destination point changed, so recalculate path
-				if (currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y) {
-					pathUnit.setIsPathCreated(false);
-				}
-
-				// move from one node to the next
-				moveToDestination(map);
-			}
+		if (shouldGeneratePath(map, mapStart, mapEnd)) {
+			updateMapAfterPathfinding(map, mapStart, mapEnd);
+			currentMapEndX = mapEnd.x;
+			currentMapEndY = mapEnd.y;
 		}
 
-		// visualize path
-		// drawPathfinding();
+		if (pathUnit.isPathFound()) {
+			handlePathFound(map, mapEnd, unitList);
+		}
+	}
+
+	boolean shouldGeneratePath(int[][] map, Point mapStart, Point mapEnd) {
+		return pathUnit.findPath(map, mapStart, mapEnd);
+	}
+
+	void updateMapAfterPathfinding(int[][] map, Point mapStart, Point mapEnd) {
+		if (map[mapStart.y][mapStart.x] != TileConverter.TILE_WALL
+				&& map[mapStart.y][mapStart.x] != 8 && map[mapStart.y][mapStart.x] != 9)
+			map[mapStart.y][mapStart.x] = 0;
+
+		if (map[mapEnd.y][mapEnd.x] != TileConverter.TILE_WALL
+				&& map[mapEnd.y][mapEnd.x] != 8 && map[mapEnd.y][mapEnd.x] != 9)
+			map[mapEnd.y][mapEnd.x] = classType + 1;
+	}
+
+	private void handlePathFound(int[][] map, Point mapEnd, ArrayList<GameUnit> unitList) {
+		if (destinationChanged(mapEnd)) {
+			pathUnit.setIsPathCreated(false);
+		}
+		moveToDestination(map, unitList);
+	}
+
+	boolean destinationChanged(Point mapEnd) {
+		return currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y;
 	}
 
 	/*
@@ -203,51 +208,43 @@ public class GameUnit {
 	/*
 	 * Change the player position until player reaches waypoint.
 	 */
-	public void moveToDestination(int[][] map) {
-		// If player isn't moving, then don't do anything
-		if (pathUnit.getIsMoving() == false)
-			return;
-
-		// player must be moving, but not attacking
-		// if (isAttacking == false)
-
-		// Get the corresponding unit list
-		ArrayList<GameUnit> unitList = (isPlayerUnit == true) ? SimpleRTS.playerList : SimpleRTS.enemyList;
-
-		// Iterate through the whole player list, adding units to a group
-		for (int i = 0; i < unitList.size(); i++) {
-			GameUnit other = unitList.get(i);
-
-			// don't compare to itself
-			if (other == this)
-				continue;
-
-			// make sure destination is same
-			Point otherMapDest = getMapPoint(other.destination);
-			Point playerMapDest = getMapPoint(this.destination);
-
-			if (otherMapDest.x == playerMapDest.x && otherMapDest.y == playerMapDest.y) {
-				if (other.pathUnit.getIsPathCreated() == false)
-					continue;
-
-				other.destination = other.pathUnit.recalculateDest(map, playerMapDest);
-
-				Point currentEnd = getMapPoint(other.destination);
-				currentMapEndX = currentEnd.x;
-				currentMapEndY = currentEnd.y;
-
-				// Point otherMapCurrent = getMapPoint(other.current);
-				// otherMapDest = getMapPoint(other.destination);
-
-				// other.pathUnit.findPath(map, otherMapCurrent, otherMapDest);
-				// map[otherMapCurrent.y][otherMapCurrent.x] = 0;
-				// map[otherMapDest.y][otherMapDest.x] = other.classType + 1;
-			}
-
-			unitList.set(i, other); // modify unit's destination if needed
-		}
-
+	public void moveToDestination(int[][] map, ArrayList<GameUnit> unitList) {
+		if (!pathUnit.getIsMoving()) return;
+		updateGroupDestinations(map, unitList);
 		currentPosition = pathUnit.run();
+	}
+
+	private void updateGroupDestinations(int[][] map, ArrayList<GameUnit> unitList) {
+		for (GameUnit other : unitList) {
+			if (other == this) continue;
+			if (isSameDestination(other)) {
+				if (!other.pathUnit.getIsPathCreated()) continue;
+				other.destination = other.pathUnit.recalculateDest(map, getMapPoint(this.destination));
+				updateCurrentMapEnd(getMapPoint(other.destination));
+			}
+		}
+	}
+
+	boolean isSameDestination(GameUnit other) {
+		Point otherMapDest = getMapPoint(other.destination);
+		Point playerMapDest = getMapPoint(this.destination);
+		return otherMapDest.equals(playerMapDest);
+	}
+
+	private void updateCurrentMapEnd(Point currentEnd) {
+		currentMapEndX = currentEnd.x;
+		currentMapEndY = currentEnd.y;
+	}
+
+	// Package-private setters for testing
+	void setCurrentMapEnd(Point p) {
+		this.currentMapEndX = p.x;
+		this.currentMapEndY = p.y;
+	}
+
+	void setCurrentMapEnd(int x, int y) {
+		this.currentMapEndX = x;
+		this.currentMapEndY = y;
 	}
 
 	/*
@@ -255,31 +252,26 @@ public class GameUnit {
 	 * fight each other
 	 */
 	public void interactWithEnemy(int[][] map, ArrayList<GameUnit> enemyList) {
-		final int ATTACK_RADIUS = 8;
-
-		for (int i = 0; i < enemyList.size(); i++) {
-			GameUnit enemy = enemyList.get(i);
-			int manhattanDist = Math.abs(currentPosition.x - enemy.currentPosition.x) / GameMap.TILE_WIDTH +
-					Math.abs(currentPosition.y - enemy.currentPosition.y) / GameMap.TILE_HEIGHT;
-
-			if (manhattanDist <= ATTACK_RADIUS && this.checkVisible(map, enemy)) {
-				isAttacking = true;
-
-				// remove enemy damage from ally and vice versa
-				this.health -= enemy.dealDamagePoints(this);
-				enemy.health -= this.dealDamagePoints(enemy);
-
-				// draw red box around enemy units under fire
-				/*
-				 * SimpleRTS.offscr.setColor(Color.RED);
-				 * SimpleRTS.offscr.drawRect(enemy.getCurrentPoint().x - SimpleRTS.cameraX,
-				 * enemy.getCurrentPoint().y - SimpleRTS.cameraY,
-				 * GameMap.TILE_WIDTH, GameMap.TILE_HEIGHT);
-				 */
+		for (GameUnit enemy : enemyList) {
+			if (canAttackEnemy(map, enemy)) {
+				handleAttack(enemy);
 			} else {
 				isAttacking = false;
 			}
 		}
+	}
+
+	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
+		final int ATTACK_RADIUS = 8;
+		int manhattanDist = Math.abs(currentPosition.x - enemy.currentPosition.x) / GameMap.TILE_WIDTH +
+				Math.abs(currentPosition.y - enemy.currentPosition.y) / GameMap.TILE_HEIGHT;
+		return manhattanDist <= ATTACK_RADIUS && this.checkVisible(map, enemy);
+	}
+
+	void handleAttack(GameUnit enemy) {
+		isAttacking = true;
+		this.health -= enemy.dealDamagePoints(this);
+		enemy.health -= this.dealDamagePoints(enemy);
 	}
 
 	// Different types of units deal different damage
@@ -351,7 +343,7 @@ public class GameUnit {
 
 		// Check the entire row from start to end, including endpoints
 		for (int x = minX; x <= maxX; x++) {
-			if (map[entityY1][x] == GameMap.TILE_WALL)
+			if (map[entityY1][x] == TileConverter.TILE_WALL)
 				return false;
 		}
 
@@ -364,7 +356,7 @@ public class GameUnit {
 
 		// Check the entire column from start to end, including endpoints
 		for (int y = minY; y <= maxY; y++) {
-			if (map[y][entityX1] == GameMap.TILE_WALL)
+			if (map[y][entityX1] == TileConverter.TILE_WALL)
 				return false;
 		}
 		return true;
@@ -378,7 +370,7 @@ public class GameUnit {
 			double slope = deltaX / deltaY;
 			double curX = entityX1 + 0.5 * slope;
 			for (int y = entityY1 + 1; y <= entityY2; y++) {
-				if (map[y][(int) Math.round(curX)] == GameMap.TILE_WALL)
+				if (map[y][(int) Math.round(curX)] == TileConverter.TILE_WALL)
 					return false;
 
 				curX += slope;
@@ -387,7 +379,7 @@ public class GameUnit {
 			double slope = deltaX / deltaY;
 			double curX = entityX1 - 0.5 * slope;
 			for (int y = entityY1 - 1; y >= entityY2; y--) {
-				if (map[y][(int) Math.round(curX)] == GameMap.TILE_WALL)
+				if (map[y][(int) Math.round(curX)] == TileConverter.TILE_WALL)
 					return false;
 
 				curX -= slope;
@@ -397,7 +389,7 @@ public class GameUnit {
 		if (entityX1 < entityX2) {
 			double curY = entityY1 + 0.5 * deltaY / deltaX;
 			for (int x = entityX1 + 1; x <= entityX2; x++) {
-				if (map[(int) Math.round(curY)][x] == GameMap.TILE_WALL)
+				if (map[(int) Math.round(curY)][x] == TileConverter.TILE_WALL)
 					return false;
 
 				curY += deltaY / deltaX;
@@ -405,7 +397,7 @@ public class GameUnit {
 		} else {
 			double curY = entityY1 - 0.5 * deltaY / deltaX;
 			for (int x = entityX1 - 1; x >= entityX2; x--) {
-				if (map[(int) Math.round(curY)][x] == GameMap.TILE_WALL)
+				if (map[(int) Math.round(curY)][x] == TileConverter.TILE_WALL)
 					return false;
 
 				curY -= deltaY / deltaX;

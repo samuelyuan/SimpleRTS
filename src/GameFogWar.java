@@ -1,5 +1,6 @@
-import java.awt.Point;
 import java.util.List;
+
+import graphics.Point;
 
 public class GameFogWar {
     private boolean[][] visibleData;

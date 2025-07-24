@@ -2,13 +2,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.awt.Point;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import graphics.Point;
 import map.MapParseResult;
+import map.TileConverter;
 
 public class GameMapTest {
     @Test
@@ -102,7 +103,7 @@ public class GameMapTest {
 
         int result = GameMap.tileStrToId("Flag +1", 1, 1, ally, enemy, flags);
 
-        assertEquals(GameMap.TILE_ALLY_FLAG, result);
+        assertEquals(TileConverter.TILE_FLAG_ALLY, result);
         Point p = new Point(1, 1);
         assertTrue(flags.containsKey(p));
         assertEquals(1, flags.get(p));
@@ -116,7 +117,7 @@ public class GameMapTest {
 
         int result = GameMap.tileStrToId("Flag -1", 0, 2, ally, enemy, flags);
 
-        assertEquals(GameMap.TILE_ENEMY_FLAG, result);
+        assertEquals(TileConverter.TILE_FLAG_ENEMY, result);
         Point p = new Point(0, 2);
         assertTrue(flags.containsKey(p));
         assertEquals(-1, flags.get(p));
@@ -134,5 +135,25 @@ public class GameMapTest {
         assertTrue(ally.isEmpty());
         assertTrue(enemy.isEmpty());
         assertTrue(flags.isEmpty());
+    }
+
+    @Test
+    public void testGenerateMapTileStrings() {
+        // Set up a simple map for testing
+        GameMap.mapdata = new int[][] {
+            {0, 1, 8},
+            {5, 6, 9}
+        };
+        String[][] tileStrings = GameMap.generateMapTileStrings();
+        assertEquals(2, tileStrings.length);
+        assertEquals(3, tileStrings[0].length);
+
+        // Adjust these expected values if your TileConverter returns different strings
+        assertEquals(TileConverter.STR_LAND, tileStrings[0][0]);
+        assertEquals(TileConverter.STR_WALL, tileStrings[0][1]);
+        assertEquals(TileConverter.STR_FLAG, tileStrings[0][2]);
+        assertEquals(TileConverter.STR_UNIT_LIGHT_ENEMY, tileStrings[1][0]);
+        assertEquals(TileConverter.STR_UNIT_MEDIUM, tileStrings[1][1]);
+        assertEquals(TileConverter.STR_FLAG, tileStrings[1][2]);
     }
 }

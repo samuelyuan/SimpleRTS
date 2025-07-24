@@ -1,8 +1,9 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import java.awt.Point;
 import java.util.ArrayList;
+
+import graphics.Point;
 
 public class PathAStarTest {
 

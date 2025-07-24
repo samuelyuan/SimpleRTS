@@ -1,22 +1,40 @@
-import java.awt.Point;
+import graphics.Point;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import map.TileConverter;
+
 public class StateGameMain extends StateMachine {
 	private GameTime gameTimer = new GameTime(1, 0);
 	// private GameFlagManager flagManager = new GameFlagManager();
-	private GraphicsMain graphicsMain = new GraphicsMain();
+	private GraphicsMain graphicsMain;
+	private GameFogWar fogWar;
 
 	private boolean isSpawned = false; // only spawn once per day
+	private GameUnitManager unitManager;
+	private SimpleRTS simpleRTS;
+
+	public StateGameMain(SimpleRTS simpleRTS, GameUnitManager unitManager, GameFogWar fogWar, GraphicsMain graphicsMain) {
+		this.simpleRTS = simpleRTS;
+		this.unitManager = unitManager;
+		this.fogWar = fogWar;
+		this.graphicsMain = graphicsMain;
+	}
 
 	public void run() {
 		int[][] map = GameMap.mapdata;
 
-		graphicsMain.drawGraphics(gameTimer);
+		// If fogWar or graphicsMain not initialized (e.g., map loaded after constructor)
+		if (fogWar == null || graphicsMain == null) {
+			fogWar = new GameFogWar(map.length, map[0].length);
+			graphicsMain = new GraphicsMain(fogWar);
+		}
+
+		graphicsMain.drawGraphics(simpleRTS.offscr, gameTimer, unitManager);
 
 		// Add capture the flag system
-		Iterator<GameFlag> itrFlag = GameUnitManager.getFlagManager().getFlagList();
+		Iterator<GameFlag> itrFlag = unitManager.getFlagManager().getFlagList();
 		while (itrFlag.hasNext()) {
 			GameFlag flag = itrFlag.next();
 
@@ -52,14 +70,12 @@ public class StateGameMain extends StateMachine {
 
 	// Retrieve the unit list depending on which faction it is
 	public ArrayList<GameUnit> getUnitList(int factionId) {
-		ArrayList<GameUnit> unitList = new ArrayList<GameUnit>();
 		if (factionId == GameFlag.FACTION_PLAYER) {
-			unitList = SimpleRTS.playerList;
+			return unitManager.getPlayerList();
 		} else if (factionId == GameFlag.FACTION_ENEMY) {
-			unitList = SimpleRTS.enemyList;
+			return unitManager.getEnemyList();
 		}
-
-		return unitList;
+		return new ArrayList<>();
 	}
 
 	public void runFaction(int[][] map, int factionId) {
@@ -76,20 +92,20 @@ public class StateGameMain extends StateMachine {
 			}
 
 			// Determine whether the unit is near the flag
-			GameUnitManager.checkFlagStates(unit, factionId);
+			unitManager.checkFlagStates(unit, factionId);
 
 			// remove dead units
 			if (unit.isAlive() == false) {
-				GameUnitManager.removeDeadUnits(map, unitList, i);
+				unitManager.removeDeadUnits(map, unitList, i);
 			}
 		}
 
 		// terminating condition
-		if (GameUnitManager.isFlagsListEmpty(factionId)) {
+		if (unitManager.isFlagsListEmpty(factionId)) {
 			if (factionId == GameFlag.FACTION_PLAYER) {
-				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_GAMEOVER); // player loses all flags, game over
+				simpleRTS.setNewState(SimpleRTS.GameState.STATE_GAMEOVER); // player loses all flags, game over
 			} else if (factionId == GameFlag.FACTION_ENEMY) {
-				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_NEXTLVL); // enemy loses all flags, win
+				simpleRTS.setNewState(SimpleRTS.GameState.STATE_NEXTLVL); // enemy loses all flags, win
 			}
 		}
 	}
@@ -98,7 +114,7 @@ public class StateGameMain extends StateMachine {
 		// select and move units
 		playerUnit.isPlayerSelected = Mouse.isPlayerSelect(playerUnit.getCurrentPoint(), playerUnit.isClickedOn);
 
-		playerUnit.findPath(map);
+		playerUnit.findPath(map, unitManager.getPlayerList());
 
 		// check collisions with other players once
 		// for (int j = 0; j < i; j++)
@@ -106,13 +122,13 @@ public class StateGameMain extends StateMachine {
 		// SimpleRTS.playerList.get(j));
 
 		// handle battles
-		playerUnit.interactWithEnemy(map, SimpleRTS.enemyList);
+		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
 	}
 
 	public void runEnemyLogic(int[][] map, GameUnit enemyUnit) {
 		// send the enemy units to attack the flag every day at around 06:00 hours
 		if (gameTimer.getHour() == 6) {
-			GameFlag playerFlag = GameUnitManager.getFlagManager().getPlayerFlag();
+			GameFlag playerFlag = unitManager.getFlagManager().getPlayerFlag();
 			if (playerFlag == null) {
 				System.out.println("No player flag found!");
 				return;
@@ -123,7 +139,7 @@ public class StateGameMain extends StateMachine {
 		}
 
 		// Follow the path towards the flag
-		enemyUnit.findPath(map);
+		enemyUnit.findPath(map, unitManager.getEnemyList());
 	}
 
 	public void updateDayTimer() {
@@ -134,7 +150,7 @@ public class StateGameMain extends StateMachine {
 
 		// Recalculate the flag counts at 0:00, 6:00, 12:00 and 18:00
 		if (gameTimer.getHour() % 6 == 0) {
-			GameUnitManager.getFlagManager().reset();
+			unitManager.getFlagManager().reset();
 		}
 	}
 
@@ -169,7 +185,7 @@ public class StateGameMain extends StateMachine {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 
 		// if there's a wall, then it's occupied
-		if (map[y][x] == GameMap.TILE_WALL) {
+		if (map[y][x] == TileConverter.TILE_WALL) {
 			return false;
 		}
 
@@ -204,8 +220,8 @@ public class StateGameMain extends StateMachine {
 
 	// Use the mouse to send player units to various locations.
 	public void handleMouseCommand(MouseEvent e) {
-		for (int i = 0; i < SimpleRTS.playerList.size(); i++) {
-			GameUnit player = SimpleRTS.playerList.get(i);
+		for (int i = 0; i < unitManager.getPlayerList().size(); i++) {
+			GameUnit player = unitManager.getPlayerList().get(i);
 
 			// right mouse click dictates player position
 			if (e.getButton() == MouseEvent.BUTTON3 && player.isPlayerSelected) {

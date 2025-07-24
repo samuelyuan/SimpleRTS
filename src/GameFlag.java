@@ -1,12 +1,14 @@
-import java.awt.Color;
-import java.awt.Rectangle;
+import java.awt.Graphics;
+
+import graphics.Color;
+import graphics.Rect;
 
 public class GameFlag {
 	private int mapX = 0;
 	private int mapY = 0;
 	private int health = 1;
 	private Color flagColor; // Color for the flag
-	private Rectangle boundingBox; // Bounding box for health bar display
+	private Rect boundingBox; // Bounding box for health bar display
 
 	static final int FACTION_ENEMY = -1;
 	static final int FACTION_NEUTRAL = 0;
@@ -68,13 +70,13 @@ public class GameFlag {
 		return flagColor;
 	}
 
-	public Rectangle getBoundingBox() {
+	public Rect getBoundingBox() {
 		return boundingBox;
 	}
 
 	public void runLogic() {
 		handleControl();
-		draw();
+		draw(SimpleRTS.offscr);
 	}
 
 	public void shiftToFaction(int unitX, int unitY, int factionId) {
@@ -115,43 +117,39 @@ public class GameFlag {
 		}
 	}
 
-	public void draw() {
-		// Make sure the color and bounding box are updated before drawing
-		updateColor();
-		updateBoundingBox();
-
-		// Use the updated color
-		SimpleRTS.offscr.setColor(flagColor);
-
-		// Draw the health bar with the updated bounding box
-		SimpleRTS.offscr.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
-	}
-
-	public void updateColor() {
-		// Update the flag's color based on the control faction
+	public Color getColorForFaction() {
+		// Return the flag's color based on the control faction
 		switch (controlFaction) {
 			case FACTION_PLAYER:
-				this.flagColor = Color.BLUE;
-				break;
+				return Color.BLUE;
 			case FACTION_NEUTRAL:
-				this.flagColor = Color.GRAY;
-				break;
+				return Color.GRAY;
 			case FACTION_ENEMY:
-				this.flagColor = Color.RED;
-				break;
+				return Color.RED;
 			default:
-				this.flagColor = Color.BLACK; // Default color if needed
-				break;
+				return Color.BLACK; // Default color if needed
 		}
 	}
 
-	public void updateBoundingBox() {
+	public Rect getBoundingBoxForState() {
 		// Calculate the bounding box for the health bar
 		int width = (int) ((double) (GameMap.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
 		int height = GameMap.TILE_HEIGHT / 8;
 		int x = mapX * GameMap.TILE_WIDTH - SimpleRTS.cameraX + 2;
 		int y = mapY * GameMap.TILE_HEIGHT + GameMap.TILE_HEIGHT / 8 - SimpleRTS.cameraY;
 
-		this.boundingBox = new Rectangle(x, y, width, height);
+		return new Rect(x, y, width, height);
+	}
+
+	public void draw(Graphics g) {
+		// Make sure the color and bounding box are updated before drawing
+		this.flagColor = getColorForFaction();
+		this.boundingBox = getBoundingBoxForState();
+
+		// Use the updated color
+		g.setColor(flagColor.toAwtColor());
+
+		// Draw the health bar with the updated bounding box
+		g.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
 	}
 }

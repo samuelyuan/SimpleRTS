@@ -12,30 +12,40 @@ public class TileConverter {
     public static final int TILE_FLAG_ALLY = 8;
     public static final int TILE_FLAG_ENEMY = 9;
 
+    // String constants for tile types
+    public static final String STR_LAND = "Land";
+    public static final String STR_WALL = "Wall";
+    public static final String STR_UNIT_LIGHT_PLAYER = "Unit Light Player";
+    public static final String STR_UNIT_MEDIUM = "Unit Medium";
+    public static final String STR_UNIT_HEAVY_PLAYER = "Unit Heavy Player";
+    public static final String STR_UNIT_LIGHT_ENEMY = "Unit Light Enemy";
+    public static final String STR_UNIT_HEAVY_ENEMY = "Unit Heavy Enemy";
+    public static final String STR_FLAG = "Flag";
+
     public static int tileStrToBaseId(String tileStr) {
-        if (tileStr.contains("Land")) return TILE_LAND;
-        if (tileStr.contains("Wall")) return TILE_WALL;
-        if (tileStr.contains("Flag")) return TILE_FLAG_ALLY; // default fallback
-        if (tileStr.contains("Unit Light Player")) return TILE_UNIT_LIGHT_PLAYER;
-        if (tileStr.contains("Unit Medium")) return TILE_UNIT_MEDIUM;
-        if (tileStr.contains("Unit Heavy Player")) return TILE_UNIT_HEAVY_PLAYER;
-        if (tileStr.contains("Unit Light Enemy")) return TILE_UNIT_LIGHT_ENEMY;
-        if (tileStr.contains("Unit Heavy Enemy")) return TILE_UNIT_HEAVY_ENEMY;
+        if (tileStr.contains(STR_LAND)) return TILE_LAND;
+        if (tileStr.contains(STR_WALL)) return TILE_WALL;
+        if (tileStr.contains(STR_FLAG)) return TILE_FLAG_ALLY; // default fallback
+        if (tileStr.contains(STR_UNIT_LIGHT_PLAYER)) return TILE_UNIT_LIGHT_PLAYER;
+        if (tileStr.contains(STR_UNIT_MEDIUM)) return TILE_UNIT_MEDIUM;
+        if (tileStr.contains(STR_UNIT_HEAVY_PLAYER)) return TILE_UNIT_HEAVY_PLAYER;
+        if (tileStr.contains(STR_UNIT_LIGHT_ENEMY)) return TILE_UNIT_LIGHT_ENEMY;
+        if (tileStr.contains(STR_UNIT_HEAVY_ENEMY)) return TILE_UNIT_HEAVY_ENEMY;
         return -1;
     }
 
     public static String tileIntToStr(int tileId) {
         switch (tileId) {
-            case TILE_LAND: return "Land";
-            case TILE_WALL: return "Wall";
-            case TILE_UNIT_LIGHT_PLAYER: return "Unit Light Player";
+            case TILE_LAND: return STR_LAND;
+            case TILE_WALL: return STR_WALL;
+            case TILE_UNIT_LIGHT_PLAYER: return STR_UNIT_LIGHT_PLAYER;
             case TILE_UNIT_MEDIUM:
-            case TILE_UNIT_MEDIUM_ALT: return "Unit Medium";
-            case TILE_UNIT_HEAVY_PLAYER: return "Unit Heavy Player";
-            case TILE_UNIT_LIGHT_ENEMY: return "Unit Light Enemy";
-            case TILE_UNIT_HEAVY_ENEMY: return "Unit Heavy Enemy";
+            case TILE_UNIT_MEDIUM_ALT: return STR_UNIT_MEDIUM;
+            case TILE_UNIT_HEAVY_PLAYER: return STR_UNIT_HEAVY_PLAYER;
+            case TILE_UNIT_LIGHT_ENEMY: return STR_UNIT_LIGHT_ENEMY;
+            case TILE_UNIT_HEAVY_ENEMY: return STR_UNIT_HEAVY_ENEMY;
             case TILE_FLAG_ALLY:
-            case TILE_FLAG_ENEMY: return "Flag";
+            case TILE_FLAG_ENEMY: return STR_FLAG;
             default: return "";
         }
     }

@@ -1,7 +1,6 @@
-import java.awt.Point;
+import graphics.Point;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Stack;
 
 public class PathAStar {
 	/*

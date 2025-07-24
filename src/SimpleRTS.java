@@ -26,8 +26,11 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 	private int width, height;
 
 	// unit data
-	public static ArrayList<GameUnit> playerList = new ArrayList<GameUnit>();
-	public static ArrayList<GameUnit> enemyList = new ArrayList<GameUnit>();
+	private GameUnitManager unitManager = new GameUnitManager(new GameFlagManager());
+
+	public GameUnitManager getUnitManager() {
+		return unitManager;
+	}
 
 	public static enum GameState {
 		STATE_NULL,
@@ -41,37 +44,50 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 	};
 
 	// state handling
-	private static GameState stateID = GameState.STATE_NULL;
-	private static GameState nextState = GameState.STATE_NULL;
-	private static StateMachine currentState = null;
+	private GameState stateID = GameState.STATE_NULL;
+	private GameState nextState = GameState.STATE_NULL;
+	private StateMachine currentState = null;
 
-	public static void setNewState(GameState newState) {
-		nextState = newState;
+	public void setNewState(GameState newState) {
+		this.nextState = newState;
 	}
 
-	public static void changeState() {
+	// Centralized factory method for StateGameMain
+	public StateGameMain createGameStateMain() {
+		GameMap.loadMap();
+		unitManager.init(
+			GameMap.getAllyUnitPositions(),
+			GameMap.getEnemyUnitPositions(),
+			GameMap.getFlagPositions()
+		);
+		GameFogWar fogWar = new GameFogWar(GameMap.mapdata.length, GameMap.mapdata[0].length);
+		GraphicsMain graphicsMain = new GraphicsMain(fogWar);
+		return new StateGameMain(this, unitManager, fogWar, graphicsMain);
+	}
+
+	public void changeState() {
 		if (nextState != GameState.STATE_NULL) {
 			switch (nextState) {
 				case STATE_MENU:
-					currentState = new StateGameMenu();
+					currentState = new StateGameMenu(this, unitManager);
 					break;
 				case STATE_INSTRUCT:
-					currentState = new StateGameInstructions();
+					currentState = new StateGameInstructions(this, unitManager);
 					break;
 				case STATE_MAIN:
-					currentState = new StateGameMain();
+					currentState = createGameStateMain();
 					break;
 				case STATE_STARTLVL:
-					currentState = new StateGameStartLevel();
+					currentState = new StateGameStartLevel(this, unitManager);
 					break;
 				case STATE_GAMEOVER:
-					currentState = new StateGameOver();
+					currentState = new StateGameOver(this, unitManager);
 					break;
 				case STATE_NEXTLVL:
-					currentState = new StateGameNextLevel();
+					currentState = new StateGameNextLevel(this, unitManager);
 					break;
 				case STATE_WIN:
-					currentState = new StateGameWin();
+					currentState = new StateGameWin(this, unitManager);
 					break;
 			}
 
@@ -90,7 +106,9 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		addMouseMotionListener(this);
 
 		setFont(new Font("Comic Sans", Font.BOLD, 24));
-		GameImage.loadAllImages();
+		GameImage.setImgData(GameImagePreloader.loadGameImages());
+        GameImage.setTileData(GameImagePreloader.loadTileImages());
+		GameImage.generateDarkImages();
 
 		// create backbuffer
 		width = getWidth();
@@ -101,9 +119,13 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		// init player
 		GameMap.numLevel = 1;
 		GameMap.loadMap();
-		GameUnitManager.init(playerList, enemyList);
+		unitManager.init(
+			GameMap.getAllyUnitPositions(),
+			GameMap.getEnemyUnitPositions(),
+			GameMap.getFlagPositions()
+		);
 
-		currentState = new StateGameMenu();
+		currentState = new StateGameMenu(this, unitManager);
 	}
 
 	/*
@@ -140,7 +162,7 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		offscr.fillRect(0, 0, width, height);
 
 		currentState.run();
-		changeState();
+		this.changeState();
 
 		// send back buffer to front buffer
 		g.drawImage(offscreenImage, 0, 0, this);

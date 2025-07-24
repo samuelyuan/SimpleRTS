@@ -1,6 +1,8 @@
 package map;
-import java.awt.Point;
+
 import java.util.Map;
+
+import graphics.Point;
 
 public class MapParseResult {
     public final int[][] mapData;

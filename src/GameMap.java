@@ -1,8 +1,5 @@
-import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -17,6 +14,7 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import graphics.Point;
 import map.MapParseResult;
 import map.TileConverter;
 
@@ -35,10 +33,6 @@ public class GameMap {
 
 	public static final int TILE_WIDTH = 50;
 	public static final int TILE_HEIGHT = 50;
-
-	public static final int TILE_WALL = 1;
-	public static final int TILE_ALLY_FLAG = 8;
-	public static final int TILE_ENEMY_FLAG = 9;
 
 	public static Map<Point, Integer> allyUnitPositions;
 	public static Map<Point, Integer> enemyUnitPositions;
@@ -97,8 +91,8 @@ public class GameMap {
 	}
 
 	public static MapParseResult parseMapData(List<String> data) {
-		int height = Integer.parseInt(data.get(0));
-		int width = Integer.parseInt(data.get(1));
+		int height = parseMapHeight(data);
+		int width = parseMapWidth(data);
 
 		int[][] mapdata = new int[height][width];
 		String[][] drawData = new String[height][width];
@@ -107,18 +101,49 @@ public class GameMap {
 		Map<Point, Integer> enemyUnitPositions = new HashMap<>();
 		Map<Point, Integer> flagPositions = new HashMap<>();
 
+		populateMapArrays(data, mapdata, drawData, allyUnitPositions, enemyUnitPositions, flagPositions);
+
+		return new MapParseResult(mapdata, drawData, allyUnitPositions, enemyUnitPositions, flagPositions);
+	}
+
+	private static int parseMapHeight(List<String> data) {
+		return Integer.parseInt(data.get(0));
+	}
+
+	private static int parseMapWidth(List<String> data) {
+		return Integer.parseInt(data.get(1));
+	}
+
+	private static int parseTile(
+		String tileStr,
+		int x, int y,
+		Map<Point, Integer> allyUnitPositions,
+		Map<Point, Integer> enemyUnitPositions,
+		Map<Point, Integer> flagPositions
+	) {
+		return tileStrToId(tileStr, x, y, allyUnitPositions, enemyUnitPositions, flagPositions);
+	}
+
+	private static void populateMapArrays(
+		List<String> data,
+		int[][] mapdata,
+		String[][] drawData,
+		Map<Point, Integer> allyUnitPositions,
+		Map<Point, Integer> enemyUnitPositions,
+		Map<Point, Integer> flagPositions
+	) {
+		int height = mapdata.length;
+		int width = mapdata[0].length;
 		int tileCounter = 2;
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				String tileStr = data.get(tileCounter);
-				int tileId = tileStrToId(tileStr, x, y, allyUnitPositions, enemyUnitPositions, flagPositions);
+				int tileId = parseTile(tileStr, x, y, allyUnitPositions, enemyUnitPositions, flagPositions);
 				mapdata[y][x] = tileId;
 				drawData[y][x] = tileStr;
 				tileCounter++;
 			}
 		}
-
-		return new MapParseResult(mapdata, drawData, allyUnitPositions, enemyUnitPositions, flagPositions);
 	}
 
 	public static void loadMap() {
@@ -159,8 +184,6 @@ public class GameMap {
 		System.out.println("[INFO] Enemy units: " + enemyUnitPositions.size());
 		System.out.println("[INFO] Flags: " + flagPositions.size());
 
-		// Reset fog and export image
-		GraphicsMain.resetFogOfWar(mapdata.length, mapdata[0].length);
 		exportImage();
 	}
 
@@ -171,52 +194,64 @@ public class GameMap {
 		Map<Point, Integer> enemyUnitPositions,
 		Map<Point, Integer> flagPositions
 	) {
-		Point pos = new Point(x, y);
-
-		// legend
-		// 0 - snow
-		// 1 - wall
-		// 2,3,4 - player units
-		// 5,6,7 - enemy units
-		// 8 - player flag
-		// 9 - enemy flag
 		if (tileStr.startsWith("Land")) {
-			return TileConverter.tileStrToBaseId("Land");
+			return parseLandTile(tileStr);
 		}
-
 		if (tileStr.startsWith("Wall")) {
-			return TileConverter.tileStrToBaseId("Wall");
+			return parseWallTile(tileStr);
 		}
-
 		if (tileStr.startsWith("Unit")) {
-			String unitInfo = tileStr.substring("Unit ".length()); // e.g., "+1 2" or "-1 1"
-			String[] parts = unitInfo.trim().split(" ");
-
-			if (parts.length == 2) {
-				String faction = parts[0];
-				int type = Integer.parseInt(parts[1]);
-
-				if (faction.equals("+1")) {
-					allyUnitPositions.put(pos, type);
-					return type + 1;
-				} else if (faction.equals("-1")) {
-					enemyUnitPositions.put(pos, type);
-					return type + 4;
-				}
-			}
+			return parseUnitTile(tileStr, x, y, allyUnitPositions, enemyUnitPositions);
 		}
-
 		if (tileStr.startsWith("Flag")) {
-			if (tileStr.contains("+1")) {
-				flagPositions.put(pos, 1);
-				return GameMap.TILE_ALLY_FLAG;
-			} else if (tileStr.contains("-1")) {
-				flagPositions.put(pos, -1);
-				return GameMap.TILE_ENEMY_FLAG;
+			return parseFlagTile(tileStr, x, y, flagPositions);
+		}
+		// fallback
+		return 0;
+	}
+
+	private static int parseLandTile(String tileStr) {
+		return TileConverter.tileStrToBaseId("Land");
+	}
+
+	private static int parseWallTile(String tileStr) {
+		return TileConverter.tileStrToBaseId("Wall");
+	}
+
+	private static int parseUnitTile(
+		String tileStr, int x, int y,
+		Map<Point, Integer> allyUnitPositions,
+		Map<Point, Integer> enemyUnitPositions
+	) {
+		Point pos = new Point(x, y);
+		String unitInfo = tileStr.substring("Unit ".length()); // e.g., "+1 2" or "-1 1"
+		String[] parts = unitInfo.trim().split(" ");
+		if (parts.length == 2) {
+			String faction = parts[0];
+			int type = Integer.parseInt(parts[1]);
+			if (faction.equals("+1")) {
+				allyUnitPositions.put(pos, type);
+				return type + 1;
+			} else if (faction.equals("-1")) {
+				enemyUnitPositions.put(pos, type);
+				return type + 4;
 			}
 		}
+		return 0;
+	}
 
-		// fallback
+	private static int parseFlagTile(
+		String tileStr, int x, int y,
+		Map<Point, Integer> flagPositions
+	) {
+		Point pos = new Point(x, y);
+		if (tileStr.contains("+1")) {
+			flagPositions.put(pos, 1);
+			return TileConverter.TILE_FLAG_ALLY;
+		} else if (tileStr.contains("-1")) {
+			flagPositions.put(pos, -1);
+			return TileConverter.TILE_FLAG_ENEMY;
+		}
 		return 0;
 	}
 
@@ -301,28 +336,48 @@ public class GameMap {
 		return dbi;
 	}
 
+	public static String[][] generateMapTileStrings() {
+		int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
+		String[][] tileStrings = new String[mapHeight][mapWidth];
+		for (int y = 0; y < mapHeight; ++y) {
+			for (int x = 0; x < mapWidth; ++x) {
+				int tileInt = mapdata[y][x];
+				String tileStr = TileConverter.tileIntToStr(tileInt);
+				tileStrings[y][x] = tileStr;
+			}
+		}
+		return tileStrings;
+	}
+
+	public static BufferedImage createMapImage() {
+		int imgTileWidth = 8, imgTileHeight = 8;
+		int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
+		BufferedImage im = new BufferedImage(mapWidth * imgTileWidth, mapHeight * imgTileHeight, BufferedImage.TYPE_INT_ARGB);
+
+		for (int y = 0; y < mapHeight; ++y) {
+			for (int x = 0; x < mapWidth; ++x) {
+				int tileInt = mapdata[y][x];
+				String tileStr = TileConverter.tileIntToStr(tileInt);
+
+				// scale the image before drawing
+				Image tileImg = GameImage.getImage(tileStr);
+				tileImg = scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
+						(double) imgTileWidth / GameMap.TILE_WIDTH, (double) imgTileHeight / GameMap.TILE_HEIGHT);
+
+				im.getGraphics().drawImage(tileImg, x * imgTileWidth, y * imgTileHeight, null);
+			}
+		}
+		return im;
+	}
+
+	public static void writeMapImage(BufferedImage im, String filename) throws IOException {
+		ImageIO.write(im, "png", new File(filename));
+	}
+
 	public static void exportImage() {
 		try {
-			int imgTileWidth = 8, imgTileHeight = 8;
-			int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
-			BufferedImage im = new BufferedImage(mapdata[0].length * imgTileWidth, mapdata.length * imgTileHeight,
-					BufferedImage.TYPE_INT_ARGB);
-
-			for (int y = 0; y < mapHeight; ++y) {
-				for (int x = 0; x < mapWidth; ++x) {
-					int tileInt = mapdata[y][x];
-					String tileStr = TileConverter.tileIntToStr(tileInt);
-
-					// scale the image before drawing
-					Image tileImg = GameImage.getImage(tileStr);
-					tileImg = scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
-							(double) imgTileWidth / GameMap.TILE_WIDTH, (double) imgTileHeight / GameMap.TILE_HEIGHT);
-
-					im.getGraphics().drawImage(tileImg, x * imgTileWidth, y * imgTileHeight, null);
-				}
-			}
-
-			ImageIO.write(im, "png", new File("../maps/export/map" + numLevel + ".png"));
+			BufferedImage im = createMapImage();
+			writeMapImage(im, "../maps/export/map" + numLevel + ".png");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

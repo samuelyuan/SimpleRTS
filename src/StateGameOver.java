@@ -1,35 +1,58 @@
-import java.awt.Color;
+import ui.UIComponent;
+import ui.UIButton;
+import ui.UILabel;
+import graphics.Color;
 import java.awt.Font;
 import java.awt.event.MouseEvent;
+import graphics.AwtGraphicsAdapter;
+import graphics.IGraphics;
 
 public class StateGameOver extends StateMachine {
-	public void run() {
-		// Draw menu background
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_BG_MENU),
-				0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight, null);
+    private UIComponent root;
+    private GameUnitManager unitManager;
+    private SimpleRTS simpleRTS;
 
-		// Draw the title
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_MENU_DEFEAT),
-				SimpleRTS.screenWidth / 2 - 300, 50, 600, 500, null);
+    public StateGameOver(SimpleRTS simpleRTS, GameUnitManager unitManager) {
+        this.simpleRTS = simpleRTS;
+        this.unitManager = unitManager;
 
-		// Message body
-		GameFont.setFont(new Font("Comic Sans", Font.PLAIN, 18));
-		GameFont.setColor(Color.RED);
-		GameFont.printString("Without any forces left, you surrender to the enemy. The war is over.",
-				SimpleRTS.screenWidth / 4, 125);
+        // Fonts and color
+        Font messageFont = new Font("Comic Sans", Font.PLAIN, 18);
+        Color messageColor = Color.RED;
 
-		// Return button
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_ICON_RETURN),
-				SimpleRTS.screenWidth / 2 - 100, 350, 200, 50, null);
-	}
+        root = new UIComponent(0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight) {
+            @Override
+            protected void draw(IGraphics g) {
+                // Draw background image
+                g.drawImage(GameImage.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight);
+                // Draw title image
+                g.drawImage(GameImage.getImage(ImageConstants.IMGID_MENU_DEFEAT), SimpleRTS.screenWidth / 2 - 300, 50, 600, 500);
+            }
+        };
 
-	public void handleMouseCommand(MouseEvent e) {
-		// if game over, go to main menu
-		if (SimpleRTS.isMouseInBounds(e,
-				SimpleRTS.screenWidth / 2 - 100, SimpleRTS.screenWidth / 2 + 100, 350, 400)) {
-			GameUnitManager.init(SimpleRTS.playerList, SimpleRTS.enemyList);
-			SimpleRTS.setNewState(SimpleRTS.GameState.STATE_MENU);
-		}
-	}
+        // Message label
+        UILabel messageLabel = new UILabel(SimpleRTS.screenWidth / 4, 125, "Without any forces left, you surrender to the enemy. The war is over.");
+        messageLabel.setFont(messageFont);
+        messageLabel.setColor(messageColor);
+        root.addChild(messageLabel);
 
+        // Return button
+        int buttonLeft = SimpleRTS.screenWidth / 2 - 100;
+        int buttonTop = 350;
+        int buttonWidth = 200, buttonHeight = 50;
+        UIButton returnButton = new UIButton(buttonLeft, buttonTop, buttonWidth, buttonHeight, "Return", () -> {
+            simpleRTS.setNewState(SimpleRTS.GameState.STATE_MENU);
+        });
+        returnButton.setFont(messageFont);
+        returnButton.setColor(Color.BLACK);
+        root.addChild(returnButton);
+    }
+
+    public void run() {
+        root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+    }
+
+    public void handleMouseCommand(MouseEvent e) {
+        root.handleMouse(e);
+    }
 }

@@ -1,71 +1,77 @@
-import java.awt.Color;
+import graphics.Color;
 import java.awt.Font;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import ui.UIComponent;
+import ui.UIButton;
+import ui.UILabel;
+import graphics.AwtGraphicsAdapter;
+import graphics.IGraphics;
 
 public class StateGameStartLevel extends StateMachine {
 	private ArrayList<String> description = null;
-	private int buttonLeftBound = SimpleRTS.screenWidth / 2 - 100;
-	private int buttonTopMostBound = 350;
-	private int buttonWidth = 200, buttonHeight = 50;
+	private UIComponent root;
+	private GameUnitManager unitManager;
+	private SimpleRTS simpleRTS;
 
-	public void run() {
-		// Draw menu background
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_BG_MENU),
-				0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight, null);
-
-		// Title
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_MENU_START),
-				SimpleRTS.screenWidth / 2 - 300, 50, 600, 500, null);
-
-		// new font for message body
-		GameFont.setColor(Color.BLACK);
-		GameFont.setFont(new Font("Comic Sans", Font.BOLD, 20));
-
+	public StateGameStartLevel(SimpleRTS simpleRTS, GameUnitManager unitManager) {
+		this.simpleRTS = simpleRTS;
+		this.unitManager = unitManager;
 		// Load description
-		if (description == null) {
-			boolean isBegin = true;
-			int maxLineWidth = 50; // the line can have at most 70 chars
-			description = GameMap.loadMapDescription(GameMap.numLevel, isBegin, maxLineWidth);
-		}
+		boolean isBegin = true;
+		int maxLineWidth = 50;
+		description = GameMap.loadMapDescription(GameMap.numLevel, isBegin, maxLineWidth);
 
-		// Print each line of the description
+		// Font and color for all labels/buttons
+		Font font = new Font("Comic Sans", Font.BOLD, 20);
+		Color color = Color.BLACK;
+
+		// Build UI tree
+		root = new UIComponent(0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight) {
+			@Override
+			protected void draw(IGraphics g) {
+				// Draw background image
+				g.drawImage(GameImage.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight);
+				// Draw title image
+				g.drawImage(GameImage.getImage(ImageConstants.IMGID_MENU_START), SimpleRTS.screenWidth / 2 - 300, 50, 600, 500);
+			}
+		};
+		// Add description labels
 		int printTextLeft = SimpleRTS.screenWidth / 4;
 		int printTextTop = 125;
 		for (int i = 0; i < description.size(); i++) {
-			GameFont.printString(description.get(i),
-					printTextLeft, printTextTop);
-			printTextTop += 20;
+			UILabel label = new UILabel(printTextLeft, printTextTop + i * 20, description.get(i));
+			label.setFont(font);
+			label.setColor(color);
+			root.addChild(label);
 		}
-
-		// Draw the option buttons
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_ICON_START),
-				buttonLeftBound, buttonTopMostBound,
-				buttonWidth, buttonHeight, null);
-		SimpleRTS.offscr.drawImage(GameImage.getImage(GameImage.IMGID_ICON_RETURN),
-				buttonLeftBound, buttonTopMostBound + 75,
-				buttonWidth, buttonHeight, null);
-	}
-
-	public void handleMouseCommand(MouseEvent e) {
-		int buttonRightBound = buttonLeftBound + buttonWidth;
-
-		// Clicked on "Start"
-		if (SimpleRTS.isMouseInBounds(e,
-				buttonLeftBound, buttonRightBound,
-				buttonTopMostBound, buttonTopMostBound + buttonHeight)) {
+		// Add Start button
+		int buttonLeftBound = SimpleRTS.screenWidth / 2 - 100;
+		int buttonTopMostBound = 350;
+		int buttonWidth = 200, buttonHeight = 50;
+		UIButton startButton = new UIButton(buttonLeftBound, buttonTopMostBound, buttonWidth, buttonHeight, "Start", () -> {
 			if (GameMap.numLevel <= SimpleRTS.MAX_LVL + 1)
-				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_MAIN);
+				simpleRTS.setNewState(SimpleRTS.GameState.STATE_MAIN);
 			else
-				SimpleRTS.setNewState(SimpleRTS.GameState.STATE_WIN);
-		}
-
-		// Clicked on "Return"
-		if (SimpleRTS.isMouseInBounds(e,
-				buttonLeftBound, buttonRightBound,
-				(buttonTopMostBound + 75), (buttonTopMostBound + 75) + buttonHeight)) {
-			SimpleRTS.setNewState(SimpleRTS.GameState.STATE_MENU);
-		}
+				simpleRTS.setNewState(SimpleRTS.GameState.STATE_WIN);
+		});
+		startButton.setFont(font);
+		startButton.setColor(color);
+		root.addChild(startButton);
+		// Add Return button
+		UIButton returnButton = new UIButton(buttonLeftBound, buttonTopMostBound + 75, buttonWidth, buttonHeight, "Return", () -> {
+			simpleRTS.setNewState(SimpleRTS.GameState.STATE_MENU);
+		});
+		returnButton.setFont(font);
+		returnButton.setColor(color);
+		root.addChild(returnButton);
 	}
 
+	public void run() {
+		root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+	}
+
+	public void handleMouseCommand(java.awt.event.MouseEvent e) {
+		root.handleMouse(e);
+	}
 }

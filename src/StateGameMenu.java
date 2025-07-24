@@ -1,47 +1,51 @@
+import ui.UIComponent;
+import ui.UIButton;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
+import graphics.AwtGraphicsAdapter;
+import graphics.IGraphics;
 
 public class StateGameMenu extends StateMachine {
-	public Graphics getBuffer() {
-		return SimpleRTS.offscr;
-	}
+    private UIComponent root;
+    private GameUnitManager unitManager;
+    private SimpleRTS simpleRTS;
 
-	public void drawImage(int imgId, int x, int y, int width, int height) {
-		getBuffer().drawImage(GameImage.getImage(imgId), x, y, width, height, null);
-	}
+    public StateGameMenu(SimpleRTS simpleRTS, GameUnitManager unitManager) {
+        this.simpleRTS = simpleRTS;
+        this.unitManager = unitManager;
 
-	public void run() {
-		// Draw menu background image
-		drawImage(GameImage.IMGID_BG_MENU, 0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight);
+        root = new UIComponent(0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight) {
+            @Override
+            protected void draw(IGraphics g) {
+                // Draw background image
+                g.drawImage(GameImage.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight);
+                // Draw title image
+                g.drawImage(GameImage.getImage(ImageConstants.IMGID_MENU_TITLE), SimpleRTS.screenWidth / 2 - 250, 50, 500, 400);
+            }
+        };
 
-		// Draw menu title
-		drawImage(GameImage.IMGID_MENU_TITLE, SimpleRTS.screenWidth / 2 - 250, 50, 500, 400);
+        int optionLeftBound = SimpleRTS.screenWidth / 2 - 100;
+        int optionTopBound = SimpleRTS.screenHeight / 2 - 200;
+        int optionWidth = 200, optionHeight = 50;
 
-		// Draw menu options
-		int optionLeftBound = SimpleRTS.screenWidth / 2 - 100;
-		int optionTopBound = SimpleRTS.screenHeight / 2 - 200;
-		int optionWidth = 200, optionHeight = 50;
-		drawImage(GameImage.IMGID_ICON_CAMPAIGN, optionLeftBound, optionTopBound, optionWidth, optionHeight);
-		drawImage(GameImage.IMGID_ICON_INSTRUCT, optionLeftBound, optionTopBound + 100, optionWidth, optionHeight);
-	}
+        // Campaign button
+        UIButton campaignButton = new UIButton(optionLeftBound, optionTopBound, optionWidth, optionHeight, "Campaign", () -> {
+            simpleRTS.setNewState(SimpleRTS.GameState.STATE_STARTLVL);
+        });
+        root.addChild(campaignButton);
 
-	public void handleMouseCommand(MouseEvent e) {
-		int leftBound = SimpleRTS.screenWidth / 2 - 100;
-		int rightBound = leftBound + 200;
-		int topBound = SimpleRTS.screenHeight / 2 - 200;
+        // Instructions button
+        UIButton instructButton = new UIButton(optionLeftBound, optionTopBound + 100, optionWidth, optionHeight, "Instructions", () -> {
+            simpleRTS.setNewState(SimpleRTS.GameState.STATE_INSTRUCT);
+        });
+        root.addChild(instructButton);
+    }
 
-		// start game
-		if (SimpleRTS.isMouseInBounds(e,
-				leftBound, rightBound,
-				topBound, topBound + 50)) {
-			SimpleRTS.setNewState(SimpleRTS.GameState.STATE_STARTLVL);
-		}
+    public void run() {
+        root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+    }
 
-		// display instructions
-		if (SimpleRTS.isMouseInBounds(e,
-				leftBound, rightBound,
-				topBound + 100, topBound + 150)) {
-			SimpleRTS.setNewState(SimpleRTS.GameState.STATE_INSTRUCT);
-		}
-	}
+    public void handleMouseCommand(MouseEvent e) {
+        root.handleMouse(e);
+    }
 }
