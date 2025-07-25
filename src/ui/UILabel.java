@@ -1,12 +1,12 @@
 package ui;
 
 import graphics.Color;
-import java.awt.Font;
+import graphics.GameFont;
 import graphics.IGraphics;
 
 public class UILabel extends UIComponent {
     private String text;
-    private Font font = new Font("Comic Sans", Font.BOLD, 20); // default
+    private GameFont font = new GameFont("Comic Sans", GameFont.BOLD, 20); // default
     private Color color = Color.BLACK; // default
 
     public UILabel(int x, int y, String text) {
@@ -14,7 +14,7 @@ public class UILabel extends UIComponent {
         this.text = text;
     }
 
-    public void setFont(Font font) {
+    public void setFont(GameFont font) {
         this.font = font;
     }
 

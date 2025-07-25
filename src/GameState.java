@@ -1,0 +1,10 @@
+public enum GameState {
+    STATE_NULL,
+    STATE_MENU,
+    STATE_INSTRUCT,
+    STATE_STARTLVL,
+    STATE_MAIN,
+    STATE_NEXTLVL,
+    STATE_GAMEOVER,
+    STATE_WIN
+} 

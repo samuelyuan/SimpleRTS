@@ -1,6 +1,5 @@
-import java.awt.event.MouseEvent;
-
 import graphics.Point;
+import input.GameMouseEvent;
 
 public class Mouse {
 	// mouse data
@@ -10,17 +9,17 @@ public class Mouse {
 	// final selection box
 	public static int boxX1, boxY1, boxX2, boxY2;
 
-	public static void dragSelectBox(MouseEvent e) {
+	public static void dragSelectBox(GameMouseEvent e) {
 		// record new coordinates of selection box
-		selectX2 = e.getX();
-		selectY2 = e.getY();
+		selectX2 = e.x;
+		selectY2 = e.y;
 	}
 
-	public static void createSelectBox(MouseEvent e) {
+	public static void createSelectBox(GameMouseEvent e) {
 		// left mouse button forms selection box
-		if (e.getButton() == MouseEvent.BUTTON1) {
-			selectX1 = e.getX();
-			selectY1 = e.getY();
+		if (e.button == 1) {
+			selectX1 = e.x;
+			selectY1 = e.y;
 
 			selectX2 = selectX1;
 			selectY2 = selectY1;
@@ -59,8 +58,8 @@ public class Mouse {
 		// Mouse released
 		if (!Mouse.isPressed) {
 			// Check selection box
-			if (isInSelectionBox(currentPosition.x + GameMap.TILE_WIDTH / 2 - SimpleRTS.cameraX,
-					currentPosition.y + GameMap.TILE_HEIGHT / 2 - SimpleRTS.cameraY)) {
+			if (isInSelectionBox(currentPosition.x + Constants.TILE_WIDTH / 2 - SimpleRTS.cameraX,
+					currentPosition.y + Constants.TILE_HEIGHT / 2 - SimpleRTS.cameraY)) {
 				return true;
 			} 
 			// Or click on the unit
@@ -69,12 +68,12 @@ public class Mouse {
 		return false;
 	}
 
-	public static boolean isClickOnUnit(MouseEvent e, Point currentPosition) {
-		return e.getButton() == MouseEvent.BUTTON1
-				&& currentPosition.x - SimpleRTS.cameraX <= e.getX()
-				&& currentPosition.y - SimpleRTS.cameraY <= e.getY()
-				&& currentPosition.x + GameMap.TILE_WIDTH - SimpleRTS.cameraX >= e.getX()
-				&& currentPosition.y + GameMap.TILE_HEIGHT - SimpleRTS.cameraY >= e.getY();
+	public static boolean isClickOnUnit(GameMouseEvent e, Point currentPosition) {
+		return e.button == 1
+				&& currentPosition.x - SimpleRTS.cameraX <= e.x
+				&& currentPosition.y - SimpleRTS.cameraY <= e.y
+				&& currentPosition.x + Constants.TILE_WIDTH - SimpleRTS.cameraX >= e.x
+				&& currentPosition.y + Constants.TILE_HEIGHT - SimpleRTS.cameraY >= e.y;
 
 	}
 }

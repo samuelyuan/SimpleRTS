@@ -1,10 +1,12 @@
 package ui;
 
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 import graphics.IGraphics;
+import input.GameMouseListener;
+import input.GameMouseEvent;
+import input.MouseListenerRegistrar;
 
 public abstract class UIComponent {
     protected int x, y, width, height;
@@ -29,7 +31,7 @@ public abstract class UIComponent {
 
     protected abstract void draw(IGraphics g);
 
-    public boolean handleMouse(MouseEvent e) {
+    public boolean handleMouse(GameMouseEvent e) {
         if (!visible) return false;
         for (UIComponent child : children) {
             if (child.handleMouse(e)) return true;
@@ -37,12 +39,21 @@ public abstract class UIComponent {
         return onMouse(e);
     }
 
-    protected boolean onMouse(MouseEvent e) {
+    protected boolean onMouse(GameMouseEvent e) {
         // Override in subclasses for custom behavior
         return false;
     }
 
     public boolean contains(int mx, int my) {
         return mx >= x && mx <= x + width && my >= y && my <= y + height;
+    }
+
+    public static void registerAllListeners(UIComponent component, MouseListenerRegistrar registrar) {
+        if (component instanceof GameMouseListener) {
+            registrar.addGameMouseListener((GameMouseListener) component);
+        }
+        for (UIComponent child : component.children) {
+            registerAllListeners(child, registrar);
+        }
     }
 } 

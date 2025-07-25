@@ -60,7 +60,7 @@ public class GameUnitManager {
 		for (Entry<Point, Integer> entry : allyUnitPositions.entrySet()) {
 			Point initialPosition = entry.getKey();
 			int classType = entry.getValue();
-			playerList.add(new GameUnit(initialPosition.x * GameMap.TILE_WIDTH, initialPosition.y * GameMap.TILE_HEIGHT,
+			playerList.add(new GameUnit(initialPosition.x * Constants.TILE_WIDTH, initialPosition.y * Constants.TILE_HEIGHT,
 				true, classType));
 		}
 	}
@@ -69,7 +69,7 @@ public class GameUnitManager {
 		for (Entry<Point, Integer> entry : enemyUnitPositions.entrySet()) {
 			Point initialPosition = entry.getKey();
 			int classType = entry.getValue();
-			enemyList.add(new GameUnit(initialPosition.x * GameMap.TILE_WIDTH, initialPosition.y * GameMap.TILE_HEIGHT,
+			enemyList.add(new GameUnit(initialPosition.x * Constants.TILE_WIDTH, initialPosition.y * Constants.TILE_HEIGHT,
 				false, classType));
 		}
 	}
@@ -86,8 +86,8 @@ public class GameUnitManager {
 	}
 
 	public void checkFlagStates(GameUnit unit, int factionId) {
-		int unitMapX = unit.getCurrentPoint().x / GameMap.TILE_WIDTH;
-		int unitMapY = unit.getCurrentPoint().y / GameMap.TILE_HEIGHT;
+		int unitMapX = unit.getCurrentPoint().x / Constants.TILE_WIDTH;
+		int unitMapY = unit.getCurrentPoint().y / Constants.TILE_HEIGHT;
 		flagManager.checkFlagState(unitMapX, unitMapY, factionId);
 	}
 

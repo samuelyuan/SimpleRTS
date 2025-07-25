@@ -1,6 +1,4 @@
-import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,6 +12,7 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import graphics.ImageUtils;
 import graphics.Point;
 import map.MapParseResult;
 import map.TileConverter;
@@ -30,9 +29,6 @@ public class GameMap {
 	public static String[][] getDrawData() {
 		return drawData;
 	}
-
-	public static final int TILE_WIDTH = 50;
-	public static final int TILE_HEIGHT = 50;
 
 	public static Map<Point, Integer> allyUnitPositions;
 	public static Map<Point, Integer> enemyUnitPositions;
@@ -313,60 +309,38 @@ public class GameMap {
 		}
 	}
 
-	/**
-	 * scale image
-	 * 
-	 * @param sbi       image to scale
-	 * @param imageType type of image
-	 * @param dWidth    width of destination image
-	 * @param dHeight   height of destination image
-	 * @param fWidth    x-factor for transformation / scaling
-	 * @param fHeight   y-factor for transformation / scaling
-	 * @return scaled image
-	 */
-	public static BufferedImage scale(BufferedImage sbi, int imageType, int dWidth, int dHeight, double fWidth,
-			double fHeight) {
-		BufferedImage dbi = null;
-		if (sbi != null) {
-			dbi = new BufferedImage(dWidth, dHeight, imageType);
-			Graphics2D g = dbi.createGraphics();
-			AffineTransform at = AffineTransform.getScaleInstance(fWidth, fHeight);
-			g.drawRenderedImage(sbi, at);
-		}
-		return dbi;
-	}
-
-	public static String[][] generateMapTileStrings() {
-		int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
+	public static String[][] generateMapTileStrings(int[][] mapData) {
+		int mapWidth = mapData[0].length, mapHeight = mapData.length;
 		String[][] tileStrings = new String[mapHeight][mapWidth];
+
 		for (int y = 0; y < mapHeight; ++y) {
 			for (int x = 0; x < mapWidth; ++x) {
-				int tileInt = mapdata[y][x];
-				String tileStr = TileConverter.tileIntToStr(tileInt);
-				tileStrings[y][x] = tileStr;
+				int tileInt = mapData[y][x];
+				tileStrings[y][x] = TileConverter.tileIntToStr(tileInt);
 			}
 		}
 		return tileStrings;
 	}
 
-	public static BufferedImage createMapImage() {
+	public static BufferedImage createMapImage(String[][] tileStrings) {
 		int imgTileWidth = 8, imgTileHeight = 8;
-		int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
+		int mapHeight = tileStrings.length, mapWidth = tileStrings[0].length;
+
 		BufferedImage im = new BufferedImage(mapWidth * imgTileWidth, mapHeight * imgTileHeight, BufferedImage.TYPE_INT_ARGB);
 
 		for (int y = 0; y < mapHeight; ++y) {
 			for (int x = 0; x < mapWidth; ++x) {
-				int tileInt = mapdata[y][x];
-				String tileStr = TileConverter.tileIntToStr(tileInt);
+				String tileStr = tileStrings[y][x];
 
-				// scale the image before drawing
-				Image tileImg = GameImage.getImage(tileStr);
-				tileImg = scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
-						(double) imgTileWidth / GameMap.TILE_WIDTH, (double) imgTileHeight / GameMap.TILE_HEIGHT);
+				Image tileImg = (java.awt.Image) GameImageManager.getImage(tileStr).getBackendImage();
+				tileImg = ImageUtils.scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
+						(double) imgTileWidth / Constants.TILE_WIDTH,
+						(double) imgTileHeight / Constants.TILE_HEIGHT);
 
 				im.getGraphics().drawImage(tileImg, x * imgTileWidth, y * imgTileHeight, null);
 			}
 		}
+
 		return im;
 	}
 
@@ -375,10 +349,18 @@ public class GameMap {
 	}
 
 	public static void exportImage() {
+		if (mapdata == null || mapdata.length == 0 || mapdata[0].length == 0) {
+			System.err.println("Error: No map data to export.");
+			return;
+		}
+
 		try {
-			BufferedImage im = createMapImage();
+			String[][] tileStrings = generateMapTileStrings(mapdata);
+			BufferedImage im = createMapImage(tileStrings);
 			writeMapImage(im, "../maps/export/map" + numLevel + ".png");
+			System.out.println("[INFO] Map image exported.");
 		} catch (IOException e) {
+			System.err.println("Error exporting map image: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}

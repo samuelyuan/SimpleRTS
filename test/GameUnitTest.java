@@ -134,12 +134,12 @@ public class GameUnitTest {
     public void testCanAttackEnemyTrueAndFalse() {
         // Place both units in screen coordinates (adjacent tiles)
         int tileX = 2, tileY = 2;
-        playerUnit = new GameUnit(tileX * GameMap.TILE_WIDTH, tileY * GameMap.TILE_HEIGHT, true, GameUnit.UNIT_ID_LIGHT);
-        GameUnit closeEnemy = new GameUnit((tileX + 1) * GameMap.TILE_WIDTH, tileY * GameMap.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
+        playerUnit = new GameUnit(tileX * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, true, GameUnit.UNIT_ID_LIGHT);
+        GameUnit closeEnemy = new GameUnit((tileX + 1) * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
         assertTrue(playerUnit.canAttackEnemy(map, closeEnemy), "Should be able to attack enemy in range and visible");
 
         // Place enemy out of attack radius
-        GameUnit farEnemy = new GameUnit(100 * GameMap.TILE_WIDTH, 100 * GameMap.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
+        GameUnit farEnemy = new GameUnit(100 * Constants.TILE_WIDTH, 100 * Constants.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
         assertFalse(playerUnit.canAttackEnemy(map, farEnemy), "Should not be able to attack enemy out of range");
     }
 

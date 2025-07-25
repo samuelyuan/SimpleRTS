@@ -4,11 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.imageio.ImageIO;
 import map.TileConverter;
+import graphics.GameImage;
 
 public class GameImagePreloader {
 
-    public static Map<Integer, Image> loadGameImages() {
-        Map<Integer, Image> imgData = new HashMap<>();
+    public static Map<Integer, GameImage> loadGameImages() {
+        Map<Integer, GameImage> imgData = new HashMap<>();
 
         // Define image ID -> filename pairs
         Object[][] imageList = {
@@ -38,8 +39,8 @@ public class GameImagePreloader {
         return imgData;
     }
 
-    public static Map<String, Image> loadTileImages() {
-        Map<String, Image> tileData = new HashMap<>();
+    public static Map<String, GameImage> loadTileImages() {
+        Map<String, GameImage> tileData = new HashMap<>();
 
         // Define tile name -> filename pairs using TileConverter constants
         String[][] tileList = {
@@ -60,23 +61,23 @@ public class GameImagePreloader {
         return tileData;
     }
 
-    private static void loadImage(Map<Integer, Image> imgData, int imageId, String filename) {
+    private static void loadImage(Map<Integer, GameImage> imgData, int imageId, String filename) {
         String fullPath = "../img/" + filename;
         try {
             File file = new File(fullPath);
             Image newImage = ImageIO.read(file);
-            imgData.put(imageId, newImage);
+            imgData.put(imageId, new GameImage(newImage));
         } catch (Exception e) {
             System.out.println("Failed to load image " + fullPath + ", exception: " + e.getMessage());
         }
     }
 
-    private static void loadTile(Map<String, Image> tileData, String imageStr, String filename) {
+    private static void loadTile(Map<String, GameImage> tileData, String imageStr, String filename) {
         String fullPath = "../img/" + filename;
         try {
             File file = new File(fullPath);
             Image newImage = ImageIO.read(file);
-            tileData.put(imageStr, newImage);
+            tileData.put(imageStr, new GameImage(newImage));
         } catch (Exception e) {
             System.out.println("Failed to load tile " + fullPath + ", exception: " + e.getMessage());
         }

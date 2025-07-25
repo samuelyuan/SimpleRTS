@@ -37,7 +37,7 @@ public class GameUnit {
 	public static final int DIR_WEST = 3;
 
 	public Point getMapPoint(Point screenPoint) {
-		return new Point(screenPoint.x / GameMap.TILE_WIDTH, screenPoint.y / GameMap.TILE_HEIGHT);
+		return new Point(screenPoint.x / Constants.TILE_WIDTH, screenPoint.y / Constants.TILE_HEIGHT);
 	}
 
 	// Location on map
@@ -197,9 +197,9 @@ public class GameUnit {
 	 * {
 	 * SimpleRTS.offscr.setColor(Color.ORANGE);
 	 * SimpleRTS.offscr.drawRect(pathUnit.getPath().get(i).getX() *
-	 * GameMap.TILE_WIDTH - SimpleRTS.cameraX,
-	 * pathUnit.getPath().get(i).getY() * GameMap.TILE_HEIGHT - SimpleRTS.cameraY,
-	 * GameMap.TILE_WIDTH, GameMap.TILE_HEIGHT);
+	 * Constants.TILE_WIDTH - SimpleRTS.cameraX,
+	 * pathUnit.getPath().get(i).getY() * Constants.TILE_HEIGHT - SimpleRTS.cameraY,
+	 * Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
 	 * }
 	 * }
 	 * }
@@ -263,8 +263,8 @@ public class GameUnit {
 
 	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
 		final int ATTACK_RADIUS = 8;
-		int manhattanDist = Math.abs(currentPosition.x - enemy.currentPosition.x) / GameMap.TILE_WIDTH +
-				Math.abs(currentPosition.y - enemy.currentPosition.y) / GameMap.TILE_HEIGHT;
+		int manhattanDist = Math.abs(currentPosition.x - enemy.currentPosition.x) / Constants.TILE_WIDTH +
+				Math.abs(currentPosition.y - enemy.currentPosition.y) / Constants.TILE_HEIGHT;
 		return manhattanDist <= ATTACK_RADIUS && this.checkVisible(map, enemy);
 	}
 
@@ -278,40 +278,15 @@ public class GameUnit {
 	// (ex. a light unit would do more damage to a medium unit, but less to a heavy
 	// unit)
 	public int dealDamagePoints(GameUnit enemy) {
-		switch (classType) {
-			case UNIT_ID_LIGHT:
-				switch (enemy.classType) {
-					case UNIT_ID_LIGHT:
-						return 2;
-					case UNIT_ID_MEDIUM:
-						return 3;
-					case UNIT_ID_HEAVY:
-						return 2;
-				}
-				break;
-			case UNIT_ID_MEDIUM:
-				switch (enemy.classType) {
-					case UNIT_ID_LIGHT:
-						return 2;
-					case UNIT_ID_MEDIUM:
-						return 2;
-					case UNIT_ID_HEAVY:
-						return 3;
-				}
-				break;
-			case UNIT_ID_HEAVY:
-				switch (enemy.classType) {
-					case UNIT_ID_LIGHT:
-						return 5;
-					case UNIT_ID_MEDIUM:
-						return 2;
-					case UNIT_ID_HEAVY:
-						return 2;
-				}
-				break;
+		int attacker = this.classType - 1; // UNIT_ID_LIGHT = 1 → index 0
+		int defender = enemy.classType - 1;
+
+		if (attacker < 0 || attacker >= Constants.DAMAGE_MATRIX.length ||
+			defender < 0 || defender >= Constants.DAMAGE_MATRIX[0].length) {
+			return 1; // fallback value
 		}
 
-		return 1;
+		return Constants.DAMAGE_MATRIX[attacker][defender];
 	}
 
 	/*

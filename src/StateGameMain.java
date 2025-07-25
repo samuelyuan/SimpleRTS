@@ -1,8 +1,9 @@
-import graphics.Point;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import graphics.AwtGraphicsAdapter;
+import graphics.Point;
+import input.GameMouseEvent;
 import map.TileConverter;
 
 public class StateGameMain extends StateMachine {
@@ -31,7 +32,7 @@ public class StateGameMain extends StateMachine {
 			graphicsMain = new GraphicsMain(fogWar);
 		}
 
-		graphicsMain.drawGraphics(simpleRTS.offscr, gameTimer, unitManager);
+		graphicsMain.drawGraphics(new AwtGraphicsAdapter(simpleRTS.offscr), gameTimer, unitManager);
 
 		// Add capture the flag system
 		Iterator<GameFlag> itrFlag = unitManager.getFlagManager().getFlagList();
@@ -103,9 +104,9 @@ public class StateGameMain extends StateMachine {
 		// terminating condition
 		if (unitManager.isFlagsListEmpty(factionId)) {
 			if (factionId == GameFlag.FACTION_PLAYER) {
-				simpleRTS.setNewState(SimpleRTS.GameState.STATE_GAMEOVER); // player loses all flags, game over
+				simpleRTS.setNewState(GameState.STATE_GAMEOVER); // player loses all flags, game over
 			} else if (factionId == GameFlag.FACTION_ENEMY) {
-				simpleRTS.setNewState(SimpleRTS.GameState.STATE_NEXTLVL); // enemy loses all flags, win
+				simpleRTS.setNewState(GameState.STATE_NEXTLVL); // enemy loses all flags, win
 			}
 		}
 	}
@@ -133,8 +134,8 @@ public class StateGameMain extends StateMachine {
 				System.out.println("No player flag found!");
 				return;
 			}
-			enemyUnit.destination = new Point((playerFlag.getMapX() - 1) * GameMap.TILE_WIDTH,
-					playerFlag.getMapY() * GameMap.TILE_HEIGHT);
+			enemyUnit.destination = new Point((playerFlag.getMapX() - 1) * Constants.TILE_WIDTH,
+					playerFlag.getMapY() * Constants.TILE_HEIGHT);
 			enemyUnit.startMoving();
 		}
 
@@ -204,7 +205,7 @@ public class StateGameMain extends StateMachine {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 
 		// Create new unit
-		GameUnit newUnit = new GameUnit(x * GameMap.TILE_WIDTH, y * GameMap.TILE_HEIGHT,
+		GameUnit newUnit = new GameUnit(x * Constants.TILE_WIDTH, y * Constants.TILE_HEIGHT,
 				(factionId == GameFlag.FACTION_PLAYER), GameUnit.UNIT_ID_LIGHT);
 		// newUnit.setSpeed(2);
 		newUnit.spawn(map, new Point(x, y), factionId);
@@ -219,14 +220,14 @@ public class StateGameMain extends StateMachine {
 	}
 
 	// Use the mouse to send player units to various locations.
-	public void handleMouseCommand(MouseEvent e) {
+	public void handleMouseCommand(GameMouseEvent e) {
 		for (int i = 0; i < unitManager.getPlayerList().size(); i++) {
 			GameUnit player = unitManager.getPlayerList().get(i);
 
 			// right mouse click dictates player position
-			if (e.getButton() == MouseEvent.BUTTON3 && player.isPlayerSelected) {
+			if (e.button == 3 && player.isPlayerSelected) {
 				// offset for scrolling camera
-				player.destination = new Point(e.getX() + SimpleRTS.cameraX, e.getY() + SimpleRTS.cameraY);
+				player.destination = new Point(e.x + SimpleRTS.cameraX, e.y + SimpleRTS.cameraY);
 
 				// destX, destY must be multiples of tile_width and tile_height to simplify
 				// pathfinder calculations

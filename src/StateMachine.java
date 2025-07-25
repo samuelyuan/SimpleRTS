@@ -1,7 +1,7 @@
-import java.awt.event.MouseEvent;
+import input.GameMouseEvent;
 
 public abstract class StateMachine {
 	public abstract void run();
 
-	public abstract void handleMouseCommand(MouseEvent e);
+	public abstract void handleMouseCommand(GameMouseEvent e);
 }

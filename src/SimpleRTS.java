@@ -3,6 +3,9 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import input.GameMouseEvent;
+import input.GameMouseListener;
+import java.util.List;
 import java.util.ArrayList;
 
 /*
@@ -12,13 +15,6 @@ import java.util.ArrayList;
 public class SimpleRTS extends Applet implements MouseMotionListener, MouseListener, Runnable {
 	// camera data
 	public static int cameraX = 0, cameraY = 0;
-
-	// map data
-	public static final int MAX_LVL = 2;
-
-	// screen
-	public static final int screenWidth = 1076;
-	public static final int screenHeight = 768;
 
 	// Backbuffer data
 	private Image offscreenImage;
@@ -32,83 +28,26 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		return unitManager;
 	}
 
-	public static enum GameState {
-		STATE_NULL,
-		STATE_MENU,
-		STATE_INSTRUCT,
-		STATE_STARTLVL,
-		STATE_MAIN,
-		STATE_NEXTLVL,
-		STATE_GAMEOVER,
-		STATE_WIN
-	};
-
 	// state handling
-	private GameState stateID = GameState.STATE_NULL;
-	private GameState nextState = GameState.STATE_NULL;
-	private StateMachine currentState = null;
+	private GameStateManager stateManager;
 
 	public void setNewState(GameState newState) {
-		this.nextState = newState;
-	}
-
-	// Centralized factory method for StateGameMain
-	public StateGameMain createGameStateMain() {
-		GameMap.loadMap();
-		unitManager.init(
-			GameMap.getAllyUnitPositions(),
-			GameMap.getEnemyUnitPositions(),
-			GameMap.getFlagPositions()
-		);
-		GameFogWar fogWar = new GameFogWar(GameMap.mapdata.length, GameMap.mapdata[0].length);
-		GraphicsMain graphicsMain = new GraphicsMain(fogWar);
-		return new StateGameMain(this, unitManager, fogWar, graphicsMain);
-	}
-
-	public void changeState() {
-		if (nextState != GameState.STATE_NULL) {
-			switch (nextState) {
-				case STATE_MENU:
-					currentState = new StateGameMenu(this, unitManager);
-					break;
-				case STATE_INSTRUCT:
-					currentState = new StateGameInstructions(this, unitManager);
-					break;
-				case STATE_MAIN:
-					currentState = createGameStateMain();
-					break;
-				case STATE_STARTLVL:
-					currentState = new StateGameStartLevel(this, unitManager);
-					break;
-				case STATE_GAMEOVER:
-					currentState = new StateGameOver(this, unitManager);
-					break;
-				case STATE_NEXTLVL:
-					currentState = new StateGameNextLevel(this, unitManager);
-					break;
-				case STATE_WIN:
-					currentState = new StateGameWin(this, unitManager);
-					break;
-			}
-
-			stateID = nextState;
-			nextState = GameState.STATE_NULL;
-		}
+		stateManager.setNewState(newState);
 	}
 
 	public void init() {
 		Thread thread = new Thread(this);
 		thread.start();
 
-		setSize(screenWidth, screenHeight);
+		setSize(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
 
 		addMouseListener(this);
 		addMouseMotionListener(this);
 
 		setFont(new Font("Comic Sans", Font.BOLD, 24));
-		GameImage.setImgData(GameImagePreloader.loadGameImages());
-        GameImage.setTileData(GameImagePreloader.loadTileImages());
-		GameImage.generateDarkImages();
+		GameImageManager.setImgData(GameImagePreloader.loadGameImages());
+        GameImageManager.setTileData(GameImagePreloader.loadTileImages());
+		GameImageManager.generateDarkImages();
 
 		// create backbuffer
 		width = getWidth();
@@ -125,7 +64,7 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 			GameMap.getFlagPositions()
 		);
 
-		currentState = new StateGameMenu(this, unitManager);
+		stateManager = new GameStateManager(this, unitManager);
 	}
 
 	/*
@@ -161,8 +100,8 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		offscr.setColor(Color.black);
 		offscr.fillRect(0, 0, width, height);
 
-		currentState.run();
-		this.changeState();
+		stateManager.getCurrentState().run();
+		stateManager.changeState();
 
 		// send back buffer to front buffer
 		g.drawImage(offscreenImage, 0, 0, this);
@@ -183,7 +122,7 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		final int margin = 25;
 		// scroll with mouse
 		// scroll right
-		if (e.getX() > screenWidth - margin) {
+		if (e.getX() > Constants.SCREEN_WIDTH - margin) {
 			cameraX += scrollAmount;
 			setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
 		}
@@ -194,7 +133,7 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		}
 
 		// scroll down
-		if (e.getY() > screenHeight - margin) {
+		if (e.getY() > Constants.SCREEN_HEIGHT - margin) {
 			cameraY += scrollAmount;
 			setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
 		}
@@ -205,8 +144,8 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		}
 
 		// don't scroll at all
-		if (e.getX() > 50 && e.getX() < screenWidth - 50
-				&& e.getY() > 50 && e.getY() < screenHeight - 50)
+		if (e.getX() > 50 && e.getX() < Constants.SCREEN_WIDTH - 50
+				&& e.getY() > 50 && e.getY() < Constants.SCREEN_HEIGHT - 50)
 			setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
 
 		// keep camera inside map
@@ -224,20 +163,44 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 			cameraX = 400 + scrollAmount;
 
 		// too far down
-		if (cameraY > screenHeight)
-			cameraY = screenHeight;
+		if (cameraY > Constants.SCREEN_HEIGHT)
+			cameraY = Constants.SCREEN_HEIGHT;
 
 		// make sure world display changes
 		repaint();
 	}
 
+	// Input abstraction support
+	private List<GameMouseListener> mouseListeners = new ArrayList<>();
+
+	public void addGameMouseListener(GameMouseListener listener) {
+		mouseListeners.add(listener);
+	}
+
+	public void clearGameMouseListeners() {
+		mouseListeners.clear();
+	}
+
+	private void dispatchGameMouseEvent(GameMouseEvent event) {
+		for (GameMouseListener listener : mouseListeners) {
+			listener.onGameMouseEvent(event);
+		}
+	}
+
 	public void mouseDragged(MouseEvent e) {
-		if (currentState instanceof StateGameMain)
-			Mouse.dragSelectBox(e);
+		GameMouseEvent ge = new GameMouseEvent(
+			GameMouseEvent.Type.DRAGGED, e.getX(), e.getY(), e.getButton()
+		);
+		dispatchGameMouseEvent(ge);
+		if (stateManager.getCurrentState() instanceof StateGameMain)
+			Mouse.dragSelectBox(ge);
 	}
 
 	public void mouseMoved(MouseEvent e) {
-		if (currentState instanceof StateGameMain)
+		dispatchGameMouseEvent(new GameMouseEvent(
+			GameMouseEvent.Type.MOVED, e.getX(), e.getY(), e.getButton()
+		));
+		if (stateManager.getCurrentState() instanceof StateGameMain)
 			mouseScrollWorld(e);
 	}
 
@@ -250,15 +213,22 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 
 	// Mouse should only be held down when forming selection boxes in-game
 	public void mousePressed(MouseEvent e) {
-		if (currentState instanceof StateGameMain)
-			Mouse.createSelectBox(e);
+		GameMouseEvent ge = new GameMouseEvent(
+			GameMouseEvent.Type.PRESSED, e.getX(), e.getY(), e.getButton()
+		);
+		dispatchGameMouseEvent(ge);
+		if (stateManager.getCurrentState() instanceof StateGameMain)
+			Mouse.createSelectBox(ge);
 	}
 
 	// Form a selection box in-game
 	public void mouseReleased(MouseEvent e) {
-		currentState.handleMouseCommand(e);
+		GameMouseEvent ge = new GameMouseEvent(
+			GameMouseEvent.Type.RELEASED, e.getX(), e.getY(), e.getButton()
+		);
+		stateManager.getCurrentState().handleMouseCommand(ge);
 
-		if (currentState instanceof StateGameMain)
+		if (stateManager.getCurrentState() instanceof StateGameMain)
 			Mouse.releaseSelectBox();
 	}
 

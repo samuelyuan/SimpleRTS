@@ -76,7 +76,6 @@ public class GameFlag {
 
 	public void runLogic() {
 		handleControl();
-		draw(SimpleRTS.offscr);
 	}
 
 	public void shiftToFaction(int unitX, int unitY, int factionId) {
@@ -133,23 +132,11 @@ public class GameFlag {
 
 	public Rect getBoundingBoxForState() {
 		// Calculate the bounding box for the health bar
-		int width = (int) ((double) (GameMap.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
-		int height = GameMap.TILE_HEIGHT / 8;
-		int x = mapX * GameMap.TILE_WIDTH - SimpleRTS.cameraX + 2;
-		int y = mapY * GameMap.TILE_HEIGHT + GameMap.TILE_HEIGHT / 8 - SimpleRTS.cameraY;
+		int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
+		int height = Constants.TILE_HEIGHT / 8;
+		int x = mapX * Constants.TILE_WIDTH - SimpleRTS.cameraX + 2;
+		int y = mapY * Constants.TILE_HEIGHT + Constants.TILE_HEIGHT / 8 - SimpleRTS.cameraY;
 
 		return new Rect(x, y, width, height);
-	}
-
-	public void draw(Graphics g) {
-		// Make sure the color and bounding box are updated before drawing
-		this.flagColor = getColorForFaction();
-		this.boundingBox = getBoundingBoxForState();
-
-		// Use the updated color
-		g.setColor(flagColor.toAwtColor());
-
-		// Draw the health bar with the updated bounding box
-		g.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
 	}
 }

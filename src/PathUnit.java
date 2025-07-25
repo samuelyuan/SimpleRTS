@@ -93,8 +93,8 @@ public class PathUnit {
 
 			if (map[playerMapDest.y + dy][playerMapDest.x + dx] == 0) {
 				newDest = new Point(
-					(playerMapDest.x + dx) * GameMap.TILE_WIDTH,
-					(playerMapDest.y + dy) * GameMap.TILE_HEIGHT
+					(playerMapDest.x + dx) * Constants.TILE_WIDTH,
+					(playerMapDest.y + dy) * Constants.TILE_HEIGHT
 				);
 				break;
 			}
@@ -117,8 +117,8 @@ public class PathUnit {
 		 * 
 		 * if (map[playerMapDest.y + dy][playerMapDest.x + dx] == 0)
 		 * {
-		 * newDest.x = (playerMapDest.x + dx) * GameMap.TILE_WIDTH;
-		 * newDest.y = (playerMapDest.y + dy) * GameMap.TILE_HEIGHT;
+		 * newDest.x = (playerMapDest.x + dx) * Constants.TILE_WIDTH;
+		 * newDest.y = (playerMapDest.y + dy) * Constants.TILE_HEIGHT;
 		 * isTileFound = true;
 		 * }
 		 * 
@@ -149,8 +149,8 @@ public class PathUnit {
 		// Get location of next waypoint
 		// Since the path is stored backwards, get the last node first
 		MapNode mapLocation = movePath.get(nodeCounter);
-		int destPosX = mapLocation.getX() * GameMap.TILE_WIDTH;
-		int destPosY = mapLocation.getY() * GameMap.TILE_HEIGHT;
+		int destPosX = mapLocation.getX() * Constants.TILE_WIDTH;
+		int destPosY = mapLocation.getY() * Constants.TILE_HEIGHT;
 
 		nextLocation = new PathVector2D(destPosX, destPosY);
 		updateLocation(nextLocation);

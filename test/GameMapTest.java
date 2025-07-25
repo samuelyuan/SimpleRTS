@@ -140,11 +140,11 @@ public class GameMapTest {
     @Test
     public void testGenerateMapTileStrings() {
         // Set up a simple map for testing
-        GameMap.mapdata = new int[][] {
+        int[][] mapdata = new int[][] {
             {0, 1, 8},
             {5, 6, 9}
         };
-        String[][] tileStrings = GameMap.generateMapTileStrings();
+        String[][] tileStrings = GameMap.generateMapTileStrings(mapdata);
         assertEquals(2, tileStrings.length);
         assertEquals(3, tileStrings[0].length);
 

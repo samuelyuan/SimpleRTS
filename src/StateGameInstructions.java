@@ -1,9 +1,8 @@
-import java.awt.Font;
-import java.awt.event.MouseEvent;
-
 import graphics.AwtGraphicsAdapter;
 import graphics.Color;
+import graphics.GameFont;
 import graphics.IGraphics;
+import input.GameMouseEvent;
 import ui.UIButton;
 import ui.UIComponent;
 import ui.UILabel;
@@ -18,65 +17,67 @@ public class StateGameInstructions extends StateMachine {
         this.unitManager = unitManager;
 
         // Fonts and color
-        Font mainFont = new Font("Comic Sans", Font.BOLD, 20);
-        Font sectionFont = new Font("Comic Sans", Font.BOLD, 18);
-        Font bodyFont = new Font("Comic Sans", Font.PLAIN, 16);
+        GameFont mainFont = new GameFont("Comic Sans", GameFont.BOLD, 20);
+        GameFont sectionFont = new GameFont("Comic Sans", GameFont.BOLD, 18);
+        GameFont bodyFont = new GameFont("Comic Sans", GameFont.PLAIN, 16);
         Color color = Color.BLACK;
 
-        root = new UIComponent(0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight) {
+        root = new UIComponent(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT) {
             @Override
             protected void draw(IGraphics g) {
                 // Draw background image
-                g.drawImage(GameImage.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, SimpleRTS.screenWidth, SimpleRTS.screenHeight);
+                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
                 // Draw title image
-                g.drawImage(GameImage.getImage(ImageConstants.IMGID_MENU_INSTRUCT), SimpleRTS.screenWidth / 2 - 300, 50, 600, 400);
+                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_MENU_INSTRUCT), Constants.SCREEN_WIDTH / 2 - 300, 50, 600, 400);
             }
         };
 
         // Section: About
-        UILabel aboutHeader = new UILabel(SimpleRTS.screenWidth / 2 - 25, 150, "About");
+        UILabel aboutHeader = new UILabel(Constants.SCREEN_WIDTH / 2 - 25, 150, "About");
         aboutHeader.setFont(sectionFont);
         aboutHeader.setColor(color);
         root.addChild(aboutHeader);
 
-        UILabel aboutBody = new UILabel(SimpleRTS.screenWidth / 2 - 250, 175, "The player commands allied (blue) units to defeat enemy (red) units.");
+        UILabel aboutBody = new UILabel(Constants.SCREEN_WIDTH / 2 - 250, 175, "The player commands allied (blue) units to defeat enemy (red) units.");
         aboutBody.setFont(bodyFont);
         aboutBody.setColor(color);
         root.addChild(aboutBody);
 
         // Section: Controls
-        UILabel controlsHeader = new UILabel(SimpleRTS.screenWidth / 2 - 25, 200, "Controls");
+        UILabel controlsHeader = new UILabel(Constants.SCREEN_WIDTH / 2 - 25, 200, "Controls");
         controlsHeader.setFont(sectionFont);
         controlsHeader.setColor(color);
         root.addChild(controlsHeader);
 
-        UILabel controlsBody1 = new UILabel(SimpleRTS.screenWidth / 2 - 250, 225, "First select all units by left clicking and dragging the mouse");
+        UILabel controlsBody1 = new UILabel(Constants.SCREEN_WIDTH / 2 - 250, 225, "First select all units by left clicking and dragging the mouse");
         controlsBody1.setFont(bodyFont);
         controlsBody1.setColor(color);
         root.addChild(controlsBody1);
 
-        UILabel controlsBody2 = new UILabel(SimpleRTS.screenWidth / 2 - 250, 250, "Then, right click a point on the map as the destination.");
+        UILabel controlsBody2 = new UILabel(Constants.SCREEN_WIDTH / 2 - 250, 250, "Then, right click a point on the map as the destination.");
         controlsBody2.setFont(bodyFont);
         controlsBody2.setColor(color);
         root.addChild(controlsBody2);
 
         // Return button
-        int buttonLeft = SimpleRTS.screenWidth / 2 - 100;
+        int buttonLeft = Constants.SCREEN_WIDTH / 2 - 100;
         int buttonTop = 350;
         int buttonWidth = 200, buttonHeight = 50;
         UIButton returnButton = new UIButton(buttonLeft, buttonTop, buttonWidth, buttonHeight, "Return", () -> {
-            simpleRTS.setNewState(SimpleRTS.GameState.STATE_MENU);
+            simpleRTS.setNewState(GameState.STATE_MENU);
         });
         returnButton.setFont(mainFont);
         returnButton.setColor(color);
         root.addChild(returnButton);
+        simpleRTS.clearGameMouseListeners();
+        UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
     }
 
     public void run() {
         root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
     }
 
-    public void handleMouseCommand(MouseEvent e) {
+    public void handleMouseCommand(GameMouseEvent e) {
         root.handleMouse(e);
     }
 }

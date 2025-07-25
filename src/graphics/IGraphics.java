@@ -1,12 +1,13 @@
 package graphics;
 
-import graphics.Color;
-import java.awt.Font;
-import java.awt.Image;
-
 public interface IGraphics {
     void setColor(Color color);
-    void setFont(Font font);
+    void setFont(GameFont font);
     void drawString(String str, int x, int y);
-    void drawImage(Image img, int x, int y, int width, int height);
+    void drawImage(GameImage img, int x, int y, int width, int height);
+    void fillRect(int x, int y, int width, int height);
+    void drawRect(int x, int y, int width, int height);
+    void fillPolygon(int[] xPoints, int[] yPoints, int nPoints);
+    void drawPolygon(int[] xPoints, int[] yPoints, int nPoints);
+    IFontMetrics getFontMetrics(GameFont font);
 } 
