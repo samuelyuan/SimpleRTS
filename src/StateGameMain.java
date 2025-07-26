@@ -1,7 +1,6 @@
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import graphics.AwtGraphicsAdapter;
 import graphics.Point;
 import input.GameMouseEvent;
 import map.TileConverter;
@@ -14,25 +13,27 @@ public class StateGameMain extends StateMachine {
 
 	private boolean isSpawned = false; // only spawn once per day
 	private GameUnitManager unitManager;
-	private SimpleRTS simpleRTS;
+	private GameStateManager stateManager;
 
-	public StateGameMain(SimpleRTS simpleRTS, GameUnitManager unitManager, GameFogWar fogWar, GraphicsMain graphicsMain) {
-		this.simpleRTS = simpleRTS;
+	public StateGameMain(GameStateManager stateManager, GameUnitManager unitManager, GameFogWar fogWar,
+			GraphicsMain graphicsMain) {
+		this.stateManager = stateManager;
 		this.unitManager = unitManager;
 		this.fogWar = fogWar;
 		this.graphicsMain = graphicsMain;
 	}
 
-	public void run() {
-		int[][] map = GameMap.mapdata;
+	public void run(graphics.IGraphics g) {
+		int[][] map = this.stateManager.getGameMap().mapdata;
 
-		// If fogWar or graphicsMain not initialized (e.g., map loaded after constructor)
+		// If fogWar or graphicsMain not initialized (e.g., map loaded after
+		// constructor)
 		if (fogWar == null || graphicsMain == null) {
 			fogWar = new GameFogWar(map.length, map[0].length);
-			graphicsMain = new GraphicsMain(fogWar);
+			graphicsMain = new GraphicsMain(stateManager, fogWar);
 		}
 
-		graphicsMain.drawGraphics(new AwtGraphicsAdapter(simpleRTS.offscr), gameTimer, unitManager);
+		graphicsMain.drawGraphics(g, gameTimer, unitManager);
 
 		// Add capture the flag system
 		Iterator<GameFlag> itrFlag = unitManager.getFlagManager().getFlagList();
@@ -104,23 +105,23 @@ public class StateGameMain extends StateMachine {
 		// terminating condition
 		if (unitManager.isFlagsListEmpty(factionId)) {
 			if (factionId == GameFlag.FACTION_PLAYER) {
-				simpleRTS.setNewState(GameState.STATE_GAMEOVER); // player loses all flags, game over
+				stateManager.setNewState(GameState.STATE_GAMEOVER); // player loses all flags, game over
 			} else if (factionId == GameFlag.FACTION_ENEMY) {
-				simpleRTS.setNewState(GameState.STATE_NEXTLVL); // enemy loses all flags, win
+				stateManager.setNewState(GameState.STATE_NEXTLVL); // enemy loses all flags, win
 			}
 		}
 	}
 
 	public void runPlayerLogic(int[][] map, GameUnit playerUnit) {
 		// select and move units
-		playerUnit.isPlayerSelected = Mouse.isPlayerSelect(playerUnit.getCurrentPoint(), playerUnit.isClickedOn);
+		playerUnit.isPlayerSelected = Mouse.isPlayerSelect(playerUnit.getCurrentPoint(), playerUnit.isClickedOn,
+				stateManager.getCameraX(), stateManager.getCameraY());
 
 		playerUnit.findPath(map, unitManager.getPlayerList());
 
 		// check collisions with other players once
 		// for (int j = 0; j < i; j++)
-		// UnitManager.pHandleOverlap(SimpleRTS.playerList.get(i),
-		// SimpleRTS.playerList.get(j));
+		// UnitManager.pHandleOverlap(playerList.get(i), playerList.get(j));
 
 		// handle battles
 		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
@@ -206,17 +207,12 @@ public class StateGameMain extends StateMachine {
 
 		// Create new unit
 		GameUnit newUnit = new GameUnit(x * Constants.TILE_WIDTH, y * Constants.TILE_HEIGHT,
-				(factionId == GameFlag.FACTION_PLAYER), GameUnit.UNIT_ID_LIGHT);
+				(factionId == GameFlag.FACTION_PLAYER), Constants.UNIT_ID_LIGHT);
 		// newUnit.setSpeed(2);
 		newUnit.spawn(map, new Point(x, y), factionId);
 
 		// Add unit to list
 		unitList.add(newUnit);
-
-		// if (factionId== GameFlag.FACTION_PLAYER)
-		// GameUnitManager.addPlayerUnit(newUnit, SimpleRTS.playerList);
-		// else if (factionId == GameFlag.FACTION_ENEMY)
-		// GameUnitManager.addEnemyUnit(newUnit, SimpleRTS.enemyList);
 	}
 
 	// Use the mouse to send player units to various locations.
@@ -227,7 +223,7 @@ public class StateGameMain extends StateMachine {
 			// right mouse click dictates player position
 			if (e.button == 3 && player.isPlayerSelected) {
 				// offset for scrolling camera
-				player.destination = new Point(e.x + SimpleRTS.cameraX, e.y + SimpleRTS.cameraY);
+				player.destination = new Point(e.x + stateManager.getCameraX(), e.y + stateManager.getCameraY());
 
 				// destX, destY must be multiples of tile_width and tile_height to simplify
 				// pathfinder calculations
@@ -238,7 +234,7 @@ public class StateGameMain extends StateMachine {
 				player.startMoving();
 			}
 
-			player.isClickedOn = Mouse.isClickOnUnit(e, player.getCurrentPoint());
+			player.isClickedOn = Mouse.isClickOnUnit(e, player.getCurrentPoint(), stateManager.getCameraX(), stateManager.getCameraY());
 		}
 	}
 }

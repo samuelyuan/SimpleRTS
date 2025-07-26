@@ -54,12 +54,12 @@ public class Mouse {
 		return x >= boxX1 && x <= boxX2 && y >= boxY1 && y <= boxY2;
 	}
 
-	public static boolean isPlayerSelect(Point currentPosition, boolean isClickedOn) {
+	public static boolean isPlayerSelect(Point currentPosition, boolean isClickedOn, int cameraX, int cameraY) {
 		// Mouse released
 		if (!Mouse.isPressed) {
 			// Check selection box
-			if (isInSelectionBox(currentPosition.x + Constants.TILE_WIDTH / 2 - SimpleRTS.cameraX,
-					currentPosition.y + Constants.TILE_HEIGHT / 2 - SimpleRTS.cameraY)) {
+			if (isInSelectionBox(currentPosition.x + Constants.TILE_WIDTH / 2 - cameraX,
+					currentPosition.y + Constants.TILE_HEIGHT / 2 - cameraY)) {
 				return true;
 			} 
 			// Or click on the unit
@@ -68,12 +68,12 @@ public class Mouse {
 		return false;
 	}
 
-	public static boolean isClickOnUnit(GameMouseEvent e, Point currentPosition) {
+	public static boolean isClickOnUnit(GameMouseEvent e, Point currentPosition, int cameraX, int cameraY) {
 		return e.button == 1
-				&& currentPosition.x - SimpleRTS.cameraX <= e.x
-				&& currentPosition.y - SimpleRTS.cameraY <= e.y
-				&& currentPosition.x + Constants.TILE_WIDTH - SimpleRTS.cameraX >= e.x
-				&& currentPosition.y + Constants.TILE_HEIGHT - SimpleRTS.cameraY >= e.y;
+				&& currentPosition.x - cameraX <= e.x
+				&& currentPosition.y - cameraY <= e.y
+				&& currentPosition.x + Constants.TILE_WIDTH - cameraX >= e.x
+				&& currentPosition.y + Constants.TILE_HEIGHT - cameraY >= e.y;
 
 	}
 }

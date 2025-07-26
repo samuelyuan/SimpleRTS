@@ -17,6 +17,7 @@ import graphics.GameImage;
 public class GraphicsMain {
 	private static boolean isNight;
 	private GameFogWar fogWar;
+	private GameStateManager stateManager;
 
 	// HUD UI components
 	private UIComponent hudRoot;
@@ -26,7 +27,8 @@ public class GraphicsMain {
 	private UILabel timerHourLabel;
 
 	// Add a constructor to inject fogWar
-	public GraphicsMain(GameFogWar fogWar) {
+	public GraphicsMain(GameStateManager stateManager, GameFogWar fogWar) {
+		this.stateManager = stateManager;
 		this.fogWar = fogWar;
 		setupHUD();
 	}
@@ -34,7 +36,8 @@ public class GraphicsMain {
 	private void setupHUD() {
 		hudRoot = new UIComponent(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT) {
 			@Override
-			protected void draw(graphics.IGraphics g) {}
+			protected void draw(graphics.IGraphics g) {
+			}
 		};
 		// Player panel
 		playerCountLabel = new UILabel(Constants.SCREEN_WIDTH / 2 - 100, Constants.SCREEN_HEIGHT - 100 + 65, "");
@@ -58,28 +61,26 @@ public class GraphicsMain {
 	}
 
 	// helper functions
-	
+
 	public void drawImageOnScreen(IGraphics g, java.awt.Image img, int x, int y, int width, int height) {
-		g.drawImage(new GameImage(img), x - SimpleRTS.cameraX, y - SimpleRTS.cameraY, width, height);
+		g.drawImage(new GameImage(img), x - stateManager.getCameraX(), y - stateManager.getCameraY(), width, height);
 	}
 
-	
 	public void drawRectOnScreen(IGraphics g, int x, int y, int width, int height, boolean fill) {
 		if (fill) {
-			g.fillRect(x - SimpleRTS.cameraX, y - SimpleRTS.cameraY, width, height);
+			g.fillRect(x - stateManager.getCameraX(), y - stateManager.getCameraY(), width, height);
 		} else {
-			g.drawRect(x - SimpleRTS.cameraX, y - SimpleRTS.cameraY, width, height);
+			g.drawRect(x - stateManager.getCameraX(), y - stateManager.getCameraY(), width, height);
 		}
 	}
 
-	
 	public void drawInstruction(IGraphics g, DrawingInstruction instr) {
 		Rect r = instr.rect;
 		g.setColor(instr.color);
 		if (instr.fill) {
-			g.fillRect(r.x - SimpleRTS.cameraX, r.y - SimpleRTS.cameraY, r.width, r.height);
+			g.fillRect(r.x - stateManager.getCameraX(), r.y - stateManager.getCameraY(), r.width, r.height);
 		} else {
-			g.drawRect(r.x - SimpleRTS.cameraX, r.y - SimpleRTS.cameraY, r.width, r.height);
+			g.drawRect(r.x - stateManager.getCameraX(), r.y - stateManager.getCameraY(), r.width, r.height);
 		}
 	}
 
@@ -87,10 +88,10 @@ public class GraphicsMain {
 		// draw according to a day/night cycle
 		isNight = gameTimer.isNight();
 
-		fogWar.calculateFogOfWar(unitManager.getPlayerList(), GameMap.mapdata);
+		fogWar.calculateFogOfWar(unitManager.getPlayerList(), stateManager.getGameMap().mapdata);
 
 		// Draw the map first
-		drawMapTiles(g, GameMap.getDrawData());
+		drawMapTiles(g, stateManager.getGameMap().getDrawData());
 
 		// Draw the units
 		for (int i = 0; i < unitManager.getPlayerList().size(); i++) {
@@ -110,7 +111,7 @@ public class GraphicsMain {
 		}
 
 		// draw fog (although this should be done before drawing units, not after
-		renderFog(g, GameMap.getDrawData());
+		renderFog(g, stateManager.getGameMap().getDrawData());
 
 		// Draw everything else
 		drawMouseSelectionBox(g);
@@ -122,11 +123,11 @@ public class GraphicsMain {
 		timerHourLabel.setText(gameTimer.getHour() + ":00");
 		// Draw player/enemy panel backgrounds and timer image
 		g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_SUPPLY_PLAYER),
-			Constants.SCREEN_WIDTH / 2 - 250, Constants.SCREEN_HEIGHT - 100, 200, 100);
+				Constants.SCREEN_WIDTH / 2 - 250, Constants.SCREEN_HEIGHT - 100, 200, 100);
 		g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_SUPPLY_ENEMY),
-			Constants.SCREEN_WIDTH / 2 + 100, Constants.SCREEN_HEIGHT - 100, 200, 100);
+				Constants.SCREEN_WIDTH / 2 + 100, Constants.SCREEN_HEIGHT - 100, 200, 100);
 		g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_GAME_TIMER),
-			Constants.SCREEN_WIDTH / 2 - 50, Constants.SCREEN_HEIGHT - 100, 150, 100);
+				Constants.SCREEN_WIDTH / 2 - 50, Constants.SCREEN_HEIGHT - 100, 150, 100);
 		// Render the HUD
 		hudRoot.render(g);
 	}
@@ -138,11 +139,10 @@ public class GraphicsMain {
 			for (int x = 0; x < mapData[y].length; x++) {
 				if (!fogWar.isTileVisible(x, y)) {
 					Rect rect = new Rect(
-						x * Constants.TILE_WIDTH,
-						y * Constants.TILE_HEIGHT,
-						Constants.TILE_WIDTH,
-						Constants.TILE_HEIGHT
-					);
+							x * Constants.TILE_WIDTH,
+							y * Constants.TILE_HEIGHT,
+							Constants.TILE_WIDTH,
+							Constants.TILE_HEIGHT);
 					fogRects.add(new DrawingInstruction(rect, new Color(226, 226, 226), true));
 				}
 			}
@@ -177,7 +177,8 @@ public class GraphicsMain {
 		// change direction for all units, not just player units!
 		if (unit.isPathCreated() && unit.isAlive()) {
 			Point mapDest = unit.getMapPoint(unit.destination);
-			unit.direction = calculateDirection(unit.getCurrentPoint(), new Point(mapDest.x * Constants.TILE_WIDTH, mapDest.y * Constants.TILE_HEIGHT));
+			unit.direction = calculateDirection(unit.getCurrentPoint(),
+					new Point(mapDest.x * Constants.TILE_WIDTH, mapDest.y * Constants.TILE_HEIGHT));
 		}
 
 		// draw the sprite
@@ -196,7 +197,8 @@ public class GraphicsMain {
 			for (int x = 0; x < mapData[y].length; x++) {
 				java.awt.Image tempImg;
 				String tileStr = mapData[y][x];
-				tempImg = (java.awt.Image) GameImageManager.getImage(getTileImageKey(tileStr), isNight).getBackendImage();
+				tempImg = (java.awt.Image) GameImageManager.getImage(getTileImageKey(tileStr), isNight)
+						.getBackendImage();
 
 				drawImageOnScreen(g, tempImg, x * Constants.TILE_WIDTH, y * Constants.TILE_HEIGHT,
 						Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
@@ -204,34 +206,41 @@ public class GraphicsMain {
 		}
 	}
 
-	
 	public void drawUnitSprite(IGraphics g, Point current, int classType, boolean isPlayerUnit, int direction) {
 		// display unit based off of class type
 		// also, add a distinct team color to units
 		g.setColor(Color.BLACK);
 		BufferedImage newImg = null;
-		if (classType == GameUnit.UNIT_ID_LIGHT) {
+		if (classType == Constants.UNIT_ID_LIGHT) {
 			if (isPlayerUnit) {
-				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_LIGHT_PLAYER, isNight).getBackendImage();
+				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_LIGHT_PLAYER, isNight)
+						.getBackendImage();
 			} else {
-				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_LIGHT_ENEMY, isNight).getBackendImage();
+				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_LIGHT_ENEMY, isNight)
+						.getBackendImage();
 			}
 			// calculate direction
-			newImg = newImg.getSubimage(Constants.TILE_WIDTH * direction, 0, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
-		} else if (classType == GameUnit.UNIT_ID_MEDIUM) {
-			newImg = (BufferedImage) ImageUtils.addTeamColorToUnit(GameImageManager.getImage(TileConverter.STR_UNIT_MEDIUM), isPlayerUnit).getBackendImage();
-		} else if (classType == GameUnit.UNIT_ID_HEAVY) {
+			newImg = newImg.getSubimage(Constants.TILE_WIDTH * direction, 0, Constants.TILE_WIDTH,
+					Constants.TILE_HEIGHT);
+		} else if (classType == Constants.UNIT_ID_MEDIUM) {
+			newImg = (BufferedImage) ImageUtils
+					.addTeamColorToUnit(GameImageManager.getImage(TileConverter.STR_UNIT_MEDIUM), isPlayerUnit)
+					.getBackendImage();
+		} else if (classType == Constants.UNIT_ID_HEAVY) {
 			if (isPlayerUnit) {
-				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_HEAVY_PLAYER, isNight).getBackendImage();
+				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_HEAVY_PLAYER, isNight)
+						.getBackendImage();
 			} else {
-				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_HEAVY_ENEMY, isNight).getBackendImage();
+				newImg = (BufferedImage) GameImageManager.getImage(TileConverter.STR_UNIT_HEAVY_ENEMY, isNight)
+						.getBackendImage();
 			}
 			// calculate direction
-			newImg = newImg.getSubimage(Constants.TILE_WIDTH * direction, 0, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
+			newImg = newImg.getSubimage(Constants.TILE_WIDTH * direction, 0, Constants.TILE_WIDTH,
+					Constants.TILE_HEIGHT);
 		}
 		this.drawImageOnScreen(g, newImg, current.x, current.y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
 	}
-	
+
 	public DrawingInstruction getHealthBarInstruction(int health, Point current) {
 		Color healthColor;
 		if (health > 75) {
@@ -255,7 +264,6 @@ public class GraphicsMain {
 		return new DrawingInstruction(rect, healthColor, true);
 	}
 
-	
 	public void drawHealthBar(IGraphics g, int health, Point current) {
 		DrawingInstruction instr = this.getHealthBarInstruction(health, current);
 		if (instr != null) {
@@ -263,7 +271,6 @@ public class GraphicsMain {
 		}
 	}
 
-	
 	public DrawingInstruction getMouseSelectionInstruction() {
 		if (!Mouse.isPressed)
 			return null;
@@ -271,8 +278,8 @@ public class GraphicsMain {
 		Mouse.sortSelectionCoordinates(); // ensures coordinates are ordered
 
 		Rect rect = new Rect(
-				Mouse.boxX1 + SimpleRTS.cameraX,
-				Mouse.boxY1 + SimpleRTS.cameraY,
+				Mouse.boxX1 + stateManager.getCameraX(),
+				Mouse.boxY1 + stateManager.getCameraY(),
 				Mouse.boxX2 - Mouse.boxX1,
 				Mouse.boxY2 - Mouse.boxY1);
 
@@ -290,8 +297,8 @@ public class GraphicsMain {
 		int minimapWidth = 200;
 		int minimapHeight = 200;
 
-		int mapCols = GameMap.mapdata[0].length;
-		int mapRows = GameMap.mapdata.length;
+		int mapCols = stateManager.getGameMap().mapdata[0].length;
+		int mapRows = stateManager.getGameMap().mapdata.length;
 
 		int tileWidth = minimapWidth / mapCols;
 		int tileHeight = minimapHeight / mapRows;
@@ -301,7 +308,7 @@ public class GraphicsMain {
 
 		for (int y = 0; y < mapRows; y++) {
 			for (int x = 0; x < mapCols; x++) {
-				int tile = GameMap.mapdata[y][x];
+				int tile = stateManager.getGameMap().mapdata[y][x];
 				String tileStr = TileConverter.tileIntToStr(tile);
 				Image tileImg = (java.awt.Image) GameImageManager.getImage(tileStr).getBackendImage();
 
@@ -341,9 +348,9 @@ public class GraphicsMain {
 		int deltaX = destination.x - current.x;
 		int deltaY = destination.y - current.y;
 		if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-			return (deltaX > 0) ? GameUnit.DIR_EAST : GameUnit.DIR_WEST;
+			return (deltaX > 0) ? Constants.DIR_EAST : Constants.DIR_WEST;
 		} else {
-			return (deltaY > 0) ? GameUnit.DIR_SOUTH : GameUnit.DIR_NORTH;
+			return (deltaY > 0) ? Constants.DIR_SOUTH : Constants.DIR_NORTH;
 		}
 	}
 
@@ -358,7 +365,7 @@ public class GraphicsMain {
 	public void drawFlag(IGraphics g, GameFlag flag) {
 		// Set color based on faction
 		Color flagColor = flag.getColorForFaction();
-		Rect boundingBox = flag.getBoundingBoxForState();
+		Rect boundingBox = flag.getBoundingBoxForState(stateManager.getCameraX(), stateManager.getCameraY());
 		g.setColor(flagColor);
 		g.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
 	}

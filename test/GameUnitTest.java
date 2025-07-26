@@ -27,9 +27,9 @@ public class GameUnitTest {
         };
 
         // Initialize units
-        playerUnit = new GameUnit(2, 2, true, GameUnit.UNIT_ID_LIGHT);  // Player unit at (2, 2)
-        enemyUnit = new GameUnit(3, 3, false, GameUnit.UNIT_ID_MEDIUM); // Enemy unit at (3, 3)
-        neutralUnit = new GameUnit(4, 4, false, GameUnit.UNIT_ID_HEAVY); // Neutral unit at (4, 4)
+        playerUnit = new GameUnit(2, 2, true, Constants.UNIT_ID_LIGHT);  // Player unit at (2, 2)
+        enemyUnit = new GameUnit(3, 3, false, Constants.UNIT_ID_MEDIUM); // Enemy unit at (3, 3)
+        neutralUnit = new GameUnit(4, 4, false, Constants.UNIT_ID_HEAVY); // Neutral unit at (4, 4)
     }
 
     @Test
@@ -53,7 +53,7 @@ public class GameUnitTest {
         playerUnit.spawn(map, new Point(2, 2), GameFlag.FACTION_PLAYER);
 
         // Verify that the map has been updated correctly for the player faction
-        assertEquals(GameUnit.UNIT_ID_LIGHT + 1, map[2][2], "The unit should be spawned with the correct faction ID");
+        assertEquals(Constants.UNIT_ID_LIGHT + 1, map[2][2], "The unit should be spawned with the correct faction ID");
     }
 
     @Test
@@ -134,12 +134,12 @@ public class GameUnitTest {
     public void testCanAttackEnemyTrueAndFalse() {
         // Place both units in screen coordinates (adjacent tiles)
         int tileX = 2, tileY = 2;
-        playerUnit = new GameUnit(tileX * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, true, GameUnit.UNIT_ID_LIGHT);
-        GameUnit closeEnemy = new GameUnit((tileX + 1) * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
+        playerUnit = new GameUnit(tileX * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, true, Constants.UNIT_ID_LIGHT);
+        GameUnit closeEnemy = new GameUnit((tileX + 1) * Constants.TILE_WIDTH, tileY * Constants.TILE_HEIGHT, false, Constants.UNIT_ID_MEDIUM);
         assertTrue(playerUnit.canAttackEnemy(map, closeEnemy), "Should be able to attack enemy in range and visible");
 
         // Place enemy out of attack radius
-        GameUnit farEnemy = new GameUnit(100 * Constants.TILE_WIDTH, 100 * Constants.TILE_HEIGHT, false, GameUnit.UNIT_ID_MEDIUM);
+        GameUnit farEnemy = new GameUnit(100 * Constants.TILE_WIDTH, 100 * Constants.TILE_HEIGHT, false, Constants.UNIT_ID_MEDIUM);
         assertFalse(playerUnit.canAttackEnemy(map, farEnemy), "Should not be able to attack enemy out of range");
     }
 

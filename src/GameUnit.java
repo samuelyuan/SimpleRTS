@@ -6,36 +6,6 @@ import map.TileConverter;
 public class GameUnit {
 	// public int state, waypointNum, waypointX, waypointY;
 
-	/*
-	 * The units have one class type.
-	 * 
-	 * Type1 - Light unit. (Regular infantry)
-	 * Type2 - Medium unit. (Anti-armor infantry)
-	 * Type3 - Heavy unit. (Tank)
-	 * 
-	 * Type1 > Type2
-	 * The light unit outruns the medium unit.
-	 * 
-	 * Type2 > Type3
-	 * The medium unit can damage the heavy unit's armor.
-	 * 
-	 * Type3 > Type1
-	 * The heavy unit's armor reduces light unit's attack and counterattacks with
-	 * strong weapons/
-	 */
-	public static final int UNIT_ID_LIGHT = 1;
-	public static final int UNIT_ID_MEDIUM = 2;
-	public static final int UNIT_ID_HEAVY = 3;
-
-	public static final int STATE_IDLE = 1;
-	public static final int STATE_MOVE = 2;
-	public static final int STATE_ATTACK = 3;
-
-	public static final int DIR_NORTH = 0;
-	public static final int DIR_SOUTH = 1;
-	public static final int DIR_EAST = 2;
-	public static final int DIR_WEST = 3;
-
 	public Point getMapPoint(Point screenPoint) {
 		return new Point(screenPoint.x / Constants.TILE_WIDTH, screenPoint.y / Constants.TILE_HEIGHT);
 	}
@@ -126,9 +96,9 @@ public class GameUnit {
 		// make sure to adjust values (+1 for ally since code is 2, +4 for enemy, since
 		// code is 5)
 		if (factionId == GameFlag.FACTION_PLAYER)
-			map[mapPos.y][mapPos.x] = GameUnit.UNIT_ID_LIGHT + 1;
+			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 1;
 		else if (factionId == GameFlag.FACTION_ENEMY)
-			map[mapPos.y][mapPos.x] = GameUnit.UNIT_ID_LIGHT + 4;
+			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 4;
 	}
 
 	public void die(int[][] map) {
@@ -188,18 +158,18 @@ public class GameUnit {
 	}
 
 	/*
-	 * public void drawPathfinding()
+	 * public void drawPathfinding(IGraphics g, GameStateManager stateManager)
 	 * {
 	 * if (pathUnit.getIsPathCreated() == true)
 	 * {
 	 * //render the complete path from start to finish
+	 * g.setColor(Color.ORANGE);
 	 * for (int i = pathUnit.getPath().size() - 1; i >= 0; i--)
 	 * {
-	 * SimpleRTS.offscr.setColor(Color.ORANGE);
-	 * SimpleRTS.offscr.drawRect(pathUnit.getPath().get(i).getX() *
-	 * Constants.TILE_WIDTH - SimpleRTS.cameraX,
-	 * pathUnit.getPath().get(i).getY() * Constants.TILE_HEIGHT - SimpleRTS.cameraY,
-	 * Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
+	 * MapNode pathNode = pathUnit.getPath().get(i);
+	 * int screenX = pathNode.getX() * Constants.TILE_WIDTH - stateManager.getCameraX();
+	 * int screenY = pathNode.getY() * Constants.TILE_HEIGHT - stateManager.getCameraY();
+	 * g.drawRect(screenX, screenY, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
 	 * }
 	 * }
 	 * }

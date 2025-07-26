@@ -109,13 +109,13 @@ public class GameFlagTest {
 
     @Test
     public void testGetBoundingBoxForState() {
-        assertEquals(new Rect(2, 6, 48, 6), playerFlag.getBoundingBoxForState(),
+        assertEquals(new Rect(2, 6, 48, 6), playerFlag.getBoundingBoxForState(0, 0),
                 "Player flag bounding box should be correct");
 
-        assertEquals(new Rect(52, 56, 48, 6), enemyFlag.getBoundingBoxForState(),
+        assertEquals(new Rect(52, 56, 48, 6), enemyFlag.getBoundingBoxForState(0, 0),
                 "Enemy flag bounding box should be correct");
 
-        assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(),
+        assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(0, 0),
                 "Neutral flag bounding box should be correct");
     }
 }

@@ -3,7 +3,6 @@ import java.util.ArrayList;
 import ui.UIComponent;
 import ui.UIButton;
 import ui.UILabel;
-import graphics.AwtGraphicsAdapter;
 import graphics.Color;
 import graphics.GameFont;
 import graphics.IGraphics;
@@ -12,16 +11,15 @@ import input.GameMouseEvent;
 public class StateGameStartLevel extends StateMachine {
 	private ArrayList<String> description = null;
 	private UIComponent root;
-	private GameUnitManager unitManager;
-	private SimpleRTS simpleRTS;
+	private GameStateManager stateManager;
 
-	public StateGameStartLevel(SimpleRTS simpleRTS, GameUnitManager unitManager) {
-		this.simpleRTS = simpleRTS;
-		this.unitManager = unitManager;
+	public StateGameStartLevel(GameStateManager stateManager) {
+		this.stateManager = stateManager;
 		// Load description
 		boolean isBegin = true;
 		int maxLineWidth = 50;
-		description = GameMap.loadMapDescription(GameMap.numLevel, isBegin, maxLineWidth);
+		GameMap gameMap = stateManager.getGameMap();
+		description = gameMap.loadMapDescription(gameMap.numLevel, isBegin, maxLineWidth);
 
 		// Font and color for all labels/buttons
 		GameFont font = new GameFont("Comic Sans", GameFont.BOLD, 20);
@@ -51,30 +49,32 @@ public class StateGameStartLevel extends StateMachine {
 		int buttonTopMostBound = 350;
 		int buttonWidth = 200, buttonHeight = 50;
 		UIButton startButton = new UIButton(buttonLeftBound, buttonTopMostBound, buttonWidth, buttonHeight, "Start", () -> {
-			if (GameMap.numLevel <= Constants.MAX_LVL + 1)
-				simpleRTS.setNewState(GameState.STATE_MAIN);
+			GameMap gameMapBtn = stateManager.getGameMap();
+			if (gameMapBtn.numLevel <= Constants.MAX_LVL + 1)
+				stateManager.setNewState(GameState.STATE_MAIN);
 			else
-				simpleRTS.setNewState(GameState.STATE_WIN);
+				stateManager.setNewState(GameState.STATE_WIN);
 		});
 		startButton.setFont(font);
 		startButton.setColor(color);
 		root.addChild(startButton);
 		// Add Return button
 		UIButton returnButton = new UIButton(buttonLeftBound, buttonTopMostBound + 75, buttonWidth, buttonHeight, "Return", () -> {
-			simpleRTS.setNewState(GameState.STATE_MENU);
+			stateManager.setNewState(GameState.STATE_MENU);
 		});
 		returnButton.setFont(font);
 		returnButton.setColor(color);
 		root.addChild(returnButton);
-		simpleRTS.clearGameMouseListeners();
-		UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
 	}
 
-	public void run() {
-		root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+	public void run(IGraphics g) {
+		root.render(g);
 	}
 
 	public void handleMouseCommand(GameMouseEvent e) {
 		root.handleMouse(e);
 	}
+
+	@Override
+	public ui.UIComponent getRoot() { return root; }
 }

@@ -13,41 +13,21 @@ import java.util.ArrayList;
  */
 
 public class SimpleRTS extends Applet implements MouseMotionListener, MouseListener, Runnable {
-	// camera data
-	public static int cameraX = 0, cameraY = 0;
-
 	// Backbuffer data
 	private Image offscreenImage;
 	public static Graphics offscr;
 	private int width, height;
 
-	// unit data
-	private GameUnitManager unitManager = new GameUnitManager(new GameFlagManager());
-
-	public GameUnitManager getUnitManager() {
-		return unitManager;
-	}
-
 	// state handling
 	private GameStateManager stateManager;
-
-	public void setNewState(GameState newState) {
-		stateManager.setNewState(newState);
-	}
 
 	public void init() {
 		Thread thread = new Thread(this);
 		thread.start();
 
 		setSize(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
-
 		addMouseListener(this);
 		addMouseMotionListener(this);
-
-		setFont(new Font("Comic Sans", Font.BOLD, 24));
-		GameImageManager.setImgData(GameImagePreloader.loadGameImages());
-        GameImageManager.setTileData(GameImagePreloader.loadTileImages());
-		GameImageManager.generateDarkImages();
 
 		// create backbuffer
 		width = getWidth();
@@ -55,16 +35,16 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		offscreenImage = createImage(width, height);
 		offscr = offscreenImage.getGraphics();
 
-		// init player
-		GameMap.numLevel = 1;
-		GameMap.loadMap();
-		unitManager.init(
-			GameMap.getAllyUnitPositions(),
-			GameMap.getEnemyUnitPositions(),
-			GameMap.getFlagPositions()
-		);
+		// Initialize game logic and resources
+		initializeGameLogic();
+	}
 
-		stateManager = new GameStateManager(this, unitManager);
+	private void initializeGameLogic() {
+		GameImageManager.setImgData(GameImagePreloader.loadGameImages());
+        GameImageManager.setTileData(GameImagePreloader.loadTileImages());
+		GameImageManager.generateDarkImages();
+
+		stateManager = new GameStateManager(this);
 	}
 
 	/*
@@ -100,7 +80,8 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		offscr.setColor(Color.black);
 		offscr.fillRect(0, 0, width, height);
 
-		stateManager.getCurrentState().run();
+		graphics.IGraphics ig = new graphics.AwtGraphicsAdapter(offscr);
+		stateManager.getCurrentState().run(ig);
 		stateManager.changeState();
 
 		// send back buffer to front buffer
@@ -123,23 +104,23 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		// scroll with mouse
 		// scroll right
 		if (e.getX() > Constants.SCREEN_WIDTH - margin) {
-			cameraX += scrollAmount;
+			stateManager.addCameraX(scrollAmount);
 			setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
 		}
 		// scroll left
 		else if (e.getX() < margin) {
-			cameraX -= scrollAmount;
+			stateManager.addCameraX(-scrollAmount);
 			setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
 		}
 
 		// scroll down
 		if (e.getY() > Constants.SCREEN_HEIGHT - margin) {
-			cameraY += scrollAmount;
+			stateManager.addCameraY(scrollAmount);
 			setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
 		}
 		// scroll up
 		else if (e.getY() < margin) {
-			cameraY -= scrollAmount;
+			stateManager.addCameraY(-scrollAmount);
 			setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
 		}
 
@@ -150,21 +131,21 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 
 		// keep camera inside map
 		// too far left
-		if (cameraX < 0)
-			cameraX = 0;
+		if (stateManager.getCameraX() < 0)
+			stateManager.setCameraX(0);
 
 		// too far up
-		if (cameraY < 0)
-			cameraY = 0;
+		if (stateManager.getCameraY() < 0)
+			stateManager.setCameraY(0);
 
 		// Too far right or too far left depend on the size of the level!
 		// too far right
-		if (cameraX > 400 + scrollAmount)
-			cameraX = 400 + scrollAmount;
+		if (stateManager.getCameraX() > 400 + scrollAmount)
+			stateManager.setCameraX(400 + scrollAmount);
 
 		// too far down
-		if (cameraY > Constants.SCREEN_HEIGHT)
-			cameraY = Constants.SCREEN_HEIGHT;
+		if (stateManager.getCameraY() > Constants.SCREEN_HEIGHT)
+			stateManager.setCameraY(Constants.SCREEN_HEIGHT);
 
 		// make sure world display changes
 		repaint();
@@ -202,10 +183,6 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		));
 		if (stateManager.getCurrentState() instanceof StateGameMain)
 			mouseScrollWorld(e);
-	}
-
-	public static boolean isMouseInBounds(MouseEvent e, int left, int right, int top, int bottom) {
-		return e.getX() >= left && e.getX() <= right && e.getY() >= top && e.getY() <= bottom;
 	}
 
 	public void mouseClicked(MouseEvent e) {

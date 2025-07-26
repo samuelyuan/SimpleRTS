@@ -11,7 +11,7 @@ import graphics.Rect;
 public class GraphicsMainTest {
     @Test
     public void testHealthBarColor() {
-        GraphicsMain graphicsMain = new GraphicsMain(null); // fogWar not needed for this test
+        GraphicsMain graphicsMain = new GraphicsMain(null, null);
         DrawingInstruction instr = graphicsMain.getHealthBarInstruction(40, new Point(10, 10));
         assertNotNull(instr, "Instruction should not be null for health > 0");
         assertEquals(Color.ORANGE, instr.color, "Expected color for health 40 is ORANGE");
@@ -25,7 +25,12 @@ public class GraphicsMainTest {
         Mouse.selectY2 = 160;
         Mouse.isPressed = true;
 
-        GraphicsMain graphicsMain = new GraphicsMain(null); // fogWar not needed for this test
+        // Create a mock GameStateManager that returns 0 for camera coordinates
+        GameStateManager mockStateManager = mock(GameStateManager.class);
+        when(mockStateManager.getCameraX()).thenReturn(0);
+        when(mockStateManager.getCameraY()).thenReturn(0);
+
+        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null);
         DrawingInstruction instr = graphicsMain.getMouseSelectionInstruction();
 
         assertNotNull(instr);
@@ -63,17 +68,17 @@ public class GraphicsMainTest {
     @Test
     public void testCalculateDirection() {
         // East
-        assertEquals(GameUnit.DIR_EAST, GraphicsMain.calculateDirection(new Point(0, 0), new Point(10, 0)));
+        assertEquals(Constants.DIR_EAST, GraphicsMain.calculateDirection(new Point(0, 0), new Point(10, 0)));
         // West
-        assertEquals(GameUnit.DIR_WEST, GraphicsMain.calculateDirection(new Point(10, 0), new Point(0, 0)));
+        assertEquals(Constants.DIR_WEST, GraphicsMain.calculateDirection(new Point(10, 0), new Point(0, 0)));
         // South
-        assertEquals(GameUnit.DIR_SOUTH, GraphicsMain.calculateDirection(new Point(0, 0), new Point(0, 10)));
+        assertEquals(Constants.DIR_SOUTH, GraphicsMain.calculateDirection(new Point(0, 0), new Point(0, 10)));
         // North
-        assertEquals(GameUnit.DIR_NORTH, GraphicsMain.calculateDirection(new Point(0, 10), new Point(0, 0)));
+        assertEquals(Constants.DIR_NORTH, GraphicsMain.calculateDirection(new Point(0, 10), new Point(0, 0)));
         // Diagonal (East wins if deltaX == deltaY)
-        assertEquals(GameUnit.DIR_EAST, GraphicsMain.calculateDirection(new Point(0, 0), new Point(10, 10)));
+        assertEquals(Constants.DIR_EAST, GraphicsMain.calculateDirection(new Point(0, 0), new Point(10, 10)));
         // Diagonal (West wins if deltaX == -deltaY)
-        assertEquals(GameUnit.DIR_WEST, GraphicsMain.calculateDirection(new Point(10, 10), new Point(0, 0)));
+        assertEquals(Constants.DIR_WEST, GraphicsMain.calculateDirection(new Point(10, 10), new Point(0, 0)));
     }
 
     @Test

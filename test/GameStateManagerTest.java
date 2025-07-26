@@ -6,24 +6,20 @@ import static org.junit.jupiter.api.Assertions.*;
 class SimpleRTSStub extends SimpleRTS {
     // No-op stub, override as needed
 }
-class GameUnitManagerStub extends GameUnitManager {
-    public GameUnitManagerStub() { super(null); }
-}
 
 public class GameStateManagerTest {
     private SimpleRTSStub stubRTS;
-    private GameUnitManagerStub stubUnitManager;
     private GameStateManager manager;
 
     @BeforeEach
     void setUp() {
         stubRTS = new SimpleRTSStub();
-        stubUnitManager = new GameUnitManagerStub();
-        manager = new GameStateManager(stubRTS, stubUnitManager);
+        manager = new GameStateManager(stubRTS);
 
-        // Minimal static setup for GameMap to avoid exceptions
-        GameMap.numLevel = 1;
-        GameMap.mapdata = new int[10][10]; // or whatever minimal size is needed
+        // Minimal setup for GameMap instance to avoid exceptions
+        GameMap gameMap = manager.getGameMap();
+        gameMap.numLevel = 1;
+        gameMap.mapdata = new int[10][10]; // or whatever minimal size is needed
     }
 
     @Test

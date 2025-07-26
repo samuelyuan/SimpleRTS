@@ -1,4 +1,3 @@
-import graphics.AwtGraphicsAdapter;
 import graphics.Color;
 import graphics.GameFont;
 import graphics.IGraphics;
@@ -9,12 +8,10 @@ import ui.UILabel;
 
 public class StateGameOver extends StateMachine {
     private UIComponent root;
-    private GameUnitManager unitManager;
-    private SimpleRTS simpleRTS;
+    private GameStateManager stateManager;
 
-    public StateGameOver(SimpleRTS simpleRTS, GameUnitManager unitManager) {
-        this.simpleRTS = simpleRTS;
-        this.unitManager = unitManager;
+    public StateGameOver(GameStateManager stateManager) {
+        this.stateManager = stateManager;
 
         // Fonts and color
         GameFont messageFont = new GameFont("Comic Sans", GameFont.PLAIN, 18);
@@ -41,20 +38,21 @@ public class StateGameOver extends StateMachine {
         int buttonTop = 350;
         int buttonWidth = 200, buttonHeight = 50;
         UIButton returnButton = new UIButton(buttonLeft, buttonTop, buttonWidth, buttonHeight, "Return", () -> {
-            simpleRTS.setNewState(GameState.STATE_MENU);
+            stateManager.setNewState(GameState.STATE_MENU);
         });
         returnButton.setFont(messageFont);
         returnButton.setColor(Color.BLACK);
         root.addChild(returnButton);
-        simpleRTS.clearGameMouseListeners();
-        UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
     }
 
-    public void run() {
-        root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+    public void run(IGraphics g) {
+        root.render(g);
     }
 
     public void handleMouseCommand(GameMouseEvent e) {
         root.handleMouse(e);
     }
+
+    @Override
+    public ui.UIComponent getRoot() { return root; }
 }

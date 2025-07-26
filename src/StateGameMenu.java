@@ -1,17 +1,14 @@
 import ui.UIComponent;
 import ui.UIButton;
-import graphics.AwtGraphicsAdapter;
 import graphics.IGraphics;
 import input.GameMouseEvent;
 
 public class StateGameMenu extends StateMachine {
     private UIComponent root;
-    private GameUnitManager unitManager;
-    private SimpleRTS simpleRTS;
+    private GameStateManager stateManager;
 
-    public StateGameMenu(SimpleRTS simpleRTS, GameUnitManager unitManager) {
-        this.simpleRTS = simpleRTS;
-        this.unitManager = unitManager;
+    public StateGameMenu(GameStateManager stateManager) {
+        this.stateManager = stateManager;
 
         root = new UIComponent(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT) {
             @Override
@@ -29,24 +26,25 @@ public class StateGameMenu extends StateMachine {
 
         // Campaign button
         UIButton campaignButton = new UIButton(optionLeftBound, optionTopBound, optionWidth, optionHeight, "Campaign", () -> {
-            simpleRTS.setNewState(GameState.STATE_STARTLVL);
+            stateManager.setNewState(GameState.STATE_STARTLVL);
         });
         root.addChild(campaignButton);
 
         // Instructions button
         UIButton instructButton = new UIButton(optionLeftBound, optionTopBound + 100, optionWidth, optionHeight, "Instructions", () -> {
-            simpleRTS.setNewState(GameState.STATE_INSTRUCT);
+            stateManager.setNewState(GameState.STATE_INSTRUCT);
         });
         root.addChild(instructButton);
-        simpleRTS.clearGameMouseListeners();
-        UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
     }
 
-    public void run() {
-        root.render(new AwtGraphicsAdapter(SimpleRTS.offscr));
+    public void run(IGraphics g) {
+        root.render(g);
     }
 
     public void handleMouseCommand(GameMouseEvent e) {
         root.handleMouse(e);
     }
+
+    @Override
+    public ui.UIComponent getRoot() { return root; }
 }

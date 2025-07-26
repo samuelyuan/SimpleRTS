@@ -18,8 +18,8 @@ public class GameUnitManagerTest {
     @Test
     public void testClearUnits() {
         // Add dummy units
-        unitManager.getPlayerList().add(new GameUnit(0, 0, true, GameUnit.UNIT_ID_LIGHT));
-        unitManager.getEnemyList().add(new GameUnit(1, 1, false, GameUnit.UNIT_ID_MEDIUM));
+        unitManager.getPlayerList().add(new GameUnit(0, 0, true, Constants.UNIT_ID_LIGHT));
+        unitManager.getEnemyList().add(new GameUnit(1, 1, false, Constants.UNIT_ID_MEDIUM));
         assertFalse(unitManager.getPlayerList().isEmpty());
         assertFalse(unitManager.getEnemyList().isEmpty());
         unitManager.clearUnits();
@@ -30,22 +30,22 @@ public class GameUnitManagerTest {
     @Test
     public void testLoadPlayerUnits() {
         Map<Point, Integer> allyUnits = new HashMap<>();
-        allyUnits.put(new Point(2, 3), GameUnit.UNIT_ID_LIGHT);
-        allyUnits.put(new Point(4, 5), GameUnit.UNIT_ID_HEAVY);
+        allyUnits.put(new Point(2, 3), Constants.UNIT_ID_LIGHT);
+        allyUnits.put(new Point(4, 5), Constants.UNIT_ID_HEAVY);
         unitManager.loadPlayerUnits(allyUnits);
         assertEquals(2, unitManager.getPlayerList().size());
         assertEquals(new Point(2 * Constants.TILE_WIDTH, 3 * Constants.TILE_HEIGHT), unitManager.getPlayerList().get(0).getCurrentPoint());
-        assertEquals(GameUnit.UNIT_ID_LIGHT, unitManager.getPlayerList().get(0).getClassType());
+        assertEquals(Constants.UNIT_ID_LIGHT, unitManager.getPlayerList().get(0).getClassType());
     }
 
     @Test
     public void testLoadEnemyUnits() {
         Map<Point, Integer> enemyUnits = new HashMap<>();
-        enemyUnits.put(new Point(1, 1), GameUnit.UNIT_ID_MEDIUM);
+        enemyUnits.put(new Point(1, 1), Constants.UNIT_ID_MEDIUM);
         unitManager.loadEnemyUnits(enemyUnits);
         assertEquals(1, unitManager.getEnemyList().size());
         assertEquals(new Point(1 * Constants.TILE_WIDTH, 1 * Constants.TILE_HEIGHT), unitManager.getEnemyList().get(0).getCurrentPoint());
-        assertEquals(GameUnit.UNIT_ID_MEDIUM, unitManager.getEnemyList().get(0).getClassType());
+        assertEquals(Constants.UNIT_ID_MEDIUM, unitManager.getEnemyList().get(0).getClassType());
     }
 
     @Test
@@ -60,8 +60,8 @@ public class GameUnitManagerTest {
 
     @Test
     public void testRemoveDeadUnits() {
-        GameUnit unit1 = new GameUnit(0, 0, true, GameUnit.UNIT_ID_LIGHT);
-        GameUnit unit2 = new GameUnit(1, 1, true, GameUnit.UNIT_ID_MEDIUM);
+        GameUnit unit1 = new GameUnit(0, 0, true, Constants.UNIT_ID_LIGHT);
+        GameUnit unit2 = new GameUnit(1, 1, true, Constants.UNIT_ID_MEDIUM);
         ArrayList<GameUnit> playerList = unitManager.getPlayerList();
         playerList.add(unit1);
         playerList.add(unit2);
@@ -74,9 +74,9 @@ public class GameUnitManagerTest {
     @Test
     public void testInitWithTestData() {
         Map<Point, Integer> allyUnits = new HashMap<>();
-        allyUnits.put(new Point(1, 2), GameUnit.UNIT_ID_LIGHT);
+        allyUnits.put(new Point(1, 2), Constants.UNIT_ID_LIGHT);
         Map<Point, Integer> enemyUnits = new HashMap<>();
-        enemyUnits.put(new Point(3, 4), GameUnit.UNIT_ID_HEAVY);
+        enemyUnits.put(new Point(3, 4), Constants.UNIT_ID_HEAVY);
         Map<Point, Integer> flagPositions = new HashMap<>();
         flagPositions.put(new Point(5, 6), GameFlag.FACTION_PLAYER);
         unitManager.init(allyUnits, enemyUnits, flagPositions);
