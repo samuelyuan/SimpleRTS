@@ -24,7 +24,7 @@ public class StateGameMain extends StateMachine {
 	}
 
 	public void run(graphics.IGraphics g) {
-		int[][] map = this.stateManager.getGameMap().mapdata;
+		int[][] map = this.stateManager.getGameMap().getMapData();
 
 		// If fogWar or graphicsMain not initialized (e.g., map loaded after
 		// constructor)

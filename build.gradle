@@ -9,20 +9,23 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'org.mockito:mockito-core:4.6.1'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
 }
 
-mainClassName = 'SimpleRTS'  // Main class for the applet (you can change this if your entry point is different)
+mainClassName = 'SimpleRTS'
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+sourceCompatibility = '17'
+targetCompatibility = '17'
 
 sourceSets {
     main {
         java {
             srcDirs = ['src']  // Main Java source directory
+        }
+        resources {
+            srcDirs = ['img', 'maps']  // Include image and map resources
         }
     }
     test {
@@ -38,16 +41,24 @@ tasks {
         source = fileTree('src')  // This tells Gradle to look directly inside 'src' for .java files
     }
 
-    // Task to build the applet jar
+    // Task to build the JFrame application jar
     jar {
         archiveBaseName = 'SimpleRTS'
         archiveVersion = '1.0.0'
         manifest {
             attributes(
-                'Main-Class': 'SimpleRTS'  // This is the entry point for your applet
+                'Main-Class': 'SimpleRTS',  // This is the entry point for your JFrame application
+                'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' ')
             )
         }
         from sourceSets.main.output
+        // Include resources in the jar
+        from('img') {
+            into 'img'
+        }
+        from('maps') {
+            into 'maps'
+        }
     }
 
     // Task to run unit tests
@@ -71,9 +82,34 @@ tasks {
             }
         }
     }
+
+    // Task to run the application
+    run {
+        // Set working directory to project root so resources can be found
+        workingDir = project.projectDir
+    }
 }
 
-// Task to build the applet and jar
+// Task to build the JFrame application and jar
 task buildAppAndJar {
     dependsOn build, jar
+}
+
+// Task to create a runnable jar with all dependencies
+task createRunnableJar(type: Jar) {
+    archiveBaseName = 'SimpleRTS-runnable'
+    archiveVersion = '1.0.0'
+    manifest {
+        attributes(
+            'Main-Class': 'SimpleRTS'
+        )
+    }
+    from sourceSets.main.output
+    // Include resources in the jar
+    from('img') {
+        into 'img'
+    }
+    from('maps') {
+        into 'maps'
+    }
 }

@@ -1,42 +1,90 @@
-import java.applet.*;
+import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
-import input.GameMouseEvent;
+import java.awt.image.BufferedImage;
 import input.GameMouseListener;
-import java.util.List;
-import java.util.ArrayList;
+import input.MouseListenerRegistrar;
 
 /*
  * In every map, the player has to eliminate all the enemy forces.
  */
 
-public class SimpleRTS extends Applet implements MouseMotionListener, MouseListener, Runnable {
+public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnable {
 	// Backbuffer data
 	private Image offscreenImage;
-	public static Graphics offscr;
+	private Graphics offscr;
 	private int width, height;
+	private static final int GAME_WIDTH = Constants.SCREEN_WIDTH;
+	private static final int GAME_HEIGHT = Constants.SCREEN_HEIGHT;
 
 	// state handling
 	private GameStateManager stateManager;
+	private InputHandler inputHandler;
+	
+	// JFrame components
+	private JPanel gamePanel;
 
-	public void init() {
-		Thread thread = new Thread(this);
-		thread.start();
-
-		setSize(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
-		addMouseListener(this);
-		addMouseMotionListener(this);
-
-		// create backbuffer
-		width = getWidth();
-		height = getHeight();
-		offscreenImage = createImage(width, height);
+	public SimpleRTS() {
+		setTitle("SimpleRTS");
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setSize(GAME_WIDTH, GAME_HEIGHT);
+		setResizable(true); // Allow resizing
+		setLocationRelativeTo(null); // Center on screen
+		setMinimumSize(new Dimension(800, 600)); // Set minimum size
+		
+		// Initialize backbuffer first
+		width = GAME_WIDTH;
+		height = GAME_HEIGHT;
+		offscreenImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		offscr = offscreenImage.getGraphics();
 
-		// Initialize game logic and resources
+		// Initialize game logic and resources BEFORE creating the panel
 		initializeGameLogic();
+		
+		// Create game panel after stateManager is initialized
+		gamePanel = new JPanel() {
+			@Override
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				// Only render if stateManager is initialized
+				if (stateManager != null && stateManager.getCurrentState() != null) {
+					// clear back buffer to black
+					offscr.setColor(Color.black);
+					offscr.fillRect(0, 0, width, height);
+
+					graphics.IGraphics ig = new graphics.AwtGraphicsAdapter(offscr);
+					stateManager.getCurrentState().run(ig);
+					stateManager.changeState();
+
+					// Calculate scaling to fit the panel while maintaining aspect ratio
+					int panelWidth = getWidth();
+					int panelHeight = getHeight();
+					
+					double scaleX = (double) panelWidth / GAME_WIDTH;
+					double scaleY = (double) panelHeight / GAME_HEIGHT;
+					double scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+					
+					int scaledWidth = (int) (GAME_WIDTH * scale);
+					int scaledHeight = (int) (GAME_HEIGHT * scale);
+					
+					// Center the scaled image
+					int x = (panelWidth - scaledWidth) / 2;
+					int y = (panelHeight - scaledHeight) / 2;
+					
+					// send back buffer to front buffer with scaling
+					g.drawImage(offscreenImage, x, y, scaledWidth, scaledHeight, this);
+				}
+			}
+		};
+		
+		add(gamePanel);
+		
+		// Initialize input handler
+		inputHandler = new InputHandler(this, stateManager);
+		gamePanel.addMouseListener(inputHandler);
+		gamePanel.addMouseMotionListener(inputHandler);
+		
+		// Set initial state in input handler
+		inputHandler.setCurrentState(stateManager.getCurrentState());
 	}
 
 	private void initializeGameLogic() {
@@ -56,7 +104,7 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 	 */
 	public void run() {
 		while (true) {
-			repaint();
+			gamePanel.repaint();
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
@@ -64,154 +112,28 @@ public class SimpleRTS extends Applet implements MouseMotionListener, MouseListe
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.awt.Container#paint(java.awt.Graphics)
-	 * 
-	 * The program is split into distinct gamestates. It will execute the current
-	 * gamestate and switch
-	 * to another state if certain conditions are met.
-	 * 
-	 * The default gamestate is STATE_MENU (the main menu).
-	 */
-	public void paint(Graphics g) {
-		// clear back buffer to black
-		offscr.setColor(Color.black);
-		offscr.fillRect(0, 0, width, height);
-
-		graphics.IGraphics ig = new graphics.AwtGraphicsAdapter(offscr);
-		stateManager.getCurrentState().run(ig);
-		stateManager.changeState();
-
-		// send back buffer to front buffer
-		g.drawImage(offscreenImage, 0, 0, this);
-	}
-
-	public void update(Graphics g) {
-		paint(g);
-	}
-
-	/*
-	 * The mouse will scroll the world without going out of bounds.
-	 */
-	public void mouseScrollWorld(MouseEvent e) {
-		final int scrollAmount = 5;
-		// mouseX = e.getX();
-		// mouseY = e.getY();
-
-		final int margin = 25;
-		// scroll with mouse
-		// scroll right
-		if (e.getX() > Constants.SCREEN_WIDTH - margin) {
-			stateManager.addCameraX(scrollAmount);
-			setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
-		}
-		// scroll left
-		else if (e.getX() < margin) {
-			stateManager.addCameraX(-scrollAmount);
-			setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
-		}
-
-		// scroll down
-		if (e.getY() > Constants.SCREEN_HEIGHT - margin) {
-			stateManager.addCameraY(scrollAmount);
-			setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
-		}
-		// scroll up
-		else if (e.getY() < margin) {
-			stateManager.addCameraY(-scrollAmount);
-			setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
-		}
-
-		// don't scroll at all
-		if (e.getX() > 50 && e.getX() < Constants.SCREEN_WIDTH - 50
-				&& e.getY() > 50 && e.getY() < Constants.SCREEN_HEIGHT - 50)
-			setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
-
-		// keep camera inside map
-		// too far left
-		if (stateManager.getCameraX() < 0)
-			stateManager.setCameraX(0);
-
-		// too far up
-		if (stateManager.getCameraY() < 0)
-			stateManager.setCameraY(0);
-
-		// Too far right or too far left depend on the size of the level!
-		// too far right
-		if (stateManager.getCameraX() > 400 + scrollAmount)
-			stateManager.setCameraX(400 + scrollAmount);
-
-		// too far down
-		if (stateManager.getCameraY() > Constants.SCREEN_HEIGHT)
-			stateManager.setCameraY(Constants.SCREEN_HEIGHT);
-
-		// make sure world display changes
-		repaint();
-	}
-
-	// Input abstraction support
-	private List<GameMouseListener> mouseListeners = new ArrayList<>();
-
+	// Input abstraction support - delegate to input handler
 	public void addGameMouseListener(GameMouseListener listener) {
-		mouseListeners.add(listener);
+		inputHandler.addGameMouseListener(listener);
 	}
 
 	public void clearGameMouseListeners() {
-		mouseListeners.clear();
+		inputHandler.clearGameMouseListeners();
 	}
-
-	private void dispatchGameMouseEvent(GameMouseEvent event) {
-		for (GameMouseListener listener : mouseListeners) {
-			listener.onGameMouseEvent(event);
-		}
+	
+	public InputHandler getInputHandler() {
+		return inputHandler;
 	}
-
-	public void mouseDragged(MouseEvent e) {
-		GameMouseEvent ge = new GameMouseEvent(
-			GameMouseEvent.Type.DRAGGED, e.getX(), e.getY(), e.getButton()
-		);
-		dispatchGameMouseEvent(ge);
-		if (stateManager.getCurrentState() instanceof StateGameMain)
-			Mouse.dragSelectBox(ge);
-	}
-
-	public void mouseMoved(MouseEvent e) {
-		dispatchGameMouseEvent(new GameMouseEvent(
-			GameMouseEvent.Type.MOVED, e.getX(), e.getY(), e.getButton()
-		));
-		if (stateManager.getCurrentState() instanceof StateGameMain)
-			mouseScrollWorld(e);
-	}
-
-	public void mouseClicked(MouseEvent e) {
-	}
-
-	// Mouse should only be held down when forming selection boxes in-game
-	public void mousePressed(MouseEvent e) {
-		GameMouseEvent ge = new GameMouseEvent(
-			GameMouseEvent.Type.PRESSED, e.getX(), e.getY(), e.getButton()
-		);
-		dispatchGameMouseEvent(ge);
-		if (stateManager.getCurrentState() instanceof StateGameMain)
-			Mouse.createSelectBox(ge);
-	}
-
-	// Form a selection box in-game
-	public void mouseReleased(MouseEvent e) {
-		GameMouseEvent ge = new GameMouseEvent(
-			GameMouseEvent.Type.RELEASED, e.getX(), e.getY(), e.getButton()
-		);
-		stateManager.getCurrentState().handleMouseCommand(ge);
-
-		if (stateManager.getCurrentState() instanceof StateGameMain)
-			Mouse.releaseSelectBox();
-	}
-
-	public void mouseEntered(MouseEvent arg0) {
-	}
-
-	public void mouseExited(MouseEvent arg0) {
+	
+	// Main method to launch the application
+	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
+			SimpleRTS game = new SimpleRTS();
+			game.setVisible(true);
+			
+			// Start game loop
+			Thread gameThread = new Thread(game);
+			gameThread.start();
+		});
 	}
 }

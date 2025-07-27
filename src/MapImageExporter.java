@@ -5,6 +5,7 @@ import java.io.IOException;
 import graphics.ImageUtils;
 import map.MapFileLoader;
 import map.TileConverter;
+import utils.PathResolver;
 
 public class MapImageExporter {
     public static String[][] generateMapTileStrings(int[][] mapData) {
@@ -43,7 +44,11 @@ public class MapImageExporter {
     }
 
     public static void writeMapImage(BufferedImage im, String filename) throws IOException {
-        MapFileLoader.saveFile(im, new File(filename));
+        String resolvedPath = PathResolver.resolveExportPath(filename);
+        // Ensure the export directory exists
+        String exportDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
+        PathResolver.ensureDirectoryExists(exportDir);
+        MapFileLoader.saveFile(im, new File(resolvedPath));
     }
 
     public static void exportImage(int[][] mapdata, int numLevel) {

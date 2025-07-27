@@ -53,7 +53,23 @@ public class AwtGraphicsAdapter implements IGraphics {
 
     @Override
     public void drawImage(GameImage img, int x, int y, int width, int height) {
-        g.drawImage((java.awt.Image) img.getBackendImage(), x, y, width, height, null);
+        if (img == null) {
+            System.out.println("Warning: Attempted to draw null GameImage");
+            return;
+        }
+        
+        Object backendImage = img.getBackendImage();
+        if (backendImage == null) {
+            System.out.println("Warning: GameImage has null backend image");
+            return;
+        }
+        
+        if (!(backendImage instanceof java.awt.Image)) {
+            System.out.println("Warning: Backend image is not java.awt.Image: " + backendImage.getClass());
+            return;
+        }
+        
+        g.drawImage((java.awt.Image) backendImage, x, y, width, height, null);
     }
 
     @Override

@@ -11,10 +11,20 @@ import graphics.Rect;
 public class GraphicsMainTest {
     @Test
     public void testHealthBarColor() {
-        GraphicsMain graphicsMain = new GraphicsMain(null, null);
-        DrawingInstruction instr = graphicsMain.getHealthBarInstruction(40, new Point(10, 10));
-        assertNotNull(instr, "Instruction should not be null for health > 0");
-        assertEquals(Color.ORANGE, instr.color, "Expected color for health 40 is ORANGE");
+        // Create a mock GameStateManager for GraphicsMain
+        GameStateManager mockStateManager = mock(GameStateManager.class);
+        when(mockStateManager.getCameraX()).thenReturn(0);
+        when(mockStateManager.getCameraY()).thenReturn(0);
+        
+        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null);
+        RendererUnit unitRenderer = new RendererUnit(graphicsMain);
+        
+        // Test health color logic
+        assertEquals(Color.ORANGE, unitRenderer.getHealthColor(40), "Expected color for health 40 is ORANGE");
+        assertEquals(Color.GREEN, unitRenderer.getHealthColor(80), "Expected color for health 80 is GREEN");
+        assertEquals(Color.YELLOW, unitRenderer.getHealthColor(60), "Expected color for health 60 is YELLOW");
+        assertEquals(Color.RED, unitRenderer.getHealthColor(20), "Expected color for health 20 is RED");
+        assertNull(unitRenderer.getHealthColor(0), "Expected null for health 0");
     }
 
     @Test

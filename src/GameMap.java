@@ -11,18 +11,18 @@ import map.MapParser;
  * This class basically changes the map array depending on which level needs to be loaded
  */
 public class GameMap {
-	public int numLevel = 1;
+	private int numLevel = 1;
 
-	public int mapdata[][];
+	private int mapData[][];
 	private String drawData[][];
 
 	public String[][] getDrawData() {
 		return drawData;
 	}
 
-	public Map<Point, Integer> allyUnitPositions;
-	public Map<Point, Integer> enemyUnitPositions;
-	public Map<Point, Integer> flagPositions;
+	private Map<Point, Integer> allyUnitPositions;
+	private Map<Point, Integer> enemyUnitPositions;
+	private Map<Point, Integer> flagPositions;
 
 	public Map<Point, Integer> getAllyUnitPositions() {
 		return allyUnitPositions;
@@ -34,6 +34,20 @@ public class GameMap {
 
 	public Map<Point, Integer> getFlagPositions() {
 		return flagPositions;
+	}
+
+	// Getter and setter for numLevel
+	public int getNumLevel() {
+		return numLevel;
+	}
+
+	public void setNumLevel(int numLevel) {
+		this.numLevel = numLevel;
+	}
+
+	// Getter for mapData
+	public int[][] getMapData() {
+		return mapData;
 	}
 
 	public GameMap() {
@@ -111,13 +125,13 @@ public class GameMap {
 		}
 
 		// Apply parsed data
-		mapdata = result.mapData;
+		mapData = result.mapData;
 		drawData = result.drawData;
 		allyUnitPositions = result.allyUnitPositions;
 		enemyUnitPositions = result.enemyUnitPositions;
 		flagPositions = result.flagPositions;
 
-		System.out.println("[INFO] Map dimensions: " + mapdata.length + " x " + mapdata[0].length);
+		System.out.println("[INFO] Map dimensions: " + mapData.length + " x " + mapData[0].length);
 		System.out.println("[INFO] Ally units: " + allyUnitPositions.size());
 		System.out.println("[INFO] Enemy units: " + enemyUnitPositions.size());
 		System.out.println("[INFO] Flags: " + flagPositions.size());
@@ -136,7 +150,7 @@ public class GameMap {
 	}
 
 	public void exportImage() {
-		MapImageExporter.exportImage(mapdata, numLevel);
+		MapImageExporter.exportImage(mapData, numLevel);
 	}
 
 	/*

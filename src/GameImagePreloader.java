@@ -6,6 +6,7 @@ import javax.imageio.ImageIO;
 
 import graphics.GameImage;
 import map.TileConverter;
+import utils.PathResolver;
 
 public class GameImagePreloader {
 
@@ -62,15 +63,17 @@ public class GameImagePreloader {
         return tileData;
     }
 
-    private static String getImagePath(String filename) {
-        return "../img/" + filename;
-    }
-
     private static Image loadRawImage(String filename) {
-        String fullPath = getImagePath(filename);
+        String fullPath = PathResolver.resolveImagePath(filename);
         try {
             File file = new File(fullPath);
-            return ImageIO.read(file);
+            Image image = ImageIO.read(file);
+            if (image != null) {
+                System.out.println("Successfully loaded: " + filename);
+            } else {
+                System.out.println("Failed to load image (returned null): " + fullPath);
+            }
+            return image;
         } catch (Exception e) {
             System.out.println("Failed to load image " + fullPath + ", exception: " + e.getMessage());
             return null;
@@ -81,6 +84,9 @@ public class GameImagePreloader {
         Image newImage = loadRawImage(filename);
         if (newImage != null) {
             imgData.put(imageId, new GameImage(newImage));
+            System.out.println("Added image to map: ID=" + imageId + ", filename=" + filename);
+        } else {
+            System.out.println("Failed to add image to map: ID=" + imageId + ", filename=" + filename);
         }
     }
 
@@ -88,6 +94,9 @@ public class GameImagePreloader {
         Image newImage = loadRawImage(filename);
         if (newImage != null) {
             tileData.put(imageStr, new GameImage(newImage));
+            System.out.println("Added tile to map: " + imageStr + ", filename=" + filename);
+        } else {
+            System.out.println("Failed to add tile to map: " + imageStr + ", filename=" + filename);
         }
     }
 }

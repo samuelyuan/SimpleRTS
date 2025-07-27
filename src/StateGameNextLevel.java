@@ -20,7 +20,7 @@ public class StateGameNextLevel extends StateMachine {
         boolean isBegin = false;
         int maxLineWidth = 50;
         GameMap gameMap = stateManager.getGameMap();
-        description = gameMap.loadMapDescription(gameMap.numLevel, isBegin, maxLineWidth);
+        description = gameMap.loadMapDescription(gameMap.getNumLevel(), isBegin, maxLineWidth);
 
         // Font and color for all labels/buttons
         GameFont font = new GameFont("Comic Sans", GameFont.BOLD, 20);
@@ -54,8 +54,8 @@ public class StateGameNextLevel extends StateMachine {
         UIButton nextButton = new UIButton(buttonLeftBound, buttonTopMostBound, buttonWidth, buttonHeight, "Next",
                 () -> {
                     GameMap gameMapBtn = stateManager.getGameMap();
-                    gameMapBtn.numLevel++;
-                    if (gameMapBtn.numLevel < Constants.MAX_LVL + 1) {
+                    gameMapBtn.setNumLevel(gameMapBtn.getNumLevel() + 1);
+                    if (gameMapBtn.getNumLevel() < Constants.MAX_LVL + 1) {
                         stateManager.setNewState(GameState.STATE_STARTLVL);
                     } else {
                         stateManager.setNewState(GameState.STATE_WIN);

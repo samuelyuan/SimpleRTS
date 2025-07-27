@@ -18,8 +18,7 @@ public class GameStateManagerTest {
 
         // Minimal setup for GameMap instance to avoid exceptions
         GameMap gameMap = manager.getGameMap();
-        gameMap.numLevel = 1;
-        gameMap.mapdata = new int[10][10]; // or whatever minimal size is needed
+        gameMap.setNumLevel(1);
     }
 
     @Test

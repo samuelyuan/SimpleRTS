@@ -19,7 +19,7 @@ public class StateGameStartLevel extends StateMachine {
 		boolean isBegin = true;
 		int maxLineWidth = 50;
 		GameMap gameMap = stateManager.getGameMap();
-		description = gameMap.loadMapDescription(gameMap.numLevel, isBegin, maxLineWidth);
+		description = gameMap.loadMapDescription(gameMap.getNumLevel(), isBegin, maxLineWidth);
 
 		// Font and color for all labels/buttons
 		GameFont font = new GameFont("Comic Sans", GameFont.BOLD, 20);
@@ -50,7 +50,7 @@ public class StateGameStartLevel extends StateMachine {
 		int buttonWidth = 200, buttonHeight = 50;
 		UIButton startButton = new UIButton(buttonLeftBound, buttonTopMostBound, buttonWidth, buttonHeight, "Start", () -> {
 			GameMap gameMapBtn = stateManager.getGameMap();
-			if (gameMapBtn.numLevel <= Constants.MAX_LVL + 1)
+			if (gameMapBtn.getNumLevel() <= Constants.MAX_LVL + 1)
 				stateManager.setNewState(GameState.STATE_MAIN);
 			else
 				stateManager.setNewState(GameState.STATE_WIN);

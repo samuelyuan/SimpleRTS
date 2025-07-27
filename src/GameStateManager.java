@@ -14,13 +14,6 @@ public class GameStateManager {
         this.gameMap = new GameMap();
         // Start with menu state
         this.currentState = new StateGameMenu(this);
-        
-        // Register mouse listeners for the initial state
-        simpleRTS.clearGameMouseListeners();
-        ui.UIComponent root = currentState.getRoot();
-        if (root != null) {
-            ui.UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
-        }
     }
 
     public void setNewState(GameState newState) {
@@ -52,11 +45,9 @@ public class GameStateManager {
                     currentState = new StateGameWin(this);
                     break;
             }
-            // After switching states, set up mouse listeners if the state has a UI root
-            simpleRTS.clearGameMouseListeners();
-            ui.UIComponent root = currentState.getRoot();
-            if (root != null) {
-                ui.UIComponent.registerAllListeners(root, simpleRTS::addGameMouseListener);
+            // Notify input handler of state change
+            if (simpleRTS != null && simpleRTS.getInputHandler() != null) {
+                simpleRTS.getInputHandler().setCurrentState(currentState);
             }
             nextState = GameState.STATE_NULL;
         }
@@ -69,7 +60,7 @@ public class GameStateManager {
             gameMap.getEnemyUnitPositions(),
             gameMap.getFlagPositions()
         );
-        GameFogWar fogWar = new GameFogWar(gameMap.mapdata.length, gameMap.mapdata[0].length);
+        GameFogWar fogWar = new GameFogWar(gameMap.getMapData().length, gameMap.getMapData()[0].length);
         GraphicsMain graphicsMain = new GraphicsMain(this, fogWar);
         return new StateGameMain(this, unitManager, fogWar, graphicsMain);
     }

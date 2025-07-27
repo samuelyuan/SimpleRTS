@@ -7,30 +7,31 @@ import java.util.ArrayList;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import utils.PathResolver;
 
 public class MapFileLoader {
     public static ArrayList<String> parseFile(String filename) {
         ArrayList<String> data = new ArrayList<String>();
         try {
-            BufferedReader br = new BufferedReader(new FileReader(filename));
-            String line;
-            while ((line = br.readLine()) != null) {
-                data.add(line);
+            String resolvedPath = PathResolver.resolveMapPath(filename);
+            try (BufferedReader br = new BufferedReader(new FileReader(resolvedPath))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    data.add(line);
+                }
             }
-            br.close();
         } catch (Exception e) {
+            System.out.println("Failed to load file: " + filename + ", error: " + e.getMessage());
             e.printStackTrace();
         }
         return data;
     }
 
     public static void saveFile(ArrayList<String> data, File file) {
-        try {
-            PrintWriter out = new PrintWriter(file);
+        try (PrintWriter out = new PrintWriter(file)) {
             for (String str : data) {
                 out.println(str);
             }
-            out.close();
         } catch (Exception e) {
             e.printStackTrace();
         }

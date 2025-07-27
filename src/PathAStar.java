@@ -235,23 +235,4 @@ public class PathAStar {
 
 		return finalList;
 	}
-
-	public static void main(String[] args) {
-		int[][] map = {
-				{ 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 1, 1, 1, 1, 1, 0 },
-				{ 0, 1, 0, 0, 0, 1, 0 },
-				{ 0, 1, 0, 0, 0, 1, 0 },
-				{ 0, 1, 1, 1, 1, 1, 0 },
-				{ 0, 2, 1, 3, 0, 0, 0 }
-		};
-
-		Point startPoint = getStartPoint(map);
-		Point endPoint = getEndPoint(map);
-
-		ArrayList<MapNode> path = generatePath(map, startPoint.x, startPoint.y, endPoint.x, endPoint.y);
-		// System.out.println("Path contents (from goal to start): ");
-		// for (int i = 0; i < path.size(); i++)
-		// System.out.println(path.get(i));
-	}
 }

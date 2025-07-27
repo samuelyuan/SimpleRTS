@@ -54,7 +54,7 @@ public class StateGameWin extends StateMachine {
         UIButton returnButton = new UIButton(buttonLeft, buttonTop, buttonWidth, buttonHeight, "Return", () -> {
             // Reset to first level after win
             GameMap gameMap = stateManager.getGameMap();
-            gameMap.numLevel = 1;
+            gameMap.setNumLevel(1);
             stateManager.setNewState(GameState.STATE_MENU);
         });
         returnButton.setFont(titleFont);
