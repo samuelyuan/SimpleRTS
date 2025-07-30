@@ -43,9 +43,9 @@ public class RendererUnit {
             if (unit.isPathCreated()) {
                 g.setColor(Color.GREEN);
                 Point mapDest = unit.getMapPoint(unit.destination);
-                drawRectOnScreen(g, mapDest.x * Constants.TILE_WIDTH,
-                        mapDest.y * Constants.TILE_HEIGHT,
-                        Constants.TILE_WIDTH, Constants.TILE_HEIGHT, false);
+                Point screenPos = TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y);
+                drawRectOnScreen(g, screenPos.x, screenPos.y, 
+                    Constants.TILE_WIDTH, Constants.TILE_HEIGHT, false);
             }
         }
     }
@@ -55,7 +55,7 @@ public class RendererUnit {
         if (unit.isPathCreated()) {
             Point mapDest = unit.getMapPoint(unit.destination);
             unit.direction = calculateDirection(unit.getCurrentPoint(),
-                    new Point(mapDest.x * Constants.TILE_WIDTH, mapDest.y * Constants.TILE_HEIGHT));
+                    TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y));
         }
 
         // Draw the unit sprite

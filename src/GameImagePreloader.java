@@ -15,7 +15,7 @@ public class GameImagePreloader {
 
         // Define image ID -> filename pairs
         Object[][] imageList = {
-                { ImageConstants.IMGID_BG_MENU, "bg-menu.jpg" },
+                { ImageConstants.IMGID_BG_MENU, "bg-menu.png" },
                 { ImageConstants.IMGID_BG_DESK, "bg-desk.jpg" },
                 { ImageConstants.IMGID_BG_BOOK, "bg-book.jpg" },
                 { ImageConstants.IMGID_ICON_CAMPAIGN, "icon-campaign.png" },
@@ -27,9 +27,9 @@ public class GameImagePreloader {
                 { ImageConstants.IMGID_MENU_START, "menu-start.png" },
                 { ImageConstants.IMGID_MENU_VICTORY, "menu-victory.png" },
                 { ImageConstants.IMGID_MENU_DEFEAT, "menu-defeat.png" },
-                { ImageConstants.IMGID_SUPPLY_PLAYER, "game-supply-player.jpg" },
-                { ImageConstants.IMGID_SUPPLY_ENEMY, "game-supply-enemy.jpg" },
-                { ImageConstants.IMGID_GAME_TIMER, "game-timer.jpg" }
+                { ImageConstants.IMGID_SUPPLY_PLAYER, "game-supply-player.png" },
+                { ImageConstants.IMGID_SUPPLY_ENEMY, "game-supply-enemy.png" },
+                { ImageConstants.IMGID_GAME_TIMER, "game-timer.png" }
         };
 
         for (Object[] entry : imageList) {

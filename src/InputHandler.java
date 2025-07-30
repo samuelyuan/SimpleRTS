@@ -19,18 +19,15 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     private final List<GameMouseListener> mouseListeners = new ArrayList<>();
     private final MouseListenerRegistrar registrar;
     private final GameStateManager stateManager;
+    private final CameraManager cameraManager;
     
     // Direct state registration
     private StateMachine currentState = null;
     
-    // Camera scrolling constants
-    private static final int SCROLL_AMOUNT = 5;
-    private static final int SCROLL_MARGIN = 25;
-    private static final int CURSOR_MARGIN = 50;
-    
     public InputHandler(MouseListenerRegistrar registrar, GameStateManager stateManager) {
         this.registrar = registrar;
         this.stateManager = stateManager;
+        this.cameraManager = new CameraManager(stateManager, registrar);
     }
     
     // MouseListener implementation
@@ -41,49 +38,26 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     
     @Override
     public void mousePressed(MouseEvent e) {
-        // Transform screen coordinates to game coordinates
-        CoordinateTransformer.GameCoordinates gameCoords = CoordinateTransformer.screenToGame(
-            e.getX(), e.getY(), e.getComponent().getWidth(), e.getComponent().getHeight()
-        );
-        
-        if (gameCoords != null) {
-            GameMouseEvent ge = new GameMouseEvent(
-                GameMouseEvent.Type.PRESSED, gameCoords.x, gameCoords.y, e.getButton()
-            );
-            dispatchGameMouseEvent(ge);
-            
-            // Handle mouse command in current state
-            if (currentState != null) {
-                currentState.handleMouseCommand(ge);
-            }
+        GameMouseEvent gameEvent = createGameMouseEvent(e, GameMouseEvent.Type.PRESSED);
+        if (gameEvent != null) {
+            handleMouseEvent(gameEvent);
             
             // Handle selection box creation in game state
             if (currentState instanceof StateGameMain) {
-                Mouse.createSelectBox(ge);
+                stateManager.getSelectionManager().createSelectBox(gameEvent);
             }
         }
     }
     
     @Override
     public void mouseReleased(MouseEvent e) {
-        // Transform screen coordinates to game coordinates
-        CoordinateTransformer.GameCoordinates gameCoords = CoordinateTransformer.screenToGame(
-            e.getX(), e.getY(), e.getComponent().getWidth(), e.getComponent().getHeight()
-        );
-        
-        if (gameCoords != null) {
-            GameMouseEvent ge = new GameMouseEvent(
-                GameMouseEvent.Type.RELEASED, gameCoords.x, gameCoords.y, e.getButton()
-            );
-            
-            // Handle mouse command in current state
-            if (currentState != null) {
-                currentState.handleMouseCommand(ge);
-            }
+        GameMouseEvent gameEvent = createGameMouseEvent(e, GameMouseEvent.Type.RELEASED);
+        if (gameEvent != null) {
+            handleMouseEvent(gameEvent);
             
             // Handle selection box release in game state
             if (currentState instanceof StateGameMain) {
-                Mouse.releaseSelectBox();
+                stateManager.getSelectionManager().releaseSelectBox();
             }
         }
     }
@@ -101,117 +75,67 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     // MouseMotionListener implementation
     @Override
     public void mouseDragged(MouseEvent e) {
-        // Transform screen coordinates to game coordinates
-        CoordinateTransformer.GameCoordinates gameCoords = CoordinateTransformer.screenToGame(
-            e.getX(), e.getY(), e.getComponent().getWidth(), e.getComponent().getHeight()
-        );
-        
-        if (gameCoords != null) {
-            GameMouseEvent ge = new GameMouseEvent(
-                GameMouseEvent.Type.DRAGGED, gameCoords.x, gameCoords.y, e.getButton()
-            );
-            dispatchGameMouseEvent(ge);
+        GameMouseEvent gameEvent = createGameMouseEvent(e, GameMouseEvent.Type.DRAGGED);
+        if (gameEvent != null) {
+            handleMouseEvent(gameEvent);
             
             // Handle selection box dragging in game state
             if (currentState instanceof StateGameMain) {
-                Mouse.dragSelectBox(ge);
+                stateManager.getSelectionManager().dragSelectBox(gameEvent);
             }
         }
     }
     
     @Override
     public void mouseMoved(MouseEvent e) {
-        // Transform screen coordinates to game coordinates
-        CoordinateTransformer.GameCoordinates gameCoords = CoordinateTransformer.screenToGame(
-            e.getX(), e.getY(), e.getComponent().getWidth(), e.getComponent().getHeight()
-        );
-        
-        if (gameCoords != null) {
-            dispatchGameMouseEvent(new GameMouseEvent(
-                GameMouseEvent.Type.MOVED, gameCoords.x, gameCoords.y, e.getButton()
-            ));
+        GameMouseEvent gameEvent = createGameMouseEvent(e, GameMouseEvent.Type.MOVED);
+        if (gameEvent != null) {
+            handleMouseEvent(gameEvent);
             
             // Handle camera scrolling in game state
             if (currentState instanceof StateGameMain) {
-                handleCameraScrolling(gameCoords.x, gameCoords.y);
+                cameraManager.handleCameraScrolling(gameEvent.x, gameEvent.y);
             }
         }
     }
     
     /**
-     * Handles camera scrolling based on mouse position near screen edges
+     * Creates a GameMouseEvent from an AWT MouseEvent
      */
-    private void handleCameraScrolling(int gameX, int gameY) {
-        int screenWidth = Constants.SCREEN_WIDTH;
-        int screenHeight = Constants.SCREEN_HEIGHT;
-        
-        // Scroll right
-        if (gameX > screenWidth - SCROLL_MARGIN) {
-            stateManager.addCameraX(SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
-        }
-        // Scroll left
-        else if (gameX < SCROLL_MARGIN) {
-            stateManager.addCameraX(-SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
-        }
-        // Scroll down
-        else if (gameY > screenHeight - SCROLL_MARGIN) {
-            stateManager.addCameraY(SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
-        }
-        // Scroll up
-        else if (gameY < SCROLL_MARGIN) {
-            stateManager.addCameraY(-SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
-        }
-        // Default cursor when not near edges
-        else if (gameX > CURSOR_MARGIN && gameX < screenWidth - CURSOR_MARGIN
-                && gameY > CURSOR_MARGIN && gameY < screenHeight - CURSOR_MARGIN) {
-            setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+    private GameMouseEvent createGameMouseEvent(MouseEvent e, GameMouseEvent.Type type) {
+        if (e.getComponent() == null) {
+            return null;
         }
         
-        // Keep camera within bounds
-        constrainCameraPosition();
+        // Transform screen coordinates to game coordinates
+        CoordinateTransformer.GameCoordinates gameCoords = CoordinateTransformer.screenToGame(
+            e.getX(), e.getY(), e.getComponent().getWidth(), e.getComponent().getHeight()
+        );
+        
+        if (gameCoords == null) {
+            return null;
+        }
+        
+        return new GameMouseEvent(type, gameCoords.x, gameCoords.y, e.getButton());
     }
     
     /**
-     * Constrains camera position to stay within map boundaries
+     * Handles a game mouse event by dispatching to listeners and current state
      */
-    private void constrainCameraPosition() {
-        // Too far left
-        if (stateManager.getCameraX() < 0) {
-            stateManager.setCameraX(0);
-        }
+    private void handleMouseEvent(GameMouseEvent event) {
+        dispatchGameMouseEvent(event);
         
-        // Too far up
-        if (stateManager.getCameraY() < 0) {
-            stateManager.setCameraY(0);
-        }
-        
-        // Too far right (adjust based on map size)
-        if (stateManager.getCameraX() > 400 + SCROLL_AMOUNT) {
-            stateManager.setCameraX(400 + SCROLL_AMOUNT);
-        }
-        
-        // Too far down
-        if (stateManager.getCameraY() > Constants.SCREEN_HEIGHT) {
-            stateManager.setCameraY(Constants.SCREEN_HEIGHT);
+        // Handle mouse command in current state
+        if (currentState != null) {
+            currentState.handleMouseCommand(event);
         }
     }
-    
-    /**
-     * Sets the cursor for the game window
-     */
-    private void setCursor(Cursor cursor) {
-        if (registrar instanceof SimpleRTS) {
-            ((SimpleRTS) registrar).setCursor(cursor);
-        }
-    }
-    
+
     // Input abstraction support
     public void addGameMouseListener(GameMouseListener listener) {
-        mouseListeners.add(listener);
+        if (listener != null) {
+            mouseListeners.add(listener);
+        }
     }
     
     public void clearGameMouseListeners() {
@@ -223,15 +147,22 @@ public class InputHandler implements MouseListener, MouseMotionListener {
         clearGameMouseListeners();
         
         // Register UI components from the new state
-        ui.UIComponent root = state.getRoot();
-        if (root != null) {
-            ui.UIComponent.registerAllListeners(root, registrar);
+        if (state != null) {
+            ui.UIComponent root = state.getRoot();
+            if (root != null) {
+                ui.UIComponent.registerAllListeners(root, registrar);
+            }
         }
     }
     
     private void dispatchGameMouseEvent(GameMouseEvent event) {
         for (GameMouseListener listener : mouseListeners) {
-            listener.onGameMouseEvent(event);
+            try {
+                listener.onGameMouseEvent(event);
+            } catch (Exception e) {
+                // Log error but don't crash the input handling
+                System.err.println("Error in mouse listener: " + e.getMessage());
+            }
         }
     }
 } 

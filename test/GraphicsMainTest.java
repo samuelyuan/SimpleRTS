@@ -29,16 +29,19 @@ public class GraphicsMainTest {
 
     @Test
     public void testMouseSelectionInstruction() {
-        Mouse.selectX1 = 120;
-        Mouse.selectY1 = 80;
-        Mouse.selectX2 = 200;
-        Mouse.selectY2 = 160;
-        Mouse.isPressed = true;
-
         // Create a mock GameStateManager that returns 0 for camera coordinates
         GameStateManager mockStateManager = mock(GameStateManager.class);
         when(mockStateManager.getCameraX()).thenReturn(0);
         when(mockStateManager.getCameraY()).thenReturn(0);
+
+        // Create a mock SelectionManager
+        SelectionManager mockSelectionManager = mock(SelectionManager.class);
+        when(mockSelectionManager.isSelectionActive()).thenReturn(true);
+        
+        SelectionManager.SelectionBox mockSelectionBox = new SelectionManager.SelectionBox(120, 80, 200, 160);
+        when(mockSelectionManager.getSelectionBox()).thenReturn(mockSelectionBox);
+        
+        when(mockStateManager.getSelectionManager()).thenReturn(mockSelectionManager);
 
         GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null);
         DrawingInstruction instr = graphicsMain.getMouseSelectionInstruction();

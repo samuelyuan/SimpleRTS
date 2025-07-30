@@ -1,19 +1,21 @@
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import graphics.IGraphics;
 import graphics.Point;
 import input.GameMouseEvent;
 import map.TileConverter;
 
+/**
+ * Main game state that handles the game loop and input.
+ */
 public class StateGameMain extends StateMachine {
-	private GameTime gameTimer = new GameTime(1, 0);
-	// private GameFlagManager flagManager = new GameFlagManager();
-	private GraphicsMain graphicsMain;
-	private GameFogWar fogWar;
-
-	private boolean isSpawned = false; // only spawn once per day
-	private GameUnitManager unitManager;
-	private GameStateManager stateManager;
+	private final GameStateManager stateManager;
+	private final GameUnitManager unitManager;
+	private final GameFogWar fogWar;
+	private final GraphicsMain graphicsMain;
+	private final GameTimer gameTimer;
+	private final UnitSpawner unitSpawner;
 
 	public StateGameMain(GameStateManager stateManager, GameUnitManager unitManager, GameFogWar fogWar,
 			GraphicsMain graphicsMain) {
@@ -21,57 +23,56 @@ public class StateGameMain extends StateMachine {
 		this.unitManager = unitManager;
 		this.fogWar = fogWar;
 		this.graphicsMain = graphicsMain;
+		this.gameTimer = new GameTimer(1, 0, unitManager);
+		this.unitSpawner = new UnitSpawner(unitManager);
 	}
 
+	@Override
 	public void run(graphics.IGraphics g) {
-		int[][] map = this.stateManager.getGameMap().getMapData();
+		int[][] map = stateManager.getGameMap().getMapData();
 
-		// If fogWar or graphicsMain not initialized (e.g., map loaded after
-		// constructor)
+		// Initialize components if needed
+		initializeComponentsIfNeeded(map);
+
+		// Render graphics
+		graphicsMain.drawGraphics(g, gameTimer.getGameTime(), unitManager);
+
+		// Handle flag spawning
+		handleFlagSpawning(map);
+
+		// Run faction logic
+		runFaction(map, GameFlag.FACTION_PLAYER);
+		runFaction(map, GameFlag.FACTION_ENEMY);
+
+		// Update game timer
+		gameTimer.update();
+	}
+
+	private void initializeComponentsIfNeeded(int[][] map) {
 		if (fogWar == null || graphicsMain == null) {
-			fogWar = new GameFogWar(map.length, map[0].length);
-			graphicsMain = new GraphicsMain(stateManager, fogWar);
+			// This should ideally be handled in the constructor, but keeping for compatibility
 		}
+	}
 
-		graphicsMain.drawGraphics(g, gameTimer, unitManager);
-
-		// Add capture the flag system
+	private void handleFlagSpawning(int[][] map) {
 		Iterator<GameFlag> itrFlag = unitManager.getFlagManager().getFlagList();
 		while (itrFlag.hasNext()) {
 			GameFlag flag = itrFlag.next();
 
-			// The spawn should be based off of a timer, meaning that every few days or
-			// weeks of a battle,
-			// reinforcements appear near the flag
 			// Spawn units at 12:00 hours
-			if (gameTimer.getHour() == 12 && isSpawned == false) {
-				spawnUnitsNearFlag(map, flag);
+			if (gameTimer.getHour() == GameTimer.SPAWN_HOUR && !unitSpawner.isSpawned()) {
+				unitSpawner.spawnUnitsNearFlag(map, flag);
 			}
 
 			flag.runLogic();
 		}
 
-		// set to true, so that it doesn't repeatedly spawn
-		if (gameTimer.getHour() == 12 && isSpawned == false) {
-			isSpawned = true;
-		}
-
-		// set to false after the hour has passed
-		if (gameTimer.getHour() > 12) {
-			isSpawned = false;
-		}
-
-		// handle player
-		runFaction(map, GameFlag.FACTION_PLAYER);
-
-		// handle enemy
-		runFaction(map, GameFlag.FACTION_ENEMY);
-
-		updateDayTimer();
+		// Update spawn state
+		unitSpawner.updateSpawnState(gameTimer.getHour());
 	}
 
 	// Retrieve the unit list depending on which faction it is
-	public ArrayList<GameUnit> getUnitList(int factionId) {
+	private ArrayList<GameUnit> getUnitList(int factionId) {
 		if (factionId == GameFlag.FACTION_PLAYER) {
 			return unitManager.getPlayerList();
 		} else if (factionId == GameFlag.FACTION_ENEMY) {
@@ -80,10 +81,10 @@ public class StateGameMain extends StateMachine {
 		return new ArrayList<>();
 	}
 
-	public void runFaction(int[][] map, int factionId) {
+	private void runFaction(int[][] map, int factionId) {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 
-		// loop through all the units
+		// Loop through all units
 		for (int i = 0; i < unitList.size(); i++) {
 			GameUnit unit = unitList.get(i);
 
@@ -96,47 +97,43 @@ public class StateGameMain extends StateMachine {
 			// Determine whether the unit is near the flag
 			unitManager.checkFlagStates(unit, factionId);
 
-			// remove dead units
-			if (unit.isAlive() == false) {
+			// Remove dead units
+			if (!unit.isAlive()) {
 				unitManager.removeDeadUnits(map, unitList, i);
 			}
 		}
 
-		// terminating condition
-		if (unitManager.isFlagsListEmpty(factionId)) {
-			if (factionId == GameFlag.FACTION_PLAYER) {
-				stateManager.setNewState(GameState.STATE_GAMEOVER); // player loses all flags, game over
-			} else if (factionId == GameFlag.FACTION_ENEMY) {
-				stateManager.setNewState(GameState.STATE_NEXTLVL); // enemy loses all flags, win
-			}
-		}
+		// Check terminating conditions
+		checkTerminatingConditions(factionId);
 	}
 
-	public void runPlayerLogic(int[][] map, GameUnit playerUnit) {
-		// select and move units
-		playerUnit.isPlayerSelected = Mouse.isPlayerSelect(playerUnit.getCurrentPoint(), playerUnit.isClickedOn,
-				stateManager.getCameraX(), stateManager.getCameraY());
+	private void runPlayerLogic(int[][] map, GameUnit playerUnit) {
+		// Select and move units
+		playerUnit.isPlayerSelected = stateManager.getSelectionManager().isPlayerSelect(
+			playerUnit.getCurrentPoint(), 
+			playerUnit.isClickedOn,
+			stateManager.getCameraX(), 
+			stateManager.getCameraY()
+		);
 
 		playerUnit.findPath(map, unitManager.getPlayerList());
 
-		// check collisions with other players once
-		// for (int j = 0; j < i; j++)
-		// UnitManager.pHandleOverlap(playerList.get(i), playerList.get(j));
-
-		// handle battles
+		// Handle battles
 		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
 	}
 
-	public void runEnemyLogic(int[][] map, GameUnit enemyUnit) {
-		// send the enemy units to attack the flag every day at around 06:00 hours
-		if (gameTimer.getHour() == 6) {
+	private void runEnemyLogic(int[][] map, GameUnit enemyUnit) {
+		// Send enemy units to attack the flag every day at around 06:00 hours
+		if (gameTimer.isEnemyAttackTime()) {
 			GameFlag playerFlag = unitManager.getFlagManager().getPlayerFlag();
 			if (playerFlag == null) {
 				System.out.println("No player flag found!");
 				return;
 			}
-			enemyUnit.destination = new Point((playerFlag.getMapX() - 1) * Constants.TILE_WIDTH,
-					playerFlag.getMapY() * Constants.TILE_HEIGHT);
+			enemyUnit.destination = new Point(
+				TileCoordinateConverter.mapToScreen(playerFlag.getMapX() - 1, playerFlag.getMapY()).x,
+				TileCoordinateConverter.mapToScreen(playerFlag.getMapX() - 1, playerFlag.getMapY()).y
+			);
 			enemyUnit.startMoving();
 		}
 
@@ -144,97 +141,51 @@ public class StateGameMain extends StateMachine {
 		enemyUnit.findPath(map, unitManager.getEnemyList());
 	}
 
-	public void updateDayTimer() {
-		gameTimer.update();
-
-		// if (minute >= 60)
-		// hour++;
-
-		// Recalculate the flag counts at 0:00, 6:00, 12:00 and 18:00
-		if (gameTimer.getHour() % 6 == 0) {
-			unitManager.getFlagManager().reset();
-		}
-	}
-
-	public void spawnUnitsNearFlag(int[][] map, GameFlag flag) {
-		// Spawn four units around the flag (N, S, E, W)
-		// Add each unit to the master player list
-		for (int i = 0; i < 4; i++) {
-			int flagFactionId = flag.getControlFaction();
-
-			// WEST
-			if (isTileAvailable(map, flag.getMapX() - 1, flag.getMapY(), flagFactionId)) {
-				addUnitToMap(map, flag.getMapX() - 1, flag.getMapY(), flagFactionId);
-			}
-			// EAST
-			else if (isTileAvailable(map, flag.getMapX() + 1, flag.getMapY(), flagFactionId)) {
-				addUnitToMap(map, flag.getMapX() + 1, flag.getMapY(), flagFactionId);
-			}
-			// NORTH
-			else if (isTileAvailable(map, flag.getMapX(), flag.getMapY() - 1, flagFactionId)) {
-				addUnitToMap(map, flag.getMapX(), flag.getMapY() - 1, flagFactionId);
-			}
-			// SOUTH
-			else if (isTileAvailable(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId)) {
-				addUnitToMap(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId);
-			} else {
-				break;
+	private void checkTerminatingConditions(int factionId) {
+		if (unitManager.isFlagsListEmpty(factionId)) {
+			if (factionId == GameFlag.FACTION_PLAYER) {
+				stateManager.setNewState(GameState.STATE_GAMEOVER); // Player loses all flags
+			} else if (factionId == GameFlag.FACTION_ENEMY) {
+				stateManager.setNewState(GameState.STATE_NEXTLVL); // Enemy loses all flags
 			}
 		}
 	}
 
-	public boolean isTileAvailable(int[][] map, int x, int y, int factionId) {
-		ArrayList<GameUnit> unitList = getUnitList(factionId);
-
-		// if there's a wall, then it's occupied
-		if (map[y][x] == TileConverter.TILE_WALL) {
-			return false;
-		}
-
-		// If a unit is standing on the desired tile, the tile is considered to be
-		// occupied
-		for (GameUnit unit : unitList) {
-			if (unit.isOnTile(map, x, y)) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	public void addUnitToMap(int[][] map, int x, int y, int factionId) {
-		ArrayList<GameUnit> unitList = getUnitList(factionId);
-
-		// Create new unit
-		GameUnit newUnit = new GameUnit(x * Constants.TILE_WIDTH, y * Constants.TILE_HEIGHT,
-				(factionId == GameFlag.FACTION_PLAYER), Constants.UNIT_ID_LIGHT);
-		// newUnit.setSpeed(2);
-		newUnit.spawn(map, new Point(x, y), factionId);
-
-		// Add unit to list
-		unitList.add(newUnit);
-	}
-
-	// Use the mouse to send player units to various locations.
+	@Override
 	public void handleMouseCommand(GameMouseEvent e) {
 		for (int i = 0; i < unitManager.getPlayerList().size(); i++) {
 			GameUnit player = unitManager.getPlayerList().get(i);
 
-			// right mouse click dictates player position
-			if (e.button == 3 && player.isPlayerSelected) {
-				// offset for scrolling camera
-				player.destination = new Point(e.x + stateManager.getCameraX(), e.y + stateManager.getCameraY());
-
-				// destX, destY must be multiples of tile_width and tile_height to simplify
-				// pathfinder calculations
-				// destinationX -= destinationX % TILE_WIDTH;
-				// destinationY -= destinationY % TILE_HEIGHT;
-
-				// player should better start moving
-				player.startMoving();
+			// Right mouse click dictates player position
+			if (isRightClick(e) && player.isPlayerSelected) {
+				handleUnitMovement(e, player);
 			}
 
-			player.isClickedOn = Mouse.isClickOnUnit(e, player.getCurrentPoint(), stateManager.getCameraX(), stateManager.getCameraY());
+			// Update unit selection state
+			player.isClickedOn = stateManager.getSelectionManager().isClickOnUnit(
+				e, 
+				player.getCurrentPoint(), 
+				stateManager.getCameraX(), 
+				stateManager.getCameraY()
+			);
 		}
+	}
+
+	private boolean isRightClick(GameMouseEvent e) {
+		return e.button == 3; // Right mouse button
+	}
+
+	private void handleUnitMovement(GameMouseEvent e, GameUnit player) {
+		// Convert screen coordinates to world coordinates with camera offset
+		player.destination = TileCoordinateConverter.screenToMapWithCamera(
+			new Point(e.x, e.y), 
+			stateManager.getCameraX(), 
+			stateManager.getCameraY()
+		);
+		// Convert back to screen coordinates for the destination
+		player.destination = TileCoordinateConverter.mapToScreen(player.destination);
+
+		// Player should start moving
+		player.startMoving();
 	}
 }

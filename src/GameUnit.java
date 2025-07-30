@@ -7,7 +7,7 @@ public class GameUnit {
 	// public int state, waypointNum, waypointX, waypointY;
 
 	public Point getMapPoint(Point screenPoint) {
-		return new Point(screenPoint.x / Constants.TILE_WIDTH, screenPoint.y / Constants.TILE_HEIGHT);
+		return TileCoordinateConverter.screenToMap(screenPoint);
 	}
 
 	// Location on map
@@ -114,6 +114,8 @@ public class GameUnit {
 	 * into account
 	 */
 	private int currentMapEndX = 0, currentMapEndY = 0;
+	private int pathfindingCooldown = 0; // Add cooldown to prevent excessive pathfinding
+	private static final int PATHFINDING_COOLDOWN_FRAMES = 10; // Only recalculate every 10 frames
 
 	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
 		Point mapStart = getMapPoint(this.currentPosition);
@@ -121,10 +123,20 @@ public class GameUnit {
 
 		if (!pathUnit.getIsMoving()) return;
 
+		// Add cooldown to prevent excessive pathfinding
+		if (pathfindingCooldown > 0) {
+			pathfindingCooldown--;
+			return;
+		}
+
+		// Only recalculate path if destination changed or no path exists
 		if (shouldGeneratePath(map, mapStart, mapEnd)) {
-			updateMapAfterPathfinding(map, mapStart, mapEnd);
-			currentMapEndX = mapEnd.x;
-			currentMapEndY = mapEnd.y;
+			if (generatePath(map, mapStart, mapEnd)) {
+				updateMapAfterPathfinding(map, mapStart, mapEnd);
+				currentMapEndX = mapEnd.x;
+				currentMapEndY = mapEnd.y;
+				pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES; // Set cooldown
+			}
 		}
 
 		if (pathUnit.isPathFound()) {
@@ -133,6 +145,11 @@ public class GameUnit {
 	}
 
 	boolean shouldGeneratePath(int[][] map, Point mapStart, Point mapEnd) {
+		// Only generate path if we don't have one or destination changed
+		return !pathUnit.getIsPathCreated() || destinationChanged(mapEnd);
+	}
+
+	boolean generatePath(int[][] map, Point mapStart, Point mapEnd) {
 		return pathUnit.findPath(map, mapStart, mapEnd);
 	}
 
@@ -233,8 +250,7 @@ public class GameUnit {
 
 	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
 		final int ATTACK_RADIUS = 8;
-		int manhattanDist = Math.abs(currentPosition.x - enemy.currentPosition.x) / Constants.TILE_WIDTH +
-				Math.abs(currentPosition.y - enemy.currentPosition.y) / Constants.TILE_HEIGHT;
+		int manhattanDist = TileCoordinateConverter.manhattanDistanceInTiles(currentPosition, enemy.currentPosition);
 		return manhattanDist <= ATTACK_RADIUS && this.checkVisible(map, enemy);
 	}
 

@@ -4,6 +4,7 @@ public class GameStateManager {
     private final SimpleRTS simpleRTS;
     private final GameUnitManager unitManager;
     private final GameMap gameMap;
+    private final SelectionManager selectionManager;
     
     // camera data
     private int cameraX = 0, cameraY = 0;
@@ -12,6 +13,7 @@ public class GameStateManager {
         this.simpleRTS = simpleRTS;
         this.unitManager = new GameUnitManager(new GameFlagManager());
         this.gameMap = new GameMap();
+        this.selectionManager = new SelectionManager();
         // Start with menu state
         this.currentState = new StateGameMenu(this);
     }
@@ -75,6 +77,10 @@ public class GameStateManager {
     
     public GameUnitManager getUnitManager() {
         return unitManager;
+    }
+    
+    public SelectionManager getSelectionManager() {
+        return selectionManager;
     }
     
     // Camera getters and setters

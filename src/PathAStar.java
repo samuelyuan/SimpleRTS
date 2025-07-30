@@ -1,6 +1,9 @@
 import graphics.Point;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.PriorityQueue;
+import java.util.Comparator;
 
 public class PathAStar {
 	/*
@@ -37,6 +40,14 @@ public class PathAStar {
 	public static final int TILE_WALL = 1;
 	public static final int TILE_START = 2;
 	public static final int TILE_END = 3;
+
+	// Comparator for PriorityQueue to sort by F-cost
+	private static class MapNodeComparator implements Comparator<MapNode> {
+		@Override
+		public int compare(MapNode a, MapNode b) {
+			return Integer.compare(a.getF(), b.getF());
+		}
+	}
 
 	public static int getMapTile(int[][] map, int x, int y) {
 		return map[y][x];
@@ -77,162 +88,89 @@ public class PathAStar {
 	}
 
 	public static ArrayList<MapNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
-		ArrayList<MapNode> adjacentList = new ArrayList<MapNode>();
-		ArrayList<MapNode> openList = new ArrayList<MapNode>();
-		ArrayList<MapNode> closedList = new ArrayList<MapNode>();
+		// Use PriorityQueue for efficient min F-cost retrieval
+		PriorityQueue<MapNode> openList = new PriorityQueue<>(new MapNodeComparator());
+		// Use HashSet for O(1) lookup in closed list
+		HashSet<String> closedSet = new HashSet<>();
 		ArrayList<MapNode> finalList = new ArrayList<MapNode>();
 
-		int curX, curY;
-		int minF, numElement;
-
-		// add start node to closed list
-		MapNode startNode = new MapNode(startX, startY, 0, 0, null);
-		closedList.add(startNode);
-
-		// add all squares near start square to adjacent list
-		curX = startX;
-		curY = startY;
-
-		for (int i = curX - 1; i <= curX + 1; i++) {
-			for (int j = curY - 1; j <= curY + 1; j++) {
-				// avoid the center which is square itself
-				if (i == curX && j == curY)
-					continue;
-
-				// skip all locations not on the map
-				if (!isValidLocation(map, i, j))
-					continue;
-
-				// skip unwalkable tiles
-				if (getMapTile(map, i, j) == TILE_WALL)
-					continue;
-
-				int tempGCost = MapNode.findG(i, j, curX, curY);
-				int tempHCost = MapNode.findH(i, j, finalX, finalY);
-				openList.add(new MapNode(i, j, tempGCost, tempHCost, closedList.get(0)));
-			}
-		}
-
-		// search for lowest f-cost near starting node
-		if (openList.size() <= 0) {
+		// Early termination if start or end is invalid
+		if (!isValidLocation(map, startX, startY) || !isValidLocation(map, finalX, finalY)) {
 			return null;
 		}
 
-		minF = openList.get(0).getF();
-		numElement = 0;
-		for (int i = 1; i < openList.size(); i++) {
-			if (openList.get(i).getF() <= minF) {
-				minF = openList.get(i).getF();
-				numElement = i;
+		// Early termination if destination is a wall
+		if (getMapTile(map, finalX, finalY) == TILE_WALL) {
+			return null;
+		}
+
+		// add start node to open list
+		MapNode startNode = new MapNode(startX, startY, 0, MapNode.findH(startX, startY, finalX, finalY), null);
+		openList.add(startNode);
+
+		// Direction arrays for 8-directional movement
+		int[][] directions = {
+			{-1, -1}, {-1, 0}, {-1, 1},
+			{0, -1},           {0, 1},
+			{1, -1},  {1, 0},  {1, 1}
+		};
+
+		while (!openList.isEmpty()) {
+			MapNode currentNode = openList.poll();
+			
+			// Check if we reached the destination
+			if (currentNode.getX() == finalX && currentNode.getY() == finalY) {
+				// Reconstruct path
+				MapNode tempNode = currentNode;
+				do {
+					finalList.add(tempNode);
+					tempNode = tempNode.getParent();
+				} while (tempNode != null);
+				
+				Collections.reverse(finalList);
+				return finalList;
+			}
+
+			// Add to closed set
+			String nodeKey = currentNode.getX() + "," + currentNode.getY();
+			if (closedSet.contains(nodeKey)) {
+				continue;
+			}
+			closedSet.add(nodeKey);
+
+			// Check all 8 directions
+			for (int[] dir : directions) {
+				int newX = currentNode.getX() + dir[0];
+				int newY = currentNode.getY() + dir[1];
+
+				// Skip if out of bounds
+				if (!isValidLocation(map, newX, newY)) {
+					continue;
+				}
+
+				// Skip if wall
+				if (getMapTile(map, newX, newY) == TILE_WALL) {
+					continue;
+				}
+
+				// Skip if already in closed set
+				String newNodeKey = newX + "," + newY;
+				if (closedSet.contains(newNodeKey)) {
+					continue;
+				}
+
+				// Calculate costs
+				int newG = currentNode.getG() + MapNode.findG(currentNode.getX(), currentNode.getY(), newX, newY);
+				int newH = MapNode.findH(newX, newY, finalX, finalY);
+				int newF = newG + newH;
+
+				// Create new node
+				MapNode newNode = new MapNode(newX, newY, newG, newH, currentNode);
+				openList.add(newNode);
 			}
 		}
 
-		while (!(openList.get(numElement).getX() == finalX && openList.get(numElement).getY() == finalY)) {
-			// switch element from open list to closed list
-			// first add to closed, then remove from open
-			closedList.add(openList.get(numElement));
-			openList.remove(numElement);
-
-			curX = closedList.get(closedList.size() - 1).getX();
-			curY = closedList.get(closedList.size() - 1).getY();
-
-			adjacentList.clear();
-			for (int i = curX - 1; i <= curX + 1; i++) {
-				for (int j = curY - 1; j <= curY + 1; j++) {
-					if (isValidLocation(map, i, j) && (i != curX || j != curY)) {
-						int adjacentG = MapNode.findG(i, j, curX, curY) + closedList.get(closedList.size() - 1).getG();
-						int adjacentH = MapNode.findH(i, j, finalX, finalY);
-						adjacentList
-								.add(new MapNode(i, j, adjacentG, adjacentH, closedList.get(closedList.size() - 1)));
-					}
-				}
-			}
-
-			// remove duplicates added to closed list
-			for (int i = 0; i < adjacentList.size(); i++) {
-				for (int j = 0; j < closedList.size(); j++) {
-					if (adjacentList.get(i).getX() == closedList.get(j).getX()
-							&& adjacentList.get(i).getY() == closedList.get(j).getY()) {
-						adjacentList.remove(i);
-						i--;
-						break;
-					}
-				}
-			}
-
-			// remove unwalkables
-			for (int i = 0; i < adjacentList.size(); i++) {
-				if (getMapTile(map, adjacentList.get(i).getX(), adjacentList.get(i).getY()) == TILE_WALL) {
-					adjacentList.remove(i);
-					i--;
-				}
-			}
-
-			// remove duplicates added to open list
-			for (int i = 0; i < adjacentList.size(); i++) {
-				for (int j = 0; j < openList.size(); j++) {
-					if (adjacentList.get(i).getX() == openList.get(j).getX() &&
-							adjacentList.get(i).getY() == openList.get(j).getY()) {
-						int newG = MapNode.findG(curX, curY, adjacentList.get(i).getX(), adjacentList.get(i).getY()) +
-								MapNode.findG(curX, curY, closedList.get(closedList.size() - 2).getX(),
-										closedList.get(closedList.size() - 2).getY());
-						int oldG = MapNode.findG(adjacentList.get(i).getX(), adjacentList.get(i).getY(),
-								closedList.get(closedList.size() - 2).getX(),
-								closedList.get(closedList.size() - 2).getY());
-
-						// overwrite G cost and F cost since better path to that square has been found
-						if (newG < oldG) {
-							openList.get(j).setG(newG);
-							openList.get(j).setF(newG + openList.get(j).getH()); // f = g + h
-							openList.get(j).setParent(adjacentList.get(i));
-						}
-						adjacentList.remove(i);
-						i--;
-						break;
-					}
-				}
-			}
-
-			// add new elements to adjacent list
-			for (int i = 0; i < adjacentList.size(); i++) {
-				openList.add(adjacentList.get(i));
-			}
-
-			if (openList.size() == 0)
-				break;
-
-			minF = openList.get(0).getF();
-			numElement = 0;
-
-			for (int i = 1; i < openList.size(); i++) {
-				if (openList.get(i).getF() <= minF) {
-					// don't add nonadjacent elements
-					if (Math.abs(openList.get(i).getX() - curX) <= 1 && Math.abs(openList.get(i).getY() - curY) <= 1) {
-						minF = openList.get(i).getF();
-						numElement = i;
-					}
-				}
-			}
-		}
-
-		// add final node to closed list
-		if (openList.size() != 0) {
-			closedList.add(openList.get(numElement));
-
-			// trace path back from finish to start
-			MapNode tempNode = closedList.get(closedList.size() - 1);
-			do {
-				finalList.add(tempNode);
-				tempNode = tempNode.getParent();
-
-			} while (tempNode != null);
-
-			// list is stored backwards so reverse it
-			Collections.reverse(finalList);
-		} else {
-			finalList = null;
-		}
-
-		return finalList;
+		// No path found
+		return null;
 	}
 }

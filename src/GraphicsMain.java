@@ -153,23 +153,25 @@ public class GraphicsMain {
 				tempImg = (java.awt.Image) GameImageManager.getImage(getTileImageKey(tileStr), isNight)
 						.getBackendImage();
 
-				drawImageOnScreen(g, tempImg, x * Constants.TILE_WIDTH, y * Constants.TILE_HEIGHT,
+				Point screenPos = TileCoordinateConverter.mapToScreen(x, y);
+				drawImageOnScreen(g, tempImg, screenPos.x, screenPos.y,
 						Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
 			}
 		}
 	}
 
 	public DrawingInstruction getMouseSelectionInstruction() {
-		if (!Mouse.isPressed)
+		SelectionManager selectionManager = stateManager.getSelectionManager();
+		if (!selectionManager.isSelectionActive())
 			return null;
 
-		Mouse.sortSelectionCoordinates(); // ensures coordinates are ordered
+		SelectionManager.SelectionBox selectionBox = selectionManager.getSelectionBox();
 
 		Rect rect = new Rect(
-				Mouse.boxX1 + getCameraX(),
-				Mouse.boxY1 + getCameraY(),
-				Mouse.boxX2 - Mouse.boxX1,
-				Mouse.boxY2 - Mouse.boxY1);
+				selectionBox.x1 + getCameraX(),
+				selectionBox.y1 + getCameraY(),
+				selectionBox.getWidth(),
+				selectionBox.getHeight());
 
 		return new DrawingInstruction(rect, Color.BLACK, false); // Not filled, it's an outline
 	}

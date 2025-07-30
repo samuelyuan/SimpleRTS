@@ -132,8 +132,8 @@ public class GameFlag {
 		// Calculate the bounding box for the health bar
 		int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
 		int height = Constants.TILE_HEIGHT / 8;
-		int x = mapX * Constants.TILE_WIDTH - cameraX + 2;
-		int y = mapY * Constants.TILE_HEIGHT + Constants.TILE_HEIGHT / 8 - cameraY;
+		int x = TileCoordinateConverter.mapToScreen(mapX, mapY).x - cameraX + 2;
+		int y = TileCoordinateConverter.mapToScreen(mapX, mapY).y + Constants.TILE_HEIGHT / 8 - cameraY;
 
 		return new Rect(x, y, width, height);
 	}
