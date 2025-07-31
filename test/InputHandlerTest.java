@@ -8,6 +8,7 @@ import input.GameMouseEvent;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;
 
+
 /**
  * Tests for the improved InputHandler class.
  * Demonstrates the improved testability after refactoring.
@@ -23,7 +24,8 @@ public class InputHandlerTest {
         // Create mock objects for testing
         mockStateManager = new MockGameStateManager();
         mockRegistrar = new MockMouseListenerRegistrar();
-        inputHandler = new InputHandler(mockRegistrar, mockStateManager);
+        CameraManager mockCameraManager = new CameraManager(mockRegistrar);
+        inputHandler = new InputHandler(mockRegistrar, mockStateManager, mockCameraManager);
     }
     
     @Test
@@ -73,26 +75,8 @@ public class InputHandlerTest {
     // Mock classes for testing
     private static class MockGameStateManager extends GameStateManager {
         public MockGameStateManager() {
-            super(null);
+            super(null, new CameraManager(null));
         }
-        
-        @Override
-        public int getCameraX() { return 0; }
-        
-        @Override
-        public int getCameraY() { return 0; }
-        
-        @Override
-        public void addCameraX(int delta) {}
-        
-        @Override
-        public void addCameraY(int delta) {}
-        
-        @Override
-        public void setCameraX(int x) {}
-        
-        @Override
-        public void setCameraY(int y) {}
     }
     
     private static class MockMouseListenerRegistrar implements MouseListenerRegistrar {

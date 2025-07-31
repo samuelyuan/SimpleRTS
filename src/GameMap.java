@@ -6,6 +6,7 @@ import graphics.Point;
 import map.MapFileLoader;
 import map.MapParseResult;
 import map.MapParser;
+import map.MapDescriptionLoader;
 
 /*
  * This class basically changes the map array depending on which level needs to be loaded
@@ -55,43 +56,20 @@ public class GameMap {
 	}
 
 	public ArrayList<String> formatMapDescription(String rawLine, int numLevel, int maxLineWidth) {
-		ArrayList<String> output = new ArrayList<>();
-
-		String[] splitValues = rawLine.split(" ");
-		if (splitValues.length == 0)
-			return null;
-
-		int levelNumber;
-		try {
-			levelNumber = Integer.parseInt(splitValues[0].substring(1, splitValues[0].length() - 1));
-		} catch (Exception e) {
-			return null;
-		}
-
-		if (numLevel != levelNumber)
-			return null;
-
-		String lineStr = "";
-		for (int j = 1; j < splitValues.length; j++) {
-			if (lineStr.length() + splitValues[j].length() > maxLineWidth) {
-				output.add(lineStr.trim());
-				lineStr = splitValues[j] + " ";
-			} else {
-				lineStr += splitValues[j] + " ";
-			}
-		}
-
-		if (!lineStr.isEmpty()) {
-			output.add(lineStr.trim());
-		}
-
-		return output;
+		// This method is kept for backward compatibility but now delegates to the new JSON-based system
+		return loadMapDescription(numLevel, rawLine.contains("a"), maxLineWidth);
 	}
 
 	public ArrayList<String> loadMapDescription(int numLevel, boolean isBegin, int maxLineWidth) {
-		ArrayList<String> data = MapFileLoader.parseFile("../maps/str/english.txt");
-		int index = (isBegin) ? (numLevel - 1) * 2 : (numLevel - 1) * 2 + 1;
-		return formatMapDescription(data.get(index), numLevel, maxLineWidth);
+		// Use the new JSON-based description loader
+		String description = MapDescriptionLoader.getDescription(numLevel, isBegin);
+		if (description == null) {
+			System.err.println("Warning: No description found for level " + numLevel + " (" + (isBegin ? "begin" : "end") + ")");
+			return new ArrayList<>();
+		}
+		
+		List<String> formattedLines = MapDescriptionLoader.formatDescription(description, maxLineWidth);
+		return new ArrayList<>(formattedLines);
 	}
 
 	public MapParseResult parseMapData(List<String> data) {
@@ -151,6 +129,16 @@ public class GameMap {
 
 	public void exportImage() {
 		MapImageExporter.exportImage(mapData, numLevel);
+	}
+	
+
+	
+	/**
+	 * Gets all available level numbers
+	 * @return List of available level numbers
+	 */
+	public List<Integer> getAvailableLevels() {
+		return MapDescriptionLoader.getAvailableLevels();
 	}
 
 	/*

@@ -1,0 +1,12 @@
+{
+  "levels": {
+    "1": {
+      "begin": "A few months ago, a foreign army invaded our land and seized our cities. But now winter has come for us to regroup and prepare a decisive counterattack. If we succeed, it could halt the enemy's advance for good.",
+      "end": "Well done! The enemy is in retreat, but the war is far from over."
+    },
+    "2": {
+      "begin": "It is now becoming clear that the enemy has spread itself too thin. This is our homeland and we must drive the invaders out.",
+      "end": "Victory is ours again! If we keep pressing forward, the enemy will have no choice but to surrender."
+    }
+  }
+}

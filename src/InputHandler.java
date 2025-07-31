@@ -1,4 +1,3 @@
-import java.awt.Cursor;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -7,6 +6,7 @@ import java.util.List;
 import input.GameMouseEvent;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;
+import graphics.Point;
 
 import java.util.ArrayList;
 
@@ -24,10 +24,10 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     // Direct state registration
     private StateMachine currentState = null;
     
-    public InputHandler(MouseListenerRegistrar registrar, GameStateManager stateManager) {
+    public InputHandler(MouseListenerRegistrar registrar, GameStateManager stateManager, CameraManager cameraManager) {
         this.registrar = registrar;
         this.stateManager = stateManager;
-        this.cameraManager = new CameraManager(stateManager, registrar);
+        this.cameraManager = cameraManager;
     }
     
     // MouseListener implementation
@@ -95,8 +95,53 @@ public class InputHandler implements MouseListener, MouseMotionListener {
             // Handle camera scrolling in game state
             if (currentState instanceof StateGameMain) {
                 cameraManager.handleCameraScrolling(gameEvent.x, gameEvent.y);
+                
+                // Handle unit hover detection
+                handleUnitHover(gameEvent);
             }
         }
+    }
+    
+    /**
+     * Handles hover detection for units
+     */
+    private void handleUnitHover(GameMouseEvent e) {
+        // Clear all hover states first
+        for (GameUnit unit : stateManager.getUnitManager().getPlayerList()) {
+            unit.setHovered(false);
+        }
+        for (GameUnit unit : stateManager.getUnitManager().getEnemyList()) {
+            unit.setHovered(false);
+        }
+        
+        // Check if mouse is over any unit
+        for (GameUnit unit : stateManager.getUnitManager().getPlayerList()) {
+            if (isMouseOverUnit(e, unit)) {
+                unit.setHovered(true);
+                break;
+            }
+        }
+        
+        for (GameUnit unit : stateManager.getUnitManager().getEnemyList()) {
+            if (isMouseOverUnit(e, unit)) {
+                unit.setHovered(true);
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Checks if mouse is over a specific unit
+     */
+    private boolean isMouseOverUnit(GameMouseEvent e, GameUnit unit) {
+        Point unitPos = unit.getCurrentPosition();
+        int cameraX = cameraManager.getCameraX();
+        int cameraY = cameraManager.getCameraY();
+        
+        return e.x >= unitPos.x - cameraX 
+            && e.x <= unitPos.x - cameraX + Constants.TILE_WIDTH
+            && e.y >= unitPos.y - cameraY 
+            && e.y <= unitPos.y - cameraY + Constants.TILE_HEIGHT;
     }
     
     /**

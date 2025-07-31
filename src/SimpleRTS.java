@@ -19,6 +19,7 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 	// state handling
 	private GameStateManager stateManager;
 	private InputHandler inputHandler;
+	private CameraManager cameraManager;
 	
 	// JFrame components
 	private JPanel gamePanel;
@@ -79,7 +80,7 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 		add(gamePanel);
 		
 		// Initialize input handler
-		inputHandler = new InputHandler(this, stateManager);
+		inputHandler = new InputHandler(this, stateManager, cameraManager);
 		gamePanel.addMouseListener(inputHandler);
 		gamePanel.addMouseMotionListener(inputHandler);
 		
@@ -92,7 +93,9 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
         GameImageManager.setTileData(GameImagePreloader.loadTileImages());
 		GameImageManager.generateDarkImages();
 
-		stateManager = new GameStateManager(this);
+		// Create shared CameraManager instance
+		cameraManager = new CameraManager(this);
+		stateManager = new GameStateManager(this, cameraManager);
 	}
 
 	/*

@@ -2,21 +2,24 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.List;
+import java.util.ArrayList;
 
 import graphics.Color;
 import graphics.Point;
 import graphics.Rect;
+import graphics.IGraphics;
+
 
 public class GraphicsMainTest {
     @Test
     public void testHealthBarColor() {
         // Create a mock GameStateManager for GraphicsMain
         GameStateManager mockStateManager = mock(GameStateManager.class);
-        when(mockStateManager.getCameraX()).thenReturn(0);
-        when(mockStateManager.getCameraY()).thenReturn(0);
+        CameraManager mockCameraManager = mock(CameraManager.class);
+        when(mockCameraManager.getCameraX()).thenReturn(0);
+        when(mockCameraManager.getCameraY()).thenReturn(0);
         
-        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null);
+        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null, mockCameraManager);
         RendererUnit unitRenderer = new RendererUnit(graphicsMain);
         
         // Test health color logic
@@ -31,8 +34,9 @@ public class GraphicsMainTest {
     public void testMouseSelectionInstruction() {
         // Create a mock GameStateManager that returns 0 for camera coordinates
         GameStateManager mockStateManager = mock(GameStateManager.class);
-        when(mockStateManager.getCameraX()).thenReturn(0);
-        when(mockStateManager.getCameraY()).thenReturn(0);
+        CameraManager mockCameraManager = mock(CameraManager.class);
+        when(mockCameraManager.getCameraX()).thenReturn(0);
+        when(mockCameraManager.getCameraY()).thenReturn(0);
 
         // Create a mock SelectionManager
         SelectionManager mockSelectionManager = mock(SelectionManager.class);
@@ -43,12 +47,12 @@ public class GraphicsMainTest {
         
         when(mockStateManager.getSelectionManager()).thenReturn(mockSelectionManager);
 
-        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null);
+        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, null, mockCameraManager);
         DrawingInstruction instr = graphicsMain.getMouseSelectionInstruction();
 
         assertNotNull(instr);
-        assertEquals(Color.BLACK, instr.color);
-        assertFalse(instr.fill);
+        assertEquals(new Color(0, 150, 255), instr.color); // Blue color
+        assertFalse(instr.fill); // Outline instead of fill
 
         Rect expected = new Rect(120, 80, 80, 80);
         assertEquals(expected, instr.rect);
@@ -56,11 +60,6 @@ public class GraphicsMainTest {
 
     @Test
     public void testFogInstructions() {
-        String[][] map = {
-            {"Land", "Land"},
-            {"Wall", "Flag"}
-        };
-
         GameFogWar fogWar = new GameFogWar(2, 2);
         fogWar.getVisibleData()[0][0] = false;
         fogWar.getVisibleData()[0][1] = true;
@@ -108,5 +107,47 @@ public class GraphicsMainTest {
         Rect expected = new Rect(120, 80, 80, 80);
         Rect actual = new Rect(120, 80, 80, 80);
         assertEquals(expected, actual, "Rects should be equal");
+    }
+
+    @Test
+    public void testMinimapRendering() {
+        // Create a mock GameStateManager with necessary components
+        GameStateManager mockStateManager = mock(GameStateManager.class);
+        CameraManager mockCameraManager = mock(CameraManager.class);
+        when(mockCameraManager.getCameraX()).thenReturn(0);
+        when(mockCameraManager.getCameraY()).thenReturn(0);
+
+        // Create a mock GameMap
+        GameMap mockGameMap = mock(GameMap.class);
+        int[][] mockMapData = new int[5][5]; // 5x5 map
+        when(mockGameMap.getMapData()).thenReturn(mockMapData);
+        when(mockStateManager.getGameMap()).thenReturn(mockGameMap);
+
+        // Create a mock GameUnitManager
+        GameUnitManager mockUnitManager = mock(GameUnitManager.class);
+        when(mockStateManager.getUnitManager()).thenReturn(mockUnitManager);
+
+        // Create a mock GameFlagManager
+        GameFlagManager mockFlagManager = mock(GameFlagManager.class);
+        when(mockUnitManager.getFlagManager()).thenReturn(mockFlagManager);
+
+        // Create empty lists for units and flags
+        when(mockUnitManager.getPlayerList()).thenReturn(new ArrayList<>());
+        when(mockUnitManager.getEnemyList()).thenReturn(new ArrayList<>());
+        when(mockFlagManager.getFlagList()).thenReturn(new ArrayList<GameFlag>().iterator());
+
+        // Create GameFogWar
+        GameFogWar fogWar = new GameFogWar(5, 5);
+
+        // Create GraphicsMain
+        GraphicsMain graphicsMain = new GraphicsMain(mockStateManager, fogWar, mockCameraManager);
+
+        // Create mock graphics
+        IGraphics mockGraphics = mock(IGraphics.class);
+
+        // Test that drawMinimap doesn't throw exceptions
+        assertDoesNotThrow(() -> {
+            graphicsMain.drawMinimap(mockGraphics);
+        }, "Minimap rendering should not throw exceptions");
     }
 }

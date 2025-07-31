@@ -34,7 +34,7 @@ public class GameUnitManagerTest {
         allyUnits.put(new Point(4, 5), Constants.UNIT_ID_HEAVY);
         unitManager.loadPlayerUnits(allyUnits);
         assertEquals(2, unitManager.getPlayerList().size());
-        assertEquals(TileCoordinateConverter.mapToScreen(2, 3), unitManager.getPlayerList().get(0).getCurrentPoint());
+        assertEquals(TileCoordinateConverter.mapToScreen(2, 3), unitManager.getPlayerList().get(0).getCurrentPosition());
         assertEquals(Constants.UNIT_ID_LIGHT, unitManager.getPlayerList().get(0).getClassType());
     }
 
@@ -44,7 +44,7 @@ public class GameUnitManagerTest {
         enemyUnits.put(new Point(1, 1), Constants.UNIT_ID_MEDIUM);
         unitManager.loadEnemyUnits(enemyUnits);
         assertEquals(1, unitManager.getEnemyList().size());
-        assertEquals(TileCoordinateConverter.mapToScreen(1, 1), unitManager.getEnemyList().get(0).getCurrentPoint());
+        assertEquals(TileCoordinateConverter.mapToScreen(1, 1), unitManager.getEnemyList().get(0).getCurrentPosition());
         assertEquals(Constants.UNIT_ID_MEDIUM, unitManager.getEnemyList().get(0).getClassType());
     }
 

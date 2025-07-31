@@ -45,8 +45,11 @@ public final class PathVector2D {
 
 	public void normalize() {
 		double magnitude = getMagnitude();
-		x /= magnitude;
-		y /= magnitude;
+		if (magnitude > 0) {
+			x /= magnitude;
+			y /= magnitude;
+		}
+		// If magnitude is 0, leave the vector as is (zero vector)
 	}
 
 	public void scale(double scaleFactor) {
@@ -69,8 +72,23 @@ public final class PathVector2D {
 	}
 
 	public static double getAngleInBetween(PathVector2D v1, PathVector2D v2) {
+		double magnitude1 = v1.getMagnitude();
+		double magnitude2 = v2.getMagnitude();
+		
+		// Handle zero vectors
+		if (magnitude1 == 0 || magnitude2 == 0) {
+			return 0.0; // Return 0 for angle between zero vectors
+		}
+		
 		double dotProduct = v1.getDotProduct(v2);
-		return Math.acos(dotProduct / (v1.getMagnitude() * v2.getMagnitude()));
+		double denominator = magnitude1 * magnitude2;
+		
+		// Clamp the value to [-1, 1] to avoid numerical precision issues
+		double cosAngle = dotProduct / denominator;
+		if (cosAngle > 1.0) cosAngle = 1.0;
+		if (cosAngle < -1.0) cosAngle = -1.0;
+		
+		return Math.acos(cosAngle);
 	}
 
 	public static double getDistance(PathVector2D v1, PathVector2D v2) {
@@ -82,6 +100,12 @@ public final class PathVector2D {
 	public static PathVector2D getNormalPoint(PathVector2D p, PathVector2D a, PathVector2D b) {
 		PathVector2D ap = p.subtract(a);
 		PathVector2D ab = b.subtract(a);
+		
+		// Handle case where a and b are the same point
+		if (ab.getMagnitude() == 0) {
+			return a; // Return point a if line segment is degenerate
+		}
+		
 		ab.normalize();
 		ab.scale(ap.getDotProduct(ab));
 
@@ -94,30 +118,4 @@ public final class PathVector2D {
 		s += (this.x + "i + " + this.y + "j");
 		return s;
 	}
-
-	/*
-	 * public static void main(String[] args)
-	 * {
-	 * PathVector2D v1 = new PathVector2D(3, 4);
-	 * PathVector2D v2 = new PathVector2D(4, 50);
-	 * 
-	 * PathVector2D v3 = v1.add(v2);
-	 * PathVector2D v4 = v1.subtract(v2);
-	 * 
-	 * System.out.println("v1: " + v1 + " magnitude: " + v1.getMagnitude());
-	 * v1.normalize();
-	 * System.out.println("v1 normalized: " + v1);
-	 * v1.scale(5);
-	 * System.out.println("v1 scaled: " + v1);
-	 * System.out.println("v2: " + v2);
-	 * System.out.println("v3: " + v3);
-	 * System.out.println("v4: " + v4);
-	 * System.out.println("dot product: " + v1.getDotProduct(v2));
-	 * 
-	 * PathVector2D v5 = new PathVector2D(0, 10);
-	 * PathVector2D v6 = new PathVector2D(20, 0);
-	 * 
-	 * System.out.println("angle in between: " + getAngleInBetween(v5, v6));
-	 * }
-	 */
 }

@@ -33,8 +33,8 @@ public class GameUnitTest {
     }
 
     @Test
-    public void testGetCurrentPoint() {
-        Point currentPoint = playerUnit.getCurrentPoint();
+    public void testGetCurrentPosition() {
+        Point currentPoint = playerUnit.getCurrentPosition();
         assertEquals(new Point(2, 2), currentPoint, "The unit should be at position (2, 2)");
     }
 
@@ -73,7 +73,7 @@ public class GameUnitTest {
     @Test
     public void testMovement() {
         // Move the player towards a new destination
-        playerUnit.destination = new Point(6, 6);
+        playerUnit.setDestination(new Point(6, 6));
 
         // Test if the unit starts moving
         playerUnit.startMoving();
@@ -82,7 +82,7 @@ public class GameUnitTest {
         playerUnit.findPath(map, playerList);
 
         // Check if the unit's destination is updated and it's moving
-        assertEquals(new Point(6, 6), playerUnit.destination, "Player should be moving towards the correct destination");
+        assertEquals(new Point(6, 6), playerUnit.getDestination(), "Player should be moving towards the correct destination");
     }
 
     @Test
@@ -91,7 +91,7 @@ public class GameUnitTest {
         map[4][5] = TileConverter.TILE_WALL;
 
         // Set a destination where the wall would block the path
-        playerUnit.destination = new Point(6, 6);
+        playerUnit.setDestination(new Point(6, 6));
 
         // Try to find a path
         ArrayList<GameUnit> playerList = new ArrayList<>();
@@ -102,33 +102,7 @@ public class GameUnitTest {
         assertFalse(playerUnit.isPathCreated(), "Pathfinding should fail due to a wall blocking the path");
     }
 
-    @Test
-    public void testCheckRowVisible() {
-        // Test row visibility (no walls in the path)
-        assertTrue(playerUnit.checkRowVisible(map, 2, 2, 4, 2), "Player should see path without walls");
 
-        // Test row visibility (wall in the path)
-        assertFalse(playerUnit.checkRowVisible(map, 2, 2, 5, 2), "Player should not see path to due to wall at (5, 2)");
-    }
-
-    @Test
-    public void testCheckColumnVisible() {
-        // Test column visibility (no walls in the path)
-        assertTrue(playerUnit.checkColumnVisible(map, 2, 2, 2, 3), "Player should see path without walls");
-
-        // Test column visibility (wall in the path)
-        assertFalse(playerUnit.checkColumnVisible(map, 2, 2, 2, 6), "Player should not see path to (2, 6) due to wall at (2, 5)");
-    }
-
-    @Test
-    public void testCheckDiagonalVisible() {
-        // Test diagonal visibility (no walls in the path)
-        assertTrue(playerUnit.checkDiagonalVisible(map, 2, 2, 3, 3), "Player should see diagonal path without walls");
-
-        // Test diagonal visibility (wall in the path)
-        assertFalse(playerUnit.checkDiagonalVisible(map, 2, 2, 4, 4),
-                "Player should not see diagonal path due to wall at (4, 4)");
-    }
 
     @Test
     public void testCanAttackEnemyTrueAndFalse() {
@@ -155,11 +129,11 @@ public class GameUnitTest {
     @Test
     public void testIsSameDestination() {
         // Both destinations map to the same tile
-        playerUnit.destination = new Point(50, 50); // (1,1) in map coordinates if TILE_WIDTH=50
-        enemyUnit.destination = new Point(50, 50);
+        playerUnit.setDestination(new Point(50, 50)); // (1,1) in map coordinates if TILE_WIDTH=50
+        enemyUnit.setDestination(new Point(50, 50));
         assertTrue(playerUnit.isSameDestination(enemyUnit), "Should be same destination");
         // Destinations map to different tiles
-        enemyUnit.destination = new Point(100, 100); // (2,2) in map coordinates if TILE_WIDTH=50
+        enemyUnit.setDestination(new Point(100, 100)); // (2,2) in map coordinates if TILE_WIDTH=50
         assertFalse(playerUnit.isSameDestination(enemyUnit), "Should not be same destination");
     }
 

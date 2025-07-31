@@ -34,16 +34,55 @@ public class RendererUnit {
     }
 
     private void renderUnitSelection(IGraphics g, GameUnit unit) {
-        if (unit.isPlayerSelected) {
-            g.setColor(Color.BLACK);
-            drawRectOnScreen(g, unit.getCurrentPoint().x, unit.getCurrentPoint().y,
-                    Constants.TILE_WIDTH, Constants.TILE_HEIGHT, false);
+        Point unitPos = unit.getCurrentPosition();
+        int x = unitPos.x;
+        int y = unitPos.y;
+        
+        // Draw hover effect for all units
+        if (unit.isHovered()) {
+            // Draw hover glow effect
+            g.setColor(new Color(255, 255, 0)); // Yellow glow
+            drawRectOnScreen(g, x - 3, y - 3, Constants.TILE_WIDTH + 6, Constants.TILE_HEIGHT + 6, true);
+            
+            // Draw hover border
+            g.setColor(new Color(255, 255, 0)); // Yellow border
+            drawRectOnScreen(g, x - 1, y - 1, Constants.TILE_WIDTH + 2, Constants.TILE_HEIGHT + 2, false);
+        }
+        
+        if (unit.isPlayerSelected()) {
+            // Draw a more prominent selection indicator
+            // Draw outer glow effect
+            g.setColor(new Color(0, 150, 255)); // Blue glow
+            drawRectOnScreen(g, x - 2, y - 2, Constants.TILE_WIDTH + 4, Constants.TILE_HEIGHT + 4, true);
+            
+            // Draw main selection border
+            g.setColor(new Color(0, 200, 255)); // Bright blue border
+            drawRectOnScreen(g, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT, false);
+            
+            // Draw inner highlight
+            g.setColor(new Color(0, 200, 255)); // Blue fill
+            drawRectOnScreen(g, x + 1, y + 1, Constants.TILE_WIDTH - 2, Constants.TILE_HEIGHT - 2, true);
+            
+            // Draw corner indicators for better visibility
+            g.setColor(new Color(255, 255, 255)); // White corners
+            int cornerSize = 4;
+            // Top-left corner
+            drawRectOnScreen(g, x, y, cornerSize, cornerSize, true);
+            // Top-right corner
+            drawRectOnScreen(g, x + Constants.TILE_WIDTH - cornerSize, y, cornerSize, cornerSize, true);
+            // Bottom-left corner
+            drawRectOnScreen(g, x, y + Constants.TILE_HEIGHT - cornerSize, cornerSize, cornerSize, true);
+            // Bottom-right corner
+            drawRectOnScreen(g, x + Constants.TILE_WIDTH - cornerSize, y + Constants.TILE_HEIGHT - cornerSize, cornerSize, cornerSize, true);
 
             // Draw destination point if path exists
             if (unit.isPathCreated()) {
-                g.setColor(Color.GREEN);
-                Point mapDest = unit.getMapPoint(unit.destination);
+                g.setColor(new Color(0, 255, 0)); // Green
+                Point mapDest = unit.getMapPoint(unit.getDestination());
                 Point screenPos = TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y);
+                
+                // Draw destination border only (no fill)
+                g.setColor(new Color(0, 255, 0)); // Bright green border
                 drawRectOnScreen(g, screenPos.x, screenPos.y, 
                     Constants.TILE_WIDTH, Constants.TILE_HEIGHT, false);
             }
@@ -53,21 +92,21 @@ public class RendererUnit {
     private void renderUnitSprite(IGraphics g, GameUnit unit) {
         // Update unit direction if moving
         if (unit.isPathCreated()) {
-            Point mapDest = unit.getMapPoint(unit.destination);
-            unit.direction = calculateDirection(unit.getCurrentPoint(),
-                    TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y));
+            Point mapDest = unit.getMapPoint(unit.getDestination());
+            unit.setDirection(calculateDirection(unit.getCurrentPosition(),
+                    TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y)));
         }
 
         // Draw the unit sprite
         BufferedImage unitSprite = getUnitSprite(unit);
-        drawImageOnScreen(g, unitSprite, unit.getCurrentPoint().x, unit.getCurrentPoint().y,
+        drawImageOnScreen(g, unitSprite, unit.getCurrentPosition().x, unit.getCurrentPosition().y,
                 Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
     }
 
     private BufferedImage getUnitSprite(GameUnit unit) {
         int classType = unit.getClassType();
-        boolean isPlayerUnit = unit.getIsPlayerUnit();
-        int direction = unit.direction;
+        boolean isPlayerUnit = unit.isPlayerUnit();
+        int direction = unit.getDirection();
 
         BufferedImage sprite = null;
 
@@ -132,7 +171,7 @@ public class RendererUnit {
         if (healthColor == null)
             return;
 
-        Point current = unit.getCurrentPoint();
+        Point current = unit.getCurrentPosition();
         int barWidth = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * health);
         int barHeight = Constants.TILE_HEIGHT / 8;
 

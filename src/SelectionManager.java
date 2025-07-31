@@ -3,7 +3,6 @@ import input.GameMouseEvent;
 
 /**
  * Manages unit selection and selection box functionality.
- * Replaces the static Mouse class for better testability and maintainability.
  */
 public class SelectionManager {
     

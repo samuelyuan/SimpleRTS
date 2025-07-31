@@ -5,12 +5,11 @@ public class GameStateManager {
     private final GameUnitManager unitManager;
     private final GameMap gameMap;
     private final SelectionManager selectionManager;
-    
-    // camera data
-    private int cameraX = 0, cameraY = 0;
+    private final CameraManager cameraManager;
 
-    public GameStateManager(SimpleRTS simpleRTS) {
+    public GameStateManager(SimpleRTS simpleRTS, CameraManager cameraManager) {
         this.simpleRTS = simpleRTS;
+        this.cameraManager = cameraManager;
         this.unitManager = new GameUnitManager(new GameFlagManager());
         this.gameMap = new GameMap();
         this.selectionManager = new SelectionManager();
@@ -63,7 +62,7 @@ public class GameStateManager {
             gameMap.getFlagPositions()
         );
         GameFogWar fogWar = new GameFogWar(gameMap.getMapData().length, gameMap.getMapData()[0].length);
-        GraphicsMain graphicsMain = new GraphicsMain(this, fogWar);
+        GraphicsMain graphicsMain = new GraphicsMain(this, fogWar, cameraManager);
         return new StateGameMain(this, unitManager, fogWar, graphicsMain);
     }
 
@@ -83,28 +82,7 @@ public class GameStateManager {
         return selectionManager;
     }
     
-    // Camera getters and setters
-    public int getCameraX() {
-        return cameraX;
-    }
-    
-    public int getCameraY() {
-        return cameraY;
-    }
-    
-    public void setCameraX(int cameraX) {
-        this.cameraX = cameraX;
-    }
-    
-    public void setCameraY(int cameraY) {
-        this.cameraY = cameraY;
-    }
-    
-    public void addCameraX(int deltaX) {
-        this.cameraX += deltaX;
-    }
-    
-    public void addCameraY(int deltaY) {
-        this.cameraY += deltaY;
+    public CameraManager getCameraManager() {
+        return cameraManager;
     }
 } 

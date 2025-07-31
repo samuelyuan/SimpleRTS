@@ -86,7 +86,7 @@ public class GameUnitManager {
 	}
 
 	public void checkFlagStates(GameUnit unit, int factionId) {
-		Point unitMapPos = TileCoordinateConverter.screenToMap(unit.getCurrentPoint());
+		Point unitMapPos = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
 		int unitMapX = unitMapPos.x;
 		int unitMapY = unitMapPos.y;
 		flagManager.checkFlagState(unitMapX, unitMapY, factionId);

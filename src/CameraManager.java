@@ -16,11 +16,12 @@ public class CameraManager {
     private static final int MAX_CAMERA_X = 400 + SCROLL_AMOUNT;
     private static final int MAX_CAMERA_Y = Constants.SCREEN_HEIGHT;
     
-    private final GameStateManager stateManager;
+    private int cameraX = 0;
+    private int cameraY = 0;
+    
     private final MouseListenerRegistrar registrar;
     
-    public CameraManager(GameStateManager stateManager, MouseListenerRegistrar registrar) {
-        this.stateManager = stateManager;
+    public CameraManager(MouseListenerRegistrar registrar) {
         this.registrar = registrar;
     }
     
@@ -39,25 +40,25 @@ public class CameraManager {
         
         // Scroll right
         if (gameX > screenWidth - SCROLL_MARGIN) {
-            stateManager.addCameraX(SCROLL_AMOUNT);
+            addCameraX(SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
             scrolled = true;
         }
         // Scroll left
         else if (gameX < SCROLL_MARGIN) {
-            stateManager.addCameraX(-SCROLL_AMOUNT);
+            addCameraX(-SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
             scrolled = true;
         }
         // Scroll down
         else if (gameY > screenHeight - SCROLL_MARGIN) {
-            stateManager.addCameraY(SCROLL_AMOUNT);
+            addCameraY(SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
             scrolled = true;
         }
         // Scroll up
         else if (gameY < SCROLL_MARGIN) {
-            stateManager.addCameraY(-SCROLL_AMOUNT);
+            addCameraY(-SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
             scrolled = true;
         }
@@ -86,23 +87,23 @@ public class CameraManager {
      */
     private void constrainCameraPosition() {
         // Too far left
-        if (stateManager.getCameraX() < 0) {
-            stateManager.setCameraX(0);
+        if (cameraX < 0) {
+            cameraX = 0;
         }
         
         // Too far up
-        if (stateManager.getCameraY() < 0) {
-            stateManager.setCameraY(0);
+        if (cameraY < 0) {
+            cameraY = 0;
         }
         
         // Too far right
-        if (stateManager.getCameraX() > MAX_CAMERA_X) {
-            stateManager.setCameraX(MAX_CAMERA_X);
+        if (cameraX > MAX_CAMERA_X) {
+            cameraX = MAX_CAMERA_X;
         }
         
         // Too far down
-        if (stateManager.getCameraY() > MAX_CAMERA_Y) {
-            stateManager.setCameraY(MAX_CAMERA_Y);
+        if (cameraY > MAX_CAMERA_Y) {
+            cameraY = MAX_CAMERA_Y;
         }
     }
     
@@ -113,6 +114,35 @@ public class CameraManager {
         if (registrar instanceof SimpleRTS) {
             ((SimpleRTS) registrar).setCursor(cursor);
         }
+    }
+    
+    // Camera getters and setters
+    public int getCameraX() {
+        return cameraX;
+    }
+    
+    public int getCameraY() {
+        return cameraY;
+    }
+    
+    public void setCameraX(int cameraX) {
+        this.cameraX = cameraX;
+        constrainCameraPosition();
+    }
+    
+    public void setCameraY(int cameraY) {
+        this.cameraY = cameraY;
+        constrainCameraPosition();
+    }
+    
+    public void addCameraX(int deltaX) {
+        this.cameraX += deltaX;
+        constrainCameraPosition();
+    }
+    
+    public void addCameraY(int deltaY) {
+        this.cameraY += deltaY;
+        constrainCameraPosition();
     }
     
     /**

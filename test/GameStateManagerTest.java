@@ -14,7 +14,8 @@ public class GameStateManagerTest {
     @BeforeEach
     void setUp() {
         stubRTS = new SimpleRTSStub();
-        manager = new GameStateManager(stubRTS);
+        CameraManager cameraManager = new CameraManager(stubRTS);
+        manager = new GameStateManager(stubRTS, cameraManager);
 
         // Minimal setup for GameMap instance to avoid exceptions
         GameMap gameMap = manager.getGameMap();

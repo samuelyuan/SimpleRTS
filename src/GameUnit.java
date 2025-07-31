@@ -12,15 +12,34 @@ public class GameUnit {
 
 	// Location on map
 	private Point currentPosition;
+	private Point destination;
 
-	public Point getCurrentPoint() {
+	public Point getCurrentPosition() {
 		return this.currentPosition;
 	}
 
-	public Point destination;
+	public void setCurrentPosition(Point position) {
+		this.currentPosition = position;
+	}
+
+	public Point getDestination() {
+		return this.destination;
+	}
+
+	public void setDestination(Point destination) {
+		this.destination = destination;
+	}
 
 	// Physical state
 	private boolean isAttacking = false; // if attacking, stand still. if not, then move.
+
+	public boolean isAttacking() {
+		return this.isAttacking;
+	}
+
+	public void setAttacking(boolean attacking) {
+		this.isAttacking = attacking;
+	}
 
 	private int classType;
 
@@ -28,17 +47,29 @@ public class GameUnit {
 		return this.classType;
 	}
 
+	public void setClassType(int classType) {
+		this.classType = classType;
+	}
+
 	// private int speed = 0;
 	private boolean isPlayerUnit;
 
-	public boolean getIsPlayerUnit() {
+	public boolean isPlayerUnit() {
 		return isPlayerUnit;
+	}
+
+	public void setPlayerUnit(boolean isPlayerUnit) {
+		this.isPlayerUnit = isPlayerUnit;
 	}
 
 	private int health;
 
 	public int getHealth() {
 		return health;
+	}
+
+	public void setHealth(int health) {
+		this.health = health;
 	}
 
 	public void takeDamage(int damage) {
@@ -52,11 +83,44 @@ public class GameUnit {
 		return (health > 0);
 	}
 
-	public int direction = 0; // north, south, east, west
+	private int direction = 0; // north, south, east, west
+
+	public int getDirection() {
+		return this.direction;
+	}
+
+	public void setDirection(int direction) {
+		this.direction = direction;
+	}
 
 	// Mouse selection
-	public boolean isPlayerSelected;
-	public boolean isClickedOn = false; // if clicked on, then unit is selected
+	private boolean isPlayerSelected;
+	private boolean isClickedOn = false; // if clicked on, then unit is selected
+	private boolean isHovered = false; // if mouse is hovering over unit
+
+	public boolean isPlayerSelected() {
+		return this.isPlayerSelected;
+	}
+
+	public void setPlayerSelected(boolean selected) {
+		this.isPlayerSelected = selected;
+	}
+
+	public boolean isClickedOn() {
+		return this.isClickedOn;
+	}
+
+	public void setClickedOn(boolean clickedOn) {
+		this.isClickedOn = clickedOn;
+	}
+
+	public boolean isHovered() {
+		return this.isHovered;
+	}
+
+	public void setHovered(boolean hovered) {
+		this.isHovered = hovered;
+	}
 
 	// Misc data
 	private PathUnit pathUnit;
@@ -119,7 +183,7 @@ public class GameUnit {
 
 	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
 		Point mapStart = getMapPoint(this.currentPosition);
-		Point mapEnd = getMapPoint(this.destination);
+		Point mapEnd = getMapPoint(this.getDestination());
 
 		if (!pathUnit.getIsMoving()) return;
 
@@ -206,15 +270,15 @@ public class GameUnit {
 			if (other == this) continue;
 			if (isSameDestination(other)) {
 				if (!other.pathUnit.getIsPathCreated()) continue;
-				other.destination = other.pathUnit.recalculateDest(map, getMapPoint(this.destination));
-				updateCurrentMapEnd(getMapPoint(other.destination));
+				other.setDestination(other.pathUnit.recalculateDest(map, getMapPoint(this.getDestination())));
+				updateCurrentMapEnd(getMapPoint(other.getDestination()));
 			}
 		}
 	}
 
 	boolean isSameDestination(GameUnit other) {
-		Point otherMapDest = getMapPoint(other.destination);
-		Point playerMapDest = getMapPoint(this.destination);
+		Point otherMapDest = getMapPoint(other.getDestination());
+		Point playerMapDest = getMapPoint(this.getDestination());
 		return otherMapDest.equals(playerMapDest);
 	}
 
@@ -251,7 +315,7 @@ public class GameUnit {
 	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
 		final int ATTACK_RADIUS = 8;
 		int manhattanDist = TileCoordinateConverter.manhattanDistanceInTiles(currentPosition, enemy.currentPosition);
-		return manhattanDist <= ATTACK_RADIUS && this.checkVisible(map, enemy);
+		return manhattanDist <= ATTACK_RADIUS && UnitVisibility.checkVisible(map, this, enemy);
 	}
 
 	void handleAttack(GameUnit enemy) {
@@ -275,96 +339,5 @@ public class GameUnit {
 		return Constants.DAMAGE_MATRIX[attacker][defender];
 	}
 
-	/*
-	 * Goal: Make sure enemy is within sight of player so that the player cannot
-	 * shoot through walls.
-	 */
-	public boolean checkVisible(int map[][], GameUnit enemy) {
-		Point entity1 = new Point(getMapPoint(this.currentPosition));
-		Point entity2 = new Point(getMapPoint(enemy.currentPosition));
 
-		// same row
-		if (Math.abs(entity1.y - entity2.y) <= 1) {
-			return checkRowVisible(map, entity1.x, entity1.y, entity2.x, entity2.y);
-		}
-
-		// same column
-		if (Math.abs(entity1.x - entity2.x) <= 1) {
-			return checkColumnVisible(map, entity1.x, entity1.y, entity2.x, entity2.y);
-		}
-
-		// otherwise, trace a line of sight between the two tiles and determine whether
-		// the line intersects any tiles
-		return checkDiagonalVisible(map, entity1.x, entity1.y, entity2.x, entity2.y);
-	}
-
-	public boolean checkRowVisible(int map[][], int entityX1, int entityY1, int entityX2, int entityY2) {
-		int minX = Math.min(entityX1, entityX2);
-		int maxX = Math.max(entityX1, entityX2);
-
-		// Check the entire row from start to end, including endpoints
-		for (int x = minX; x <= maxX; x++) {
-			if (map[entityY1][x] == TileConverter.TILE_WALL)
-				return false;
-		}
-
-		return true;
-	}
-
-	public boolean checkColumnVisible(int map[][], int entityX1, int entityY1, int entityX2, int entityY2) {
-		int minY = Math.min(entityY1, entityY2);
-		int maxY = Math.max(entityY1, entityY2);
-
-		// Check the entire column from start to end, including endpoints
-		for (int y = minY; y <= maxY; y++) {
-			if (map[y][entityX1] == TileConverter.TILE_WALL)
-				return false;
-		}
-		return true;
-	}
-
-	public boolean checkDiagonalVisible(int map[][], int entityX1, int entityY1, int entityX2, int entityY2) {
-		double deltaY = entityY2 - entityY1;
-		double deltaX = entityX2 - entityX1;
-
-		if (entityY1 < entityY2) {
-			double slope = deltaX / deltaY;
-			double curX = entityX1 + 0.5 * slope;
-			for (int y = entityY1 + 1; y <= entityY2; y++) {
-				if (map[y][(int) Math.round(curX)] == TileConverter.TILE_WALL)
-					return false;
-
-				curX += slope;
-			}
-		} else {
-			double slope = deltaX / deltaY;
-			double curX = entityX1 - 0.5 * slope;
-			for (int y = entityY1 - 1; y >= entityY2; y--) {
-				if (map[y][(int) Math.round(curX)] == TileConverter.TILE_WALL)
-					return false;
-
-				curX -= slope;
-			}
-		}
-
-		if (entityX1 < entityX2) {
-			double curY = entityY1 + 0.5 * deltaY / deltaX;
-			for (int x = entityX1 + 1; x <= entityX2; x++) {
-				if (map[(int) Math.round(curY)][x] == TileConverter.TILE_WALL)
-					return false;
-
-				curY += deltaY / deltaX;
-			}
-		} else {
-			double curY = entityY1 - 0.5 * deltaY / deltaX;
-			for (int x = entityX1 - 1; x >= entityX2; x--) {
-				if (map[(int) Math.round(curY)][x] == TileConverter.TILE_WALL)
-					return false;
-
-				curY -= deltaY / deltaX;
-			}
-		}
-
-		return true;
-	}
 }

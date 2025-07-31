@@ -4,6 +4,7 @@ import graphics.Point;
 
 public class GameFogWar {
     private boolean[][] visibleData;
+    private boolean[][] visitedData; // Track areas that have been visited/explored
 
     public GameFogWar(int mapHeight, int mapWidth) {
         reset(mapHeight, mapWidth);
@@ -13,13 +14,28 @@ public class GameFogWar {
         return visibleData;
     }
 
+    public boolean[][] getVisitedData() {
+        return visitedData;
+    }
+
     public boolean isTileVisible(int x, int y) {
         return visibleData[y][x];
     }
 
+    public boolean isTileVisited(int x, int y) {
+        return visitedData[y][x];
+    }
+
     public void calculateFogOfWar(List<GameUnit> playerList, int[][] mapdata) {
+        // Clear current visibility
+        for (int y = 0; y < visibleData.length; y++) {
+            for (int x = 0; x < visibleData[y].length; x++) {
+                visibleData[y][x] = false;
+            }
+        }
+
         for (GameUnit player : playerList) {
-            Point location = player.getCurrentPoint();
+            Point location = player.getCurrentPosition();
             Point mapPoint = player.getMapPoint(location);
             int mapX = (int) mapPoint.getX();
             int mapY = (int) mapPoint.getY();
@@ -36,7 +52,14 @@ public class GameFogWar {
                         continue;
                     }
 
-                    visibleData[mapY + dy][mapX + dx] = true;
+                    int targetX = mapX + dx;
+                    int targetY = mapY + dy;
+                    
+                    // Mark as currently visible
+                    visibleData[targetY][targetX] = true;
+                    
+                    // Mark as visited (explored)
+                    visitedData[targetY][targetX] = true;
                 }
             }
         }
@@ -44,9 +67,11 @@ public class GameFogWar {
 
     public void reset(int mapHeight, int mapWidth) {
         visibleData = new boolean[mapHeight][mapWidth];
+        visitedData = new boolean[mapHeight][mapWidth];
         for (int y = 0; y < mapHeight; y++) {
             for (int x = 0; x < mapWidth; x++) {
                 visibleData[y][x] = false;
+                visitedData[y][x] = false;
             }
         }
     }

@@ -1,10 +1,8 @@
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import graphics.IGraphics;
 import graphics.Point;
 import input.GameMouseEvent;
-import map.TileConverter;
 
 /**
  * Main game state that handles the game loop and input.
@@ -35,7 +33,7 @@ public class StateGameMain extends StateMachine {
 		initializeComponentsIfNeeded(map);
 
 		// Render graphics
-		graphicsMain.drawGraphics(g, gameTimer.getGameTime(), unitManager);
+		graphicsMain.drawGraphics(g, gameTimer, unitManager);
 
 		// Handle flag spawning
 		handleFlagSpawning(map);
@@ -109,12 +107,12 @@ public class StateGameMain extends StateMachine {
 
 	private void runPlayerLogic(int[][] map, GameUnit playerUnit) {
 		// Select and move units
-		playerUnit.isPlayerSelected = stateManager.getSelectionManager().isPlayerSelect(
-			playerUnit.getCurrentPoint(), 
-			playerUnit.isClickedOn,
-			stateManager.getCameraX(), 
-			stateManager.getCameraY()
-		);
+		playerUnit.setPlayerSelected(stateManager.getSelectionManager().isPlayerSelect(
+			playerUnit.getCurrentPosition(), 
+			playerUnit.isClickedOn(),
+			graphicsMain.getCameraX(), 
+			graphicsMain.getCameraY()
+		));
 
 		playerUnit.findPath(map, unitManager.getPlayerList());
 
@@ -130,10 +128,10 @@ public class StateGameMain extends StateMachine {
 				System.out.println("No player flag found!");
 				return;
 			}
-			enemyUnit.destination = new Point(
+			enemyUnit.setDestination(new Point(
 				TileCoordinateConverter.mapToScreen(playerFlag.getMapX() - 1, playerFlag.getMapY()).x,
 				TileCoordinateConverter.mapToScreen(playerFlag.getMapX() - 1, playerFlag.getMapY()).y
-			);
+			));
 			enemyUnit.startMoving();
 		}
 
@@ -157,17 +155,17 @@ public class StateGameMain extends StateMachine {
 			GameUnit player = unitManager.getPlayerList().get(i);
 
 			// Right mouse click dictates player position
-			if (isRightClick(e) && player.isPlayerSelected) {
+			if (isRightClick(e) && player.isPlayerSelected()) {
 				handleUnitMovement(e, player);
 			}
 
 			// Update unit selection state
-			player.isClickedOn = stateManager.getSelectionManager().isClickOnUnit(
+			player.setClickedOn(stateManager.getSelectionManager().isClickOnUnit(
 				e, 
-				player.getCurrentPoint(), 
-				stateManager.getCameraX(), 
-				stateManager.getCameraY()
-			);
+				player.getCurrentPosition(), 
+				graphicsMain.getCameraX(), 
+				graphicsMain.getCameraY()
+			));
 		}
 	}
 
@@ -176,16 +174,143 @@ public class StateGameMain extends StateMachine {
 	}
 
 	private void handleUnitMovement(GameMouseEvent e, GameUnit player) {
+		// Get all selected units
+		ArrayList<GameUnit> selectedUnits = getSelectedUnits();
+		
+		if (selectedUnits.size() == 1) {
+			// Single unit - direct movement
+			handleSingleUnitMovement(e, player);
+		} else {
+			// Multiple units - formation movement
+			handleFormationMovement(e, selectedUnits);
+		}
+	}
+	
+	/**
+	 * Handles movement for a single unit
+	 */
+	private void handleSingleUnitMovement(GameMouseEvent e, GameUnit player) {
 		// Convert screen coordinates to world coordinates with camera offset
-		player.destination = TileCoordinateConverter.screenToMapWithCamera(
+		player.setDestination(TileCoordinateConverter.screenToMapWithCamera(
 			new Point(e.x, e.y), 
-			stateManager.getCameraX(), 
-			stateManager.getCameraY()
-		);
+			graphicsMain.getCameraX(), 
+			graphicsMain.getCameraY()
+		));
 		// Convert back to screen coordinates for the destination
-		player.destination = TileCoordinateConverter.mapToScreen(player.destination);
+		player.setDestination(TileCoordinateConverter.mapToScreen(player.getDestination()));
 
 		// Player should start moving
 		player.startMoving();
+	}
+	
+	/**
+	 * Handles movement for multiple units using formation
+	 */
+	private void handleFormationMovement(GameMouseEvent e, ArrayList<GameUnit> selectedUnits) {
+		// Get the target destination (center of formation)
+		Point targetDestination = TileCoordinateConverter.screenToMapWithCamera(
+			new Point(e.x, e.y), 
+			graphicsMain.getCameraX(), 
+			graphicsMain.getCameraY()
+		);
+		
+		// Calculate formation positions
+		ArrayList<Point> formationPositions = calculateFormationPositions(targetDestination, selectedUnits.size());
+		
+		// Assign destinations to each unit
+		for (int i = 0; i < selectedUnits.size() && i < formationPositions.size(); i++) {
+			GameUnit unit = selectedUnits.get(i);
+			Point formationPos = formationPositions.get(i);
+			
+			// Convert formation position to screen coordinates
+			unit.setDestination(TileCoordinateConverter.mapToScreen(formationPos));
+			unit.startMoving();
+		}
+	}
+	
+	/**
+	 * Gets all currently selected units
+	 */
+	private ArrayList<GameUnit> getSelectedUnits() {
+		ArrayList<GameUnit> selectedUnits = new ArrayList<>();
+		for (GameUnit unit : unitManager.getPlayerList()) {
+			if (unit.isPlayerSelected()) {
+				selectedUnits.add(unit);
+			}
+		}
+		return selectedUnits;
+	}
+	
+	/**
+	 * Calculates formation positions around a target destination
+	 * Creates a formation that spreads units out in a logical pattern
+	 */
+	private ArrayList<Point> calculateFormationPositions(Point targetDestination, int unitCount) {
+		ArrayList<Point> positions = new ArrayList<>();
+		
+		if (unitCount <= 1) {
+			positions.add(targetDestination);
+			return positions;
+		}
+		
+		// Calculate formation size based on unit count
+		int formationRadius = calculateFormationRadius(unitCount);
+		
+		// Create formation positions
+		for (int i = 0; i < unitCount; i++) {
+			Point formationPos = calculateFormationPosition(targetDestination, i, unitCount, formationRadius);
+			positions.add(formationPos);
+		}
+		
+		return positions;
+	}
+	
+	/**
+	 * Calculates the radius of the formation based on unit count
+	 */
+	private int calculateFormationRadius(int unitCount) {
+		// Larger formations need more space
+		if (unitCount <= 4) return 1;
+		if (unitCount <= 9) return 2;
+		if (unitCount <= 16) return 3;
+		return 4; // For very large groups
+	}
+	
+	/**
+	 * Calculates a specific position in the formation
+	 */
+	private Point calculateFormationPosition(Point center, int unitIndex, int totalUnits, int radius) {
+		// Create a spiral pattern starting from the center
+		if (unitIndex == 0) {
+			return center; // First unit goes to center
+		}
+		
+		// Calculate position in a grid pattern around the center
+		int gridSize = radius * 2 + 1;
+		int unitsPerRing = 8; // 8 directions around the center
+		
+		int ring = (unitIndex - 1) / unitsPerRing + 1;
+		int positionInRing = (unitIndex - 1) % unitsPerRing;
+		
+		if (ring > radius) {
+			// Fallback: spread units in a larger area
+			ring = radius;
+		}
+		
+		// Calculate offset from center
+		int offsetX = 0, offsetY = 0;
+		
+		switch (positionInRing) {
+			case 0: offsetX = ring; offsetY = 0; break;      // East
+			case 1: offsetX = ring; offsetY = -ring; break;   // Northeast
+			case 2: offsetX = 0; offsetY = -ring; break;      // North
+			case 3: offsetX = -ring; offsetY = -ring; break;  // Northwest
+			case 4: offsetX = -ring; offsetY = 0; break;      // West
+			case 5: offsetX = -ring; offsetY = ring; break;   // Southwest
+			case 6: offsetX = 0; offsetY = ring; break;       // South
+			case 7: offsetX = ring; offsetY = ring; break;    // Southeast
+		}
+		
+		return new Point(center.x + offsetX, center.y + offsetY);
 	}
 }
