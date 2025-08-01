@@ -13,6 +13,7 @@ import map.MapDescriptionLoader;
  */
 public class GameMap {
 	private int numLevel = 1;
+	private final ImageService imageService;
 
 	private int mapData[][];
 	private String drawData[][];
@@ -51,8 +52,8 @@ public class GameMap {
 		return mapData;
 	}
 
-	public GameMap() {
-		// Default constructor
+	public GameMap(ImageService imageService) {
+		this.imageService = imageService;
 	}
 
 	public ArrayList<String> formatMapDescription(String rawLine, int numLevel, int maxLineWidth) {
@@ -128,7 +129,7 @@ public class GameMap {
 	}
 
 	public void exportImage() {
-		MapImageExporter.exportImage(mapData, numLevel);
+		MapImageExporter.exportImage(mapData, numLevel, imageService);
 	}
 	
 

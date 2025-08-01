@@ -2,6 +2,9 @@ import java.util.ArrayList;
 
 import graphics.Point;
 import map.TileConverter;
+import pathfinding.PathUnit;
+import utils.Constants;
+import utils.TileCoordinateConverter;
 
 public class GameUnit {
 	// public int state, waypointNum, waypointX, waypointY;
@@ -131,6 +134,10 @@ public class GameUnit {
 
 	public void startMoving() {
 		pathUnit.startMoving();
+	}
+	
+	public boolean isMoving() {
+		return pathUnit.getIsMoving();
 	}
 
 	public GameUnit(int positionX, int positionY, boolean isPlayerUnit, int classType) {

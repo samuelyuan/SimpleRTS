@@ -5,6 +5,8 @@ import graphics.Color;
 import graphics.IGraphics;
 import graphics.Point;
 import graphics.Rect;
+import utils.Constants;
+import utils.TileCoordinateConverter;
 import graphics.GameImage;
 
 public class GraphicsMain {
@@ -20,7 +22,7 @@ public class GraphicsMain {
 		this.fogWar = fogWar;
 		this.cameraManager = cameraManager;
 		this.rendererUnit = new RendererUnit(this);
-		this.rendererHud = new RendererHUD();
+		this.rendererHud = new RendererHUD(stateManager.getImageService());
 	}
 
 	/**
@@ -154,7 +156,7 @@ public class GraphicsMain {
 			for (int x = 0; x < mapData[y].length; x++) {
 				java.awt.Image tempImg;
 				String tileStr = mapData[y][x];
-				tempImg = (java.awt.Image) GameImageManager.getImage(getTileImageKey(tileStr), isNight)
+				tempImg = (java.awt.Image) stateManager.getImageService().getTileImage(getTileImageKey(tileStr), isNight)
 						.getBackendImage();
 
 				Point screenPos = TileCoordinateConverter.mapToScreen(x, y);
@@ -203,138 +205,177 @@ public class GraphicsMain {
 	}
 
 	void drawMinimap(IGraphics g) {
-		int minimapWidth = 200;
-		int minimapHeight = 200;
+		MinimapRenderer minimapRenderer = new MinimapRenderer(stateManager, fogWar);
+		minimapRenderer.render(g, getCameraX(), getCameraY());
+	}
 
-		int mapCols = stateManager.getGameMap().getMapData()[0].length;
-		int mapRows = stateManager.getGameMap().getMapData().length;
+	/**
+	 * Helper class to break up the large drawMinimap method into smaller, focused methods
+	 */
+	private class MinimapRenderer {
+		private final GameStateManager stateManager;
+		private final GameFogWar fogWar;
+		private final int minimapWidth = 200;
+		private final int minimapHeight = 200;
+		private final int minimapX = 10;
+		private final int minimapY = Constants.SCREEN_HEIGHT - minimapHeight - 10;
+		private int tileWidth, tileHeight;
 
-		int tileWidth = minimapWidth / mapCols;
-		int tileHeight = minimapHeight / mapRows;
-
-		int minimapX = 10;
-		int minimapY = Constants.SCREEN_HEIGHT - minimapHeight - 10;
-
-		// Draw background
-		g.setColor(new Color(50, 50, 50));
-		g.fillRect(minimapX, minimapY, minimapWidth, minimapHeight);
-		
-		// Draw border
-		g.setColor(new Color(200, 200, 200));
-		g.drawRect(minimapX, minimapY, minimapWidth, minimapHeight);
-
-		// Draw visited areas (from fog of war)
-		for (int y = 0; y < mapRows; y++) {
-			for (int x = 0; x < mapCols; x++) {
-				int drawX = minimapX + x * tileWidth;
-				int drawY = minimapY + y * tileHeight;
-				
-				// Check if this tile has been visited (explored)
-				if (fogWar.isTileVisited(x, y)) {
-					// Draw visited area with a neutral gray color
-					g.setColor(new Color(140, 140, 140)); // Neutral gray for visited areas
-					g.fillRect(drawX, drawY, tileWidth, tileHeight);
-				}
-			}
+		public MinimapRenderer(GameStateManager stateManager, GameFogWar fogWar) {
+			this.stateManager = stateManager;
+			this.fogWar = fogWar;
 		}
 
-		// Draw terrain features (walls, etc.) for visited areas
-		for (int y = 0; y < mapRows; y++) {
-			for (int x = 0; x < mapCols; x++) {
-				if (fogWar.isTileVisited(x, y)) {
-					int tile = stateManager.getGameMap().getMapData()[y][x];
+		public void render(IGraphics g, int cameraX, int cameraY) {
+			calculateTileDimensions();
+			drawBackground(g);
+			drawVisitedAreas(g);
+			drawTerrainFeatures(g);
+			drawFlags(g);
+			drawPlayerUnits(g);
+			drawEnemyUnits(g);
+			drawCameraViewport(g, cameraX, cameraY);
+		}
+
+		private void calculateTileDimensions() {
+			int mapCols = stateManager.getGameMap().getMapData()[0].length;
+			int mapRows = stateManager.getGameMap().getMapData().length;
+			tileWidth = minimapWidth / mapCols;
+			tileHeight = minimapHeight / mapRows;
+		}
+
+		private void drawBackground(IGraphics g) {
+			// Draw background
+			g.setColor(new Color(50, 50, 50));
+			g.fillRect(minimapX, minimapY, minimapWidth, minimapHeight);
+			
+			// Draw border
+			g.setColor(new Color(200, 200, 200));
+			g.drawRect(minimapX, minimapY, minimapWidth, minimapHeight);
+		}
+
+		private void drawVisitedAreas(IGraphics g) {
+			int mapCols = stateManager.getGameMap().getMapData()[0].length;
+			int mapRows = stateManager.getGameMap().getMapData().length;
+
+			for (int y = 0; y < mapRows; y++) {
+				for (int x = 0; x < mapCols; x++) {
 					int drawX = minimapX + x * tileWidth;
 					int drawY = minimapY + y * tileHeight;
 					
-					// Draw walls
-					if (tile == 1) { // Wall
-						g.setColor(new Color(80, 80, 80)); // Dark gray for walls
+					// Check if this tile has been visited (explored)
+					if (fogWar.isTileVisited(x, y)) {
+						// Draw visited area with a neutral gray color
+						g.setColor(new Color(140, 140, 140)); // Neutral gray for visited areas
 						g.fillRect(drawX, drawY, tileWidth, tileHeight);
 					}
 				}
 			}
 		}
 
-		// Draw flags with current ownership status (only in visited areas)
-		java.util.Iterator<GameFlag> flagIter = stateManager.getUnitManager().getFlagManager().getFlagList();
-		while (flagIter.hasNext()) {
-			GameFlag flag = flagIter.next();
-			int flagX = flag.getMapX();
-			int flagY = flag.getMapY();
+		private void drawTerrainFeatures(IGraphics g) {
+			int mapCols = stateManager.getGameMap().getMapData()[0].length;
+			int mapRows = stateManager.getGameMap().getMapData().length;
+
+			for (int y = 0; y < mapRows; y++) {
+				for (int x = 0; x < mapCols; x++) {
+					if (fogWar.isTileVisited(x, y)) {
+						int tile = stateManager.getGameMap().getMapData()[y][x];
+						int drawX = minimapX + x * tileWidth;
+						int drawY = minimapY + y * tileHeight;
+						
+						// Draw walls
+						if (tile == 1) { // Wall
+							g.setColor(new Color(80, 80, 80)); // Dark gray for walls
+							g.fillRect(drawX, drawY, tileWidth, tileHeight);
+						}
+					}
+				}
+			}
+		}
+
+		private void drawFlags(IGraphics g) {
+			java.util.Iterator<GameFlag> flagIter = stateManager.getUnitManager().getFlagManager().getFlagList();
+			while (flagIter.hasNext()) {
+				GameFlag flag = flagIter.next();
+				int flagX = flag.getMapX();
+				int flagY = flag.getMapY();
+				
+				// Only show flags in visited areas
+				if (fogWar.isTileVisited(flagX, flagY)) {
+					int drawX = minimapX + flagX * tileWidth;
+					int drawY = minimapY + flagY * tileHeight;
+					
+					// Draw flag based on current ownership
+					Color flagColor = flag.getColorForFaction();
+					g.setColor(flagColor);
+					g.fillRect(drawX, drawY, tileWidth, tileHeight);
+					
+					// Draw flag border
+					g.setColor(new Color(255, 255, 255));
+					g.drawRect(drawX, drawY, tileWidth, tileHeight);
+				}
+			}
+		}
+
+		private void drawPlayerUnits(IGraphics g) {
+			for (GameUnit playerUnit : stateManager.getUnitManager().getPlayerList()) {
+				if (playerUnit.isAlive()) {
+					Point unitPos = playerUnit.getCurrentPosition();
+					Point mapPos = playerUnit.getMapPoint(unitPos);
+					
+					// Only show units in visited areas
+					if (fogWar.isTileVisited(mapPos.x, mapPos.y)) {
+						int drawX = minimapX + mapPos.x * tileWidth;
+						int drawY = minimapY + mapPos.y * tileHeight;
+						
+						// Draw player unit as blue dot
+						g.setColor(new Color(0, 100, 255)); // Blue for player units
+						g.fillRect(drawX + 1, drawY + 1, tileWidth - 2, tileHeight - 2);
+					}
+				}
+			}
+		}
+
+		private void drawEnemyUnits(IGraphics g) {
+			for (GameUnit enemyUnit : stateManager.getUnitManager().getEnemyList()) {
+				if (enemyUnit.isAlive()) {
+					Point unitPos = enemyUnit.getCurrentPosition();
+					Point mapPos = enemyUnit.getMapPoint(unitPos);
+					
+					// Only show enemy units if they're currently visible (in fog of war range)
+					if (fogWar.isTileVisible(mapPos.x, mapPos.y)) {
+						int drawX = minimapX + mapPos.x * tileWidth;
+						int drawY = minimapY + mapPos.y * tileHeight;
+						
+						// Draw enemy unit as red dot
+						g.setColor(new Color(255, 100, 100)); // Red for enemy units
+						g.fillRect(drawX + 1, drawY + 1, tileWidth - 2, tileHeight - 2);
+					}
+				}
+			}
+		}
+
+		private void drawCameraViewport(IGraphics g, int cameraX, int cameraY) {
+			int screenWidth = Constants.SCREEN_WIDTH;
+			int screenHeight = Constants.SCREEN_HEIGHT;
 			
-			// Only show flags in visited areas
-			if (fogWar.isTileVisited(flagX, flagY)) {
-				int drawX = minimapX + flagX * tileWidth;
-				int drawY = minimapY + flagY * tileHeight;
-				
-				// Draw flag based on current ownership
-				Color flagColor = flag.getColorForFaction();
-				g.setColor(flagColor);
-				g.fillRect(drawX, drawY, tileWidth, tileHeight);
-				
-				// Draw flag border
-				g.setColor(new Color(255, 255, 255));
-				g.drawRect(drawX, drawY, tileWidth, tileHeight);
-			}
+			// Calculate viewport bounds in minimap coordinates
+			int viewportX = minimapX + (cameraX / Constants.TILE_WIDTH) * tileWidth;
+			int viewportY = minimapY + (cameraY / Constants.TILE_HEIGHT) * tileHeight;
+			int viewportWidth = (screenWidth / Constants.TILE_WIDTH) * tileWidth;
+			int viewportHeight = (screenHeight / Constants.TILE_HEIGHT) * tileHeight;
+			
+			// Constrain viewport to minimap bounds
+			viewportX = Math.max(minimapX, Math.min(minimapX + minimapWidth - viewportWidth, viewportX));
+			viewportY = Math.max(minimapY, Math.min(minimapY + minimapHeight - viewportHeight, viewportY));
+			viewportWidth = Math.min(viewportWidth, minimapWidth);
+			viewportHeight = Math.min(viewportHeight, minimapHeight);
+			
+			// Draw viewport outline
+			g.setColor(new Color(255, 255, 0)); // Yellow for viewport
+			g.drawRect(viewportX, viewportY, viewportWidth, viewportHeight);
 		}
-
-		// Draw player units (always visible if in visited areas)
-		for (GameUnit playerUnit : stateManager.getUnitManager().getPlayerList()) {
-			if (playerUnit.isAlive()) {
-				Point unitPos = playerUnit.getCurrentPosition();
-				Point mapPos = playerUnit.getMapPoint(unitPos);
-				
-				// Only show units in visited areas
-				if (fogWar.isTileVisited(mapPos.x, mapPos.y)) {
-					int drawX = minimapX + mapPos.x * tileWidth;
-					int drawY = minimapY + mapPos.y * tileHeight;
-					
-					// Draw player unit as blue dot
-					g.setColor(new Color(0, 100, 255)); // Blue for player units
-					g.fillRect(drawX + 1, drawY + 1, tileWidth - 2, tileHeight - 2);
-				}
-			}
-		}
-
-		// Draw visible enemy units (only when currently visible in fog of war range)
-		for (GameUnit enemyUnit : stateManager.getUnitManager().getEnemyList()) {
-			if (enemyUnit.isAlive()) {
-				Point unitPos = enemyUnit.getCurrentPosition();
-				Point mapPos = enemyUnit.getMapPoint(unitPos);
-				
-				// Only show enemy units if they're currently visible (in fog of war range)
-				if (fogWar.isTileVisible(mapPos.x, mapPos.y)) {
-					int drawX = minimapX + mapPos.x * tileWidth;
-					int drawY = minimapY + mapPos.y * tileHeight;
-					
-					// Draw enemy unit as red dot
-					g.setColor(new Color(255, 100, 100)); // Red for enemy units
-					g.fillRect(drawX + 1, drawY + 1, tileWidth - 2, tileHeight - 2);
-				}
-			}
-		}
-
-		// Draw camera viewport indicator
-		int cameraX = getCameraX();
-		int cameraY = getCameraY();
-		int screenWidth = Constants.SCREEN_WIDTH;
-		int screenHeight = Constants.SCREEN_HEIGHT;
-		
-		// Calculate viewport bounds in minimap coordinates
-		int viewportX = minimapX + (cameraX / Constants.TILE_WIDTH) * tileWidth;
-		int viewportY = minimapY + (cameraY / Constants.TILE_HEIGHT) * tileHeight;
-		int viewportWidth = (screenWidth / Constants.TILE_WIDTH) * tileWidth;
-		int viewportHeight = (screenHeight / Constants.TILE_HEIGHT) * tileHeight;
-		
-		// Constrain viewport to minimap bounds
-		viewportX = Math.max(minimapX, Math.min(minimapX + minimapWidth - viewportWidth, viewportX));
-		viewportY = Math.max(minimapY, Math.min(minimapY + minimapHeight - viewportHeight, viewportY));
-		viewportWidth = Math.min(viewportWidth, minimapWidth);
-		viewportHeight = Math.min(viewportHeight, minimapHeight);
-		
-		// Draw viewport outline
-		g.setColor(new Color(255, 255, 0)); // Yellow for viewport
-		g.drawRect(viewportX, viewportY, viewportWidth, viewportHeight);
 	}
 
 	public void resetFogOfWar(int mapHeight, int mapWidth) {
@@ -364,10 +405,8 @@ public class GraphicsMain {
 	}
 
 	public void drawFlag(IGraphics g, GameFlag flag) {
-		// Set color based on faction
-		Color flagColor = flag.getColorForFaction();
-		Rect boundingBox = flag.getBoundingBoxForState(getCameraX(), getCameraY());
-		g.setColor(flagColor);
-		g.fillRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+		// Get drawing instruction from flag and execute it
+		DrawingInstruction instr = flag.getDrawingInstruction(getCameraX(), getCameraY());
+		drawInstruction(g, instr);
 	}
 }

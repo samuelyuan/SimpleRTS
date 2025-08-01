@@ -5,6 +5,7 @@ import java.io.IOException;
 import graphics.ImageUtils;
 import map.MapFileLoader;
 import map.TileConverter;
+import utils.Constants;
 import utils.PathResolver;
 
 public class MapImageExporter {
@@ -21,7 +22,7 @@ public class MapImageExporter {
         return tileStrings;
     }
 
-    public static BufferedImage createMapImage(String[][] tileStrings) {
+    public static BufferedImage createMapImage(String[][] tileStrings, ImageService imageService) {
         int imgTileWidth = 8, imgTileHeight = 8;
         int mapHeight = tileStrings.length, mapWidth = tileStrings[0].length;
 
@@ -31,7 +32,7 @@ public class MapImageExporter {
             for (int x = 0; x < mapWidth; ++x) {
                 String tileStr = tileStrings[y][x];
 
-                Image tileImg = (java.awt.Image) GameImageManager.getImage(tileStr).getBackendImage();
+                Image tileImg = (java.awt.Image) imageService.getTileImage(tileStr).getBackendImage();
                 tileImg = ImageUtils.scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
                         (double) imgTileWidth / Constants.TILE_WIDTH,
                         (double) imgTileHeight / Constants.TILE_HEIGHT);
@@ -51,7 +52,7 @@ public class MapImageExporter {
         MapFileLoader.saveFile(im, new File(resolvedPath));
     }
 
-    public static void exportImage(int[][] mapdata, int numLevel) {
+    public static void exportImage(int[][] mapdata, int numLevel, ImageService imageService) {
         if (mapdata == null || mapdata.length == 0 || mapdata[0].length == 0) {
             System.err.println("Error: No map data to export.");
             return;
@@ -59,7 +60,7 @@ public class MapImageExporter {
 
         try {
             String[][] tileStrings = generateMapTileStrings(mapdata);
-            BufferedImage im = createMapImage(tileStrings);
+            BufferedImage im = createMapImage(tileStrings, imageService);
             writeMapImage(im, "../maps/export/map" + numLevel + ".png");
             System.out.println("[INFO] Map image exported.");
         } catch (IOException e) {

@@ -1,6 +1,7 @@
 import java.awt.Cursor;
 
 import input.MouseListenerRegistrar;
+import utils.Constants;
 
 /**
  * Manages camera scrolling and bounds checking for the game.
@@ -36,42 +37,54 @@ public class CameraManager {
         int screenWidth = Constants.SCREEN_WIDTH;
         int screenHeight = Constants.SCREEN_HEIGHT;
         
-        boolean scrolled = false;
+        boolean scrolled = handleHorizontalScrolling(gameX, screenWidth);
+        if (!scrolled) {
+            scrolled = handleVerticalScrolling(gameY, screenHeight);
+        }
         
+        handleCursorUpdate(gameX, gameY, screenWidth, screenHeight, scrolled);
+        constrainCameraPosition();
+        
+        return scrolled;
+    }
+
+    private boolean handleHorizontalScrolling(int gameX, int screenWidth) {
         // Scroll right
         if (gameX > screenWidth - SCROLL_MARGIN) {
             addCameraX(SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
-            scrolled = true;
+            return true;
         }
         // Scroll left
         else if (gameX < SCROLL_MARGIN) {
             addCameraX(-SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
-            scrolled = true;
+            return true;
         }
+        return false;
+    }
+
+    private boolean handleVerticalScrolling(int gameY, int screenHeight) {
         // Scroll down
-        else if (gameY > screenHeight - SCROLL_MARGIN) {
+        if (gameY > screenHeight - SCROLL_MARGIN) {
             addCameraY(SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
-            scrolled = true;
+            return true;
         }
         // Scroll up
         else if (gameY < SCROLL_MARGIN) {
             addCameraY(-SCROLL_AMOUNT);
             setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
-            scrolled = true;
+            return true;
         }
-        
+        return false;
+    }
+
+    private void handleCursorUpdate(int gameX, int gameY, int screenWidth, int screenHeight, boolean scrolled) {
         // Default cursor when not near edges
         if (!scrolled && isInCenterArea(gameX, gameY, screenWidth, screenHeight)) {
             setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         }
-        
-        // Keep camera within bounds
-        constrainCameraPosition();
-        
-        return scrolled;
     }
     
     /**

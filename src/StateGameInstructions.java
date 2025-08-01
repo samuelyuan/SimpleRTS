@@ -5,11 +5,14 @@ import input.GameMouseEvent;
 import ui.UIButton;
 import ui.UIComponent;
 import ui.UILabel;
+import utils.Constants;
 
 public class StateGameInstructions extends StateMachine {
     private UIComponent root;
+    private final ImageService imageService;
 
     public StateGameInstructions(GameStateManager gameStateManager) {
+        this.imageService = gameStateManager.getImageService();
         // Fonts and color
         GameFont mainFont = new GameFont("Comic Sans", GameFont.BOLD, 20);
         GameFont sectionFont = new GameFont("Comic Sans", GameFont.BOLD, 18);
@@ -20,9 +23,9 @@ public class StateGameInstructions extends StateMachine {
             @Override
             protected void draw(IGraphics g) {
                 // Draw background image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
                 // Draw title image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_MENU_INSTRUCT), Constants.SCREEN_WIDTH / 2 - 300, 50, 600, 400);
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_MENU_INSTRUCT), Constants.SCREEN_WIDTH / 2 - 300, 50, 600, 400);
             }
         };
 

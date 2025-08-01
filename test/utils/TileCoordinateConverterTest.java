@@ -1,4 +1,6 @@
+package utils;
 import graphics.Point;
+import utils.TileCoordinateConverter;
 
 public class TileCoordinateConverterTest {
     

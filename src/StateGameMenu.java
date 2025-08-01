@@ -1,4 +1,5 @@
 import ui.UIComponent;
+import utils.Constants;
 import ui.UIButton;
 import graphics.IGraphics;
 import input.GameMouseEvent;
@@ -6,17 +7,19 @@ import input.GameMouseEvent;
 public class StateGameMenu extends StateMachine {
     private UIComponent root;
     private GameStateManager stateManager;
+    private final ImageService imageService;
 
     public StateGameMenu(GameStateManager stateManager) {
         this.stateManager = stateManager;
+        this.imageService = stateManager.getImageService();
 
         root = new UIComponent(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT) {
             @Override
             protected void draw(IGraphics g) {
                 // Draw background image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
                 // Draw title image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_MENU_TITLE), Constants.SCREEN_WIDTH / 2 - 250, 50, 500, 400);
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_MENU_TITLE), Constants.SCREEN_WIDTH / 2 - 250, 50, 500, 400);
             }
         };
 

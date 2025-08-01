@@ -1,3 +1,4 @@
+package pathfinding;
 
 public final class PathVector2D {
 	private double x, y;

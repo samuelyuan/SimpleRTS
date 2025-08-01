@@ -7,6 +7,8 @@ import java.util.List;
 
 import graphics.Point;
 import map.TileConverter;
+import utils.Constants;
+import utils.TileCoordinateConverter;
 
 public class GameUnitTest {
 

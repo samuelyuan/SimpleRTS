@@ -3,6 +3,7 @@ import graphics.Color;
 import graphics.IGraphics;
 import ui.UIComponent;
 import ui.UILabel;
+import utils.Constants;
 
 /**
  * Handles rendering of the Heads-Up Display (HUD).
@@ -13,8 +14,10 @@ public class RendererHUD {
     private final UILabel enemyCountLabel;
     private final UILabel timerDayLabel;
     private final UILabel timerHourLabel;
+    private final ImageService imageService;
 
-    public RendererHUD() {
+    public RendererHUD(ImageService imageService) {
+        this.imageService = imageService;
         this.hudRoot = createHUDRoot();
         this.playerCountLabel = createPlayerCountLabel();
         this.enemyCountLabel = createEnemyCountLabel();
@@ -94,15 +97,15 @@ public class RendererHUD {
 
     private void renderHUDBackgrounds(IGraphics g) {
         // Draw player panel background
-        g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_SUPPLY_PLAYER),
+        g.drawImage(imageService.getGameImage(ImageConstants.IMGID_SUPPLY_PLAYER),
                 Constants.SCREEN_WIDTH / 2 - 250, Constants.SCREEN_HEIGHT - 100, 200, 100);
 
         // Draw enemy panel background
-        g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_SUPPLY_ENEMY),
+        g.drawImage(imageService.getGameImage(ImageConstants.IMGID_SUPPLY_ENEMY),
                 Constants.SCREEN_WIDTH / 2 + 100, Constants.SCREEN_HEIGHT - 100, 200, 100);
 
         // Draw timer background
-        g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_GAME_TIMER),
+        g.drawImage(imageService.getGameImage(ImageConstants.IMGID_GAME_TIMER),
                 Constants.SCREEN_WIDTH / 2 - 50, Constants.SCREEN_HEIGHT - 100, 150, 100);
     }
 

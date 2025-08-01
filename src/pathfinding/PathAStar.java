@@ -1,3 +1,5 @@
+package pathfinding;
+
 import graphics.Point;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,9 +44,9 @@ public class PathAStar {
 	public static final int TILE_END = 3;
 
 	// Comparator for PriorityQueue to sort by F-cost
-	private static class MapNodeComparator implements Comparator<MapNode> {
+	private static class MapNodeComparator implements Comparator<PathNode> {
 		@Override
-		public int compare(MapNode a, MapNode b) {
+		public int compare(PathNode a, PathNode b) {
 			return Integer.compare(a.getF(), b.getF());
 		}
 	}
@@ -87,12 +89,12 @@ public class PathAStar {
 		return null;
 	}
 
-	public static ArrayList<MapNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
+	public static ArrayList<PathNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
 		// Use PriorityQueue for efficient min F-cost retrieval
-		PriorityQueue<MapNode> openList = new PriorityQueue<>(new MapNodeComparator());
+		PriorityQueue<PathNode> openList = new PriorityQueue<>(new MapNodeComparator());
 		// Use HashSet for O(1) lookup in closed list
 		HashSet<String> closedSet = new HashSet<>();
-		ArrayList<MapNode> finalList = new ArrayList<MapNode>();
+		ArrayList<PathNode> finalList = new ArrayList<PathNode>();
 
 		// Early termination if start or end is invalid
 		if (!isValidLocation(map, startX, startY) || !isValidLocation(map, finalX, finalY)) {
@@ -105,7 +107,7 @@ public class PathAStar {
 		}
 
 		// add start node to open list
-		MapNode startNode = new MapNode(startX, startY, 0, MapNode.findH(startX, startY, finalX, finalY), null);
+		PathNode startNode = new PathNode(startX, startY, 0, PathNode.findH(startX, startY, finalX, finalY), null);
 		openList.add(startNode);
 
 		// Direction arrays for 8-directional movement
@@ -116,12 +118,12 @@ public class PathAStar {
 		};
 
 		while (!openList.isEmpty()) {
-			MapNode currentNode = openList.poll();
+			PathNode currentNode = openList.poll();
 			
 			// Check if we reached the destination
 			if (currentNode.getX() == finalX && currentNode.getY() == finalY) {
 				// Reconstruct path
-				MapNode tempNode = currentNode;
+				PathNode tempNode = currentNode;
 				do {
 					finalList.add(tempNode);
 					tempNode = tempNode.getParent();
@@ -160,12 +162,12 @@ public class PathAStar {
 				}
 
 				// Calculate costs
-				int newG = currentNode.getG() + MapNode.findG(currentNode.getX(), currentNode.getY(), newX, newY);
-				int newH = MapNode.findH(newX, newY, finalX, finalY);
+				int newG = currentNode.getG() + PathNode.findG(currentNode.getX(), currentNode.getY(), newX, newY);
+				int newH = PathNode.findH(newX, newY, finalX, finalY);
 				int newF = newG + newH;
 
 				// Create new node
-				MapNode newNode = new MapNode(newX, newY, newG, newH, currentNode);
+				PathNode newNode = new PathNode(newX, newY, newG, newH, currentNode);
 				openList.add(newNode);
 			}
 		}

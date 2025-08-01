@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import utils.PathResolver;
 
 // Simple stubs for dependencies
 class SimpleRTSStub extends SimpleRTS {
@@ -8,14 +9,19 @@ class SimpleRTSStub extends SimpleRTS {
 }
 
 public class GameStateManagerTest {
-    private SimpleRTSStub stubRTS;
     private GameStateManager manager;
+    private SimpleRTSStub stubRTS;
+    private CameraManager cameraManager;
+    private ImageService mockImageService;
 
     @BeforeEach
     void setUp() {
         stubRTS = new SimpleRTSStub();
-        CameraManager cameraManager = new CameraManager(stubRTS);
-        manager = new GameStateManager(stubRTS, cameraManager);
+        cameraManager = new CameraManager(stubRTS);
+        // Create a mock ImageService for testing
+        PathResolver pathResolver = new PathResolver();
+        mockImageService = new ImageService(pathResolver);
+        manager = new GameStateManager(stubRTS, cameraManager, mockImageService);
 
         // Minimal setup for GameMap instance to avoid exceptions
         GameMap gameMap = manager.getGameMap();

@@ -7,6 +7,7 @@ import java.awt.Component;
 import input.GameMouseEvent;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;
+import utils.PathResolver;
 
 
 /**
@@ -16,16 +17,20 @@ import input.MouseListenerRegistrar;
 public class InputHandlerTest {
     
     private InputHandler inputHandler;
-    private GameStateManager mockStateManager;
-    private MouseListenerRegistrar mockRegistrar;
+    private SimpleRTSStub stubRTS;
+    private GameStateManager stateManager;
+    private CameraManager cameraManager;
+    private ImageService mockImageService;
     
     @BeforeEach
     void setUp() {
-        // Create mock objects for testing
-        mockStateManager = new MockGameStateManager();
-        mockRegistrar = new MockMouseListenerRegistrar();
-        CameraManager mockCameraManager = new CameraManager(mockRegistrar);
-        inputHandler = new InputHandler(mockRegistrar, mockStateManager, mockCameraManager);
+        stubRTS = new SimpleRTSStub();
+        cameraManager = new CameraManager(stubRTS);
+        // Create a mock ImageService for testing
+        PathResolver pathResolver = new PathResolver();
+        mockImageService = new ImageService(pathResolver);
+        stateManager = new GameStateManager(stubRTS, cameraManager, mockImageService);
+        inputHandler = new InputHandler(stubRTS, stateManager, cameraManager);
     }
     
     @Test
@@ -75,7 +80,7 @@ public class InputHandlerTest {
     // Mock classes for testing
     private static class MockGameStateManager extends GameStateManager {
         public MockGameStateManager() {
-            super(null, new CameraManager(null));
+            super(null, new CameraManager(null), new ImageService(new PathResolver()));
         }
     }
     

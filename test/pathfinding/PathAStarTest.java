@@ -1,3 +1,4 @@
+package pathfinding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,7 +65,7 @@ public class PathAStarTest {
         Point start = PathAStar.getStartPoint(map);
         Point end = PathAStar.getEndPoint(map);
 
-        ArrayList<MapNode> path = PathAStar.generatePath(map, start.x, start.y, end.x, end.y);
+        ArrayList<PathNode> path = PathAStar.generatePath(map, start.x, start.y, end.x, end.y);
 
         // Test if the path is not null
         assertNotNull(path, "Path should not be null");
@@ -84,7 +85,7 @@ public class PathAStarTest {
         Point start = PathAStar.getStartPoint(map);
         Point end = PathAStar.getEndPoint(map);
 
-        ArrayList<MapNode> path = PathAStar.generatePath(map, start.x, start.y, end.x, end.y);
+        ArrayList<PathNode> path = PathAStar.generatePath(map, start.x, start.y, end.x, end.y);
 
         // Assert that no path is found
         assertNull(path, "No path should be found when the path is blocked");

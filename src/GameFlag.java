@@ -1,5 +1,7 @@
 import graphics.Color;
 import graphics.Rect;
+import utils.Constants;
+import utils.TileCoordinateConverter;
 
 public class GameFlag {
 	private int mapX = 0;
@@ -132,9 +134,23 @@ public class GameFlag {
 		// Calculate the bounding box for the health bar
 		int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
 		int height = Constants.TILE_HEIGHT / 8;
-		int x = TileCoordinateConverter.mapToScreen(mapX, mapY).x - cameraX + 2;
-		int y = TileCoordinateConverter.mapToScreen(mapX, mapY).y + Constants.TILE_HEIGHT / 8 - cameraY;
+		int x = TileCoordinateConverter.mapToScreen(mapX, mapY).x + 2;
+		int y = TileCoordinateConverter.mapToScreen(mapX, mapY).y + Constants.TILE_HEIGHT / 8;
 
 		return new Rect(x, y, width, height);
+	}
+
+	/**
+	 * Returns a DrawingInstruction for rendering this flag.
+	 * This method encapsulates the drawing logic and makes it testable.
+	 * 
+	 * @param cameraX The camera X offset
+	 * @param cameraY The camera Y offset
+	 * @return A DrawingInstruction for rendering the flag
+	 */
+	public DrawingInstruction getDrawingInstruction(int cameraX, int cameraY) {
+		Rect boundingBox = getBoundingBoxForState(cameraX, cameraY);
+		Color flagColor = getColorForFaction();
+		return new DrawingInstruction(boundingBox, flagColor, true); // Fill the flag
 	}
 }

@@ -1,3 +1,5 @@
+import utils.Constants;
+
 /**
  * Utility class for transforming coordinates between screen space and game space.
  * Handles the scaling and centering that occurs when the window is resized.

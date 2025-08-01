@@ -2,16 +2,18 @@ public class GameStateManager {
     private GameState nextState = GameState.STATE_NULL;
     private StateMachine currentState = null;
     private final SimpleRTS simpleRTS;
+    private final ImageService imageService;
     private final GameUnitManager unitManager;
     private final GameMap gameMap;
     private final SelectionManager selectionManager;
     private final CameraManager cameraManager;
 
-    public GameStateManager(SimpleRTS simpleRTS, CameraManager cameraManager) {
+    public GameStateManager(SimpleRTS simpleRTS, CameraManager cameraManager, ImageService imageService) {
         this.simpleRTS = simpleRTS;
         this.cameraManager = cameraManager;
+        this.imageService = imageService;
         this.unitManager = new GameUnitManager(new GameFlagManager());
-        this.gameMap = new GameMap();
+        this.gameMap = new GameMap(imageService);
         this.selectionManager = new SelectionManager();
         // Start with menu state
         this.currentState = new StateGameMenu(this);
@@ -84,5 +86,9 @@ public class GameStateManager {
     
     public CameraManager getCameraManager() {
         return cameraManager;
+    }
+    
+    public ImageService getImageService() {
+        return imageService;
     }
 } 

@@ -1,4 +1,7 @@
+package pathfinding;
 import graphics.Point;
+import utils.TileCoordinateConverter;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,12 +15,12 @@ public class PathUnit {
 	private PathVector2D nextLocation;
 
 	// Path finding
-	private ArrayList<MapNode> movePath = null;
+	private ArrayList<PathNode> movePath = null;
 	private int nodeCounter;
 	private boolean isPathCreated = false;
 
 	// Path caching for performance
-	private static Map<String, ArrayList<MapNode>> pathCache = new HashMap<>();
+	private static Map<String, ArrayList<PathNode>> pathCache = new HashMap<>();
 	private static final int MAX_CACHE_SIZE = 1000;
 
 	// physical state
@@ -35,11 +38,11 @@ public class PathUnit {
 		return isMoving;
 	}
 
-	public ArrayList<MapNode> getPath() {
+	public ArrayList<PathNode> getPath() {
 		return movePath;
 	}
 
-	public void setPath(ArrayList<MapNode> path) {
+	public void setPath(ArrayList<PathNode> path) {
 		this.movePath = new ArrayList<>(path);
 		this.nodeCounter = 1;
 		this.isPathCreated = true;
@@ -71,7 +74,7 @@ public class PathUnit {
 
 		// Check cache first
 		String cacheKey = start.x + "," + start.y + "->" + end.x + "," + end.y;
-		ArrayList<MapNode> cachedPath = pathCache.get(cacheKey);
+		ArrayList<PathNode> cachedPath = pathCache.get(cacheKey);
 		
 		if (cachedPath != null) {
 			movePath = new ArrayList<>(cachedPath); // Create a copy
@@ -92,7 +95,7 @@ public class PathUnit {
 			return false;
 	}
 
-	private void cachePath(String key, ArrayList<MapNode> path) {
+	private void cachePath(String key, ArrayList<PathNode> path) {
 		// Limit cache size to prevent memory issues
 		if (pathCache.size() >= MAX_CACHE_SIZE) {
 			// Remove oldest entries (simple approach - clear half the cache)
@@ -109,30 +112,42 @@ public class PathUnit {
 	public Point recalculateDest(int map[][], Point playerMapDest) {
 		Point newDest = new Point();
 
+		// Check if map is null or empty
+		if (map == null || map.length == 0 || map[0].length == 0) {
+			return newDest;
+		}
+
+		int mapHeight = map.length;
+		int mapWidth = map[0].length;
+
+		// Define 8 directions: N, S, E, W, NW, NE, SW, SE
 		int[][] directions = new int[][] {
-				{ 0, 1 },
-				{ -1, 0 },
-				{ 1, 0 },
-				{ 0, 1 },
-				{ -1, -1 },
-				{ -1, 1 },
-				{ 1, -1 },
-				{ 1, 1 }
+				{ 0, -1 },  // North
+				{ 0, 1 },   // South
+				{ 1, 0 },   // East
+				{ -1, 0 },  // West
+				{ -1, -1 }, // Northwest
+				{ 1, -1 },  // Northeast
+				{ -1, 1 },  // Southwest
+				{ 1, 1 }    // Southeast
 		};
 
-		// Set one of the eight neighboring tiles surrounding the destination as another
-		// destination point
-
-		// fix it so that N,S,E,W is considered first, before NW,NE,SW,SE
+		// Check each direction for a walkable tile
 		for (int i = 0; i < directions.length; i++) {
 			int dx = directions[i][0];
 			int dy = directions[i][1];
+			
+			int newX = playerMapDest.x + dx;
+			int newY = playerMapDest.y + dy;
 
-			if (playerMapDest.y + dy < 0 || playerMapDest.x + dx < 0)
+			// Check bounds
+			if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
 				continue;
+			}
 
-			if (map[playerMapDest.y + dy][playerMapDest.x + dx] == 0) {
-				newDest = TileCoordinateConverter.mapToScreen(playerMapDest.x + dx, playerMapDest.y + dy);
+			// Check if tile is walkable
+			if (map[newY][newX] == 0) {
+				newDest = TileCoordinateConverter.mapToScreen(newX, newY);
 				break;
 			}
 		}
@@ -184,7 +199,7 @@ public class PathUnit {
 		}
 
 		// Get location of next waypoint with path smoothing
-		MapNode mapLocation = movePath.get(nodeCounter);
+		PathNode mapLocation = movePath.get(nodeCounter);
 		Point targetPoint = getSmoothedTarget(mapLocation);
 		
 		nextLocation = new PathVector2D(targetPoint.x, targetPoint.y);
@@ -201,13 +216,13 @@ public class PathUnit {
 		return newLocation;
 	}
 
-	private Point getSmoothedTarget(MapNode currentNode) {
+	private Point getSmoothedTarget(PathNode currentNode) {
 		// Basic smoothing: interpolate between current and next waypoint
 		Point destPos = TileCoordinateConverter.mapToScreen(currentNode.getX(), currentNode.getY());
 		
 		// If we have a next waypoint, smooth the path
 		if (nodeCounter + 1 < movePath.size()) {
-			MapNode nextNode = movePath.get(nodeCounter + 1);
+			PathNode nextNode = movePath.get(nodeCounter + 1);
 			Point nextPos = TileCoordinateConverter.mapToScreen(nextNode.getX(), nextNode.getY());
 			
 			// Simple linear interpolation for smoother movement

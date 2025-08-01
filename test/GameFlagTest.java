@@ -43,16 +43,23 @@ public class GameFlagTest {
     }
 
     @Test
-    public void testHandleControl() {
-        // Test handle control method for player, enemy, and neutral flags
+    public void testHandleControlPlayerFlag() {
+        // Test handle control method for player flag
         playerFlag.handleControl();
         assertEquals(GameFlag.FACTION_PLAYER, playerFlag.getControlFaction(), "Player flag should remain player");
         assertEquals(100, playerFlag.getHealth(), "Player flag should have health 100");
+    }
 
+    @Test
+    public void testHandleControlEnemyFlag() {
+        // Test handle control method for enemy flag
         enemyFlag.handleControl();
         assertEquals(GameFlag.FACTION_ENEMY, enemyFlag.getControlFaction(), "Enemy flag should remain enemy");
         assertEquals(-100, enemyFlag.getHealth(), "Enemy flag should have health -100");
+    }
 
+    @Test
+    public void testHandleControlNeutralToPlayer() {
         // Simulate several ticks to gradually change the health and check if control shifts
         for (int i = 0; i < 51; i++) {  // Simulate 50 ticks to gradually increase health
             neutralFlag.shiftToFaction(2, 2, GameFlag.FACTION_PLAYER);
@@ -61,16 +68,29 @@ public class GameFlagTest {
         
         assertEquals(GameFlag.FACTION_PLAYER, neutralFlag.getControlFaction(), "Neutral flag should switch to player");
         assertEquals(100, neutralFlag.getHealth(), "Neutral flag should have health 100 after being controlled by player");
+    }
 
-        // Simulate several ticks to gradually change the health and check if control shifts
+    @Test
+    public void testHandleControlPlayerToNeutral() {
+        // First get the flag to player control
+        for (int i = 0; i < 51; i++) {
+            neutralFlag.shiftToFaction(2, 2, GameFlag.FACTION_PLAYER);
+            neutralFlag.handleControl();
+        }
+        
+        // Then shift to enemy control
         for (int i = 0; i < 51; i++) { 
             neutralFlag.shiftToFaction(2, 2, GameFlag.FACTION_ENEMY);
             neutralFlag.handleControl();
         }
 
-        assertEquals(GameFlag.FACTION_NEUTRAL, neutralFlag.getControlFaction(), "Neutral flag should switch from player to netural");
-        assertEquals(-2, neutralFlag.getHealth(), "Neutral flag should have health 0 after being controlled by enemy");
+        assertEquals(GameFlag.FACTION_NEUTRAL, neutralFlag.getControlFaction(), "Neutral flag should switch from player to neutral");
+        assertEquals(-2, neutralFlag.getHealth(), "Neutral flag should have health -2 after being controlled by enemy");
+    }
 
+    @Test
+    public void testHandleControlNeutralToEnemy() {
+        // Simulate several ticks to gradually change the health and check if control shifts
         for (int i = 0; i < 50; i++) {  // Simulate 50 ticks to gradually decrease health
             neutralFlag.shiftToFaction(2, 2, GameFlag.FACTION_ENEMY);
             neutralFlag.handleControl();
@@ -113,5 +133,27 @@ public class GameFlagTest {
 
         assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(0, 0),
                 "Neutral flag bounding box should be correct");
+    }
+
+    @Test
+    public void testGetDrawingInstruction() {
+        // Test that the drawing instruction is created correctly
+        DrawingInstruction playerInstr = playerFlag.getDrawingInstruction(0, 0);
+        assertNotNull(playerInstr, "Drawing instruction should not be null");
+        assertEquals(Color.BLUE, playerInstr.color, "Player flag should be blue");
+        assertTrue(playerInstr.fill, "Flag should be filled");
+        assertEquals(new Rect(2, 6, 48, 6), playerInstr.rect, "Player flag rect should be correct");
+
+        DrawingInstruction enemyInstr = enemyFlag.getDrawingInstruction(0, 0);
+        assertNotNull(enemyInstr, "Drawing instruction should not be null");
+        assertEquals(Color.RED, enemyInstr.color, "Enemy flag should be red");
+        assertTrue(enemyInstr.fill, "Flag should be filled");
+        assertEquals(new Rect(52, 56, 48, 6), enemyInstr.rect, "Enemy flag rect should be correct");
+
+        DrawingInstruction neutralInstr = neutralFlag.getDrawingInstruction(0, 0);
+        assertNotNull(neutralInstr, "Drawing instruction should not be null");
+        assertEquals(Color.GRAY, neutralInstr.color, "Neutral flag should be gray");
+        assertTrue(neutralInstr.fill, "Flag should be filled");
+        assertEquals(new Rect(102, 106, 0, 6), neutralInstr.rect, "Neutral flag rect should be correct");
     }
 }

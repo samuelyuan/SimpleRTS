@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import graphics.Point;
 import map.TileConverter;
+import utils.Constants;
 
 /**
  * Tests for the UnitVisibility class.

@@ -5,12 +5,15 @@ import input.GameMouseEvent;
 import ui.UIComponent;
 import ui.UIButton;
 import ui.UILabel;
+import utils.Constants;
 
 public class StateGameWin extends StateMachine {
     private UIComponent root;
     private GameStateManager stateManager;
+    private final ImageService imageService;
 
     public StateGameWin(GameStateManager stateManager) {
+        this.imageService = stateManager.getImageService();
         this.stateManager = stateManager;
 
         // Fonts and color
@@ -22,10 +25,10 @@ public class StateGameWin extends StateMachine {
             @Override
             protected void draw(IGraphics g) {
                 // Draw background image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH,
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_BG_MENU), 0, 0, Constants.SCREEN_WIDTH,
                         Constants.SCREEN_HEIGHT);
                 // Draw title image
-                g.drawImage(GameImageManager.getImage(ImageConstants.IMGID_MENU_VICTORY),
+                g.drawImage(imageService.getGameImage(ImageConstants.IMGID_MENU_VICTORY),
                         Constants.SCREEN_WIDTH / 2 - 300, 50, 600, 500);
             }
         };

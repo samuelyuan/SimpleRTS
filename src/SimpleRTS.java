@@ -3,6 +3,8 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;
+import utils.PathResolver;
+import utils.Constants;
 
 /*
  * In every map, the player has to eliminate all the enemy forces.
@@ -20,6 +22,7 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 	private GameStateManager stateManager;
 	private InputHandler inputHandler;
 	private CameraManager cameraManager;
+	private final ImageService imageService;
 	
 	// JFrame components
 	private JPanel gamePanel;
@@ -37,6 +40,10 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 		height = GAME_HEIGHT;
 		offscreenImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		offscr = offscreenImage.getGraphics();
+
+		// Initialize dependencies
+		PathResolver pathResolver = new PathResolver();
+		this.imageService = new ImageService(pathResolver);
 
 		// Initialize game logic and resources BEFORE creating the panel
 		initializeGameLogic();
@@ -89,13 +96,12 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 	}
 
 	private void initializeGameLogic() {
-		GameImageManager.setImgData(GameImagePreloader.loadGameImages());
-        GameImageManager.setTileData(GameImagePreloader.loadTileImages());
-		GameImageManager.generateDarkImages();
-
+		// Load images using dependency injection
+		imageService.loadImages();
+		
 		// Create shared CameraManager instance
 		cameraManager = new CameraManager(this);
-		stateManager = new GameStateManager(this, cameraManager);
+		stateManager = new GameStateManager(this, cameraManager, imageService);
 	}
 
 	/*

@@ -6,6 +6,8 @@ import graphics.Rect;
 import graphics.IGraphics;
 import graphics.ImageUtils;
 import map.TileConverter;
+import utils.Constants;
+import utils.TileCoordinateConverter;
 
 /**
  * Handles rendering of game units.
@@ -62,18 +64,6 @@ public class RendererUnit {
             // Draw inner highlight
             g.setColor(new Color(0, 200, 255)); // Blue fill
             drawRectOnScreen(g, x + 1, y + 1, Constants.TILE_WIDTH - 2, Constants.TILE_HEIGHT - 2, true);
-            
-            // Draw corner indicators for better visibility
-            g.setColor(new Color(255, 255, 255)); // White corners
-            int cornerSize = 4;
-            // Top-left corner
-            drawRectOnScreen(g, x, y, cornerSize, cornerSize, true);
-            // Top-right corner
-            drawRectOnScreen(g, x + Constants.TILE_WIDTH - cornerSize, y, cornerSize, cornerSize, true);
-            // Bottom-left corner
-            drawRectOnScreen(g, x, y + Constants.TILE_HEIGHT - cornerSize, cornerSize, cornerSize, true);
-            // Bottom-right corner
-            drawRectOnScreen(g, x + Constants.TILE_WIDTH - cornerSize, y + Constants.TILE_HEIGHT - cornerSize, cornerSize, cornerSize, true);
 
             // Draw destination point if path exists
             if (unit.isPathCreated()) {
@@ -128,12 +118,12 @@ public class RendererUnit {
     private BufferedImage getLightUnitSprite(boolean isPlayerUnit, int direction) {
         BufferedImage sprite;
         if (isPlayerUnit) {
-            sprite = (BufferedImage) GameImageManager
-                    .getImage(TileConverter.STR_UNIT_LIGHT_PLAYER, graphicsMain.isNight())
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_LIGHT_PLAYER, graphicsMain.isNight())
                     .getBackendImage();
         } else {
-            sprite = (BufferedImage) GameImageManager
-                    .getImage(TileConverter.STR_UNIT_LIGHT_ENEMY, graphicsMain.isNight())
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_LIGHT_ENEMY, graphicsMain.isNight())
                     .getBackendImage();
         }
         return sprite.getSubimage(Constants.TILE_WIDTH * direction, 0,
@@ -142,7 +132,7 @@ public class RendererUnit {
 
     private BufferedImage getMediumUnitSprite(boolean isPlayerUnit) {
         return (BufferedImage) ImageUtils
-                .addTeamColorToUnit(GameImageManager.getImage(TileConverter.STR_UNIT_MEDIUM),
+                .addTeamColorToUnit(graphicsMain.getStateManager().getImageService().getTileImage(TileConverter.STR_UNIT_MEDIUM),
                         isPlayerUnit)
                 .getBackendImage();
     }
@@ -150,12 +140,12 @@ public class RendererUnit {
     private BufferedImage getHeavyUnitSprite(boolean isPlayerUnit, int direction) {
         BufferedImage sprite;
         if (isPlayerUnit) {
-            sprite = (BufferedImage) GameImageManager
-                    .getImage(TileConverter.STR_UNIT_HEAVY_PLAYER, graphicsMain.isNight())
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_HEAVY_PLAYER, graphicsMain.isNight())
                     .getBackendImage();
         } else {
-            sprite = (BufferedImage) GameImageManager
-                    .getImage(TileConverter.STR_UNIT_HEAVY_ENEMY, graphicsMain.isNight())
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_HEAVY_ENEMY, graphicsMain.isNight())
                     .getBackendImage();
         }
         return sprite.getSubimage(Constants.TILE_WIDTH * direction, 0,

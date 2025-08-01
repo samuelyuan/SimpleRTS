@@ -1,10 +1,11 @@
+package pathfinding;
 
-public class MapNode {
+public class PathNode {
 	private int x, y;
 	private int fScore, gScore, hScore;
-	private MapNode parentNode;
+	private PathNode parentNode;
 
-	public MapNode(int x, int y, int g, int h, MapNode parent) {
+	public PathNode(int x, int y, int g, int h, PathNode parent) {
 		this.x = x;
 		this.y = y;
 		gScore = g;
@@ -61,7 +62,7 @@ public class MapNode {
 		return hScore;
 	}
 
-	public MapNode getParent() {
+	public PathNode getParent() {
 		return parentNode;
 	}
 
@@ -85,7 +86,7 @@ public class MapNode {
 		this.hScore = h;
 	}
 
-	public void setParent(MapNode parent) {
+	public void setParent(PathNode parent) {
 		this.parentNode = parent;
 	}
 
