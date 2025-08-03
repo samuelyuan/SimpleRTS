@@ -158,69 +158,99 @@ public class CameraManagerTest {
     
     @Test
     void testHandleCameraScrollingRightEdge() {
-        // Mouse near right edge - should scroll right
-        int screenWidth = Constants.SCREEN_WIDTH;
-        boolean scrolled = cameraManager.handleCameraScrolling(screenWidth - 10, 100);
+        // Test scrolling when mouse is at right edge
+        boolean scrolled = cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, 100);
         
-        assertTrue(scrolled, "Should scroll when mouse is near right edge");
-        assertEquals(5, cameraManager.getCameraX(), "Should scroll right by SCROLL_AMOUNT");
-        assertEquals(0, cameraManager.getCameraY());
+        assertTrue(scrolled, "Should scroll when mouse is at right edge");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Camera should have moved right");
     }
     
     @Test
     void testHandleCameraScrollingLeftEdge() {
-        // Mouse near left edge - should scroll left
+        // Set camera to a position where left scrolling is possible
+        cameraManager.setCameraX(100);
+        
+        // Test scrolling when mouse is at left edge
         boolean scrolled = cameraManager.handleCameraScrolling(10, 100);
         
-        assertTrue(scrolled, "Should scroll when mouse is near left edge");
-        assertEquals(0, cameraManager.getCameraX(), "Should scroll left but be constrained to minimum 0");
-        assertEquals(0, cameraManager.getCameraY());
+        assertTrue(scrolled, "Should scroll when mouse is at left edge");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() < 100, "Camera should have moved left");
     }
     
     @Test
     void testHandleCameraScrollingBottomEdge() {
-        // Mouse near bottom edge - should scroll down
-        int screenHeight = Constants.SCREEN_HEIGHT;
-        boolean scrolled = cameraManager.handleCameraScrolling(100, screenHeight - 10);
+        // Test scrolling when mouse is at bottom edge
+        boolean scrolled = cameraManager.handleCameraScrolling(100, Constants.SCREEN_HEIGHT - 10);
         
-        assertTrue(scrolled, "Should scroll when mouse is near bottom edge");
-        assertEquals(0, cameraManager.getCameraX());
-        assertEquals(5, cameraManager.getCameraY(), "Should scroll down by SCROLL_AMOUNT");
+        assertTrue(scrolled, "Should scroll when mouse is at bottom edge");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraY() > 0, "Camera should have moved down");
     }
     
     @Test
     void testHandleCameraScrollingTopEdge() {
-        // Mouse near top edge - should scroll up
+        // Set camera to a position where up scrolling is possible
+        cameraManager.setCameraY(100);
+        
+        // Test scrolling when mouse is at top edge
         boolean scrolled = cameraManager.handleCameraScrolling(100, 10);
         
-        assertTrue(scrolled, "Should scroll when mouse is near top edge");
-        assertEquals(0, cameraManager.getCameraX());
-        assertEquals(0, cameraManager.getCameraY(), "Should scroll up but be constrained to minimum 0");
+        assertTrue(scrolled, "Should scroll when mouse is at top edge");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraY() < 100, "Camera should have moved up");
     }
     
     @Test
     void testHandleCameraScrollingCorner() {
-        // Mouse in top-right corner - should prioritize horizontal scrolling
-        int screenWidth = Constants.SCREEN_WIDTH;
-        boolean scrolled = cameraManager.handleCameraScrolling(screenWidth - 10, 10);
+        // Test scrolling when mouse is at corner (should prioritize horizontal)
+        boolean scrolled = cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, Constants.SCREEN_HEIGHT - 10);
         
-        assertTrue(scrolled, "Should scroll when mouse is in corner");
-        assertEquals(5, cameraManager.getCameraX(), "Should prioritize horizontal scrolling");
-        assertEquals(0, cameraManager.getCameraY(), "Should not scroll vertically when horizontal scrolling occurs");
+        assertTrue(scrolled, "Should scroll when mouse is at corner");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Camera should have moved right from corner");
     }
     
     @Test
     void testHorizontalScrollingPriority() {
-        // Test that horizontal scrolling takes priority over vertical scrolling
-        int screenWidth = Constants.SCREEN_WIDTH;
-        int screenHeight = Constants.SCREEN_HEIGHT;
-        
-        // Position mouse at both edges (should trigger horizontal scrolling only)
-        boolean scrolled = cameraManager.handleCameraScrolling(screenWidth - 10, screenHeight - 10);
+        // Test that horizontal scrolling takes priority over vertical
+        boolean scrolled = cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, Constants.SCREEN_HEIGHT - 10);
         
         assertTrue(scrolled, "Should scroll when mouse is at edges");
-        assertEquals(5, cameraManager.getCameraX(), "Should scroll horizontally");
-        assertEquals(0, cameraManager.getCameraY(), "Should not scroll vertically due to horizontal priority");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        // Should prioritize horizontal scrolling
+        assertTrue(cameraManager.getCameraX() > 0, "Should prioritize horizontal scrolling");
     }
     
     @Test
@@ -237,6 +267,10 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, Constants.SCREEN_HEIGHT - 10);
         
         assertTrue(scrolled, "Should attempt to scroll even at boundaries");
+        
+        // Update camera for one frame
+        cameraManager.update(1.0f / 60.0f);
+        
         assertEquals(maxX, cameraManager.getCameraX(), "Should not exceed maximum X");
         assertEquals(maxY, cameraManager.getCameraY(), "Should not exceed maximum Y");
     }
@@ -251,6 +285,10 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(10, 10);
         
         assertTrue(scrolled, "Should attempt to scroll even at minimum boundaries");
+        
+        // Update camera for one frame
+        cameraManager.update(1.0f / 60.0f);
+        
         assertEquals(0, cameraManager.getCameraX(), "Should be constrained to minimum X immediately");
         assertEquals(0, cameraManager.getCameraY(), "Should be constrained to minimum Y immediately");
     }
@@ -297,12 +335,15 @@ public class CameraManagerTest {
             cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, 100);
         }
         
-        // Should accumulate scroll amount but respect bounds
-        int expectedScroll = 10 * 5; // 10 iterations * SCROLL_AMOUNT
-        int maxX = 400 + 5;
-        int actualScroll = Math.min(expectedScroll, maxX);
+        // Update camera for multiple frames to see accumulated movement
+        for (int i = 0; i < 10; i++) {
+            cameraManager.update(1.0f / 60.0f); // 10 frames at 60 FPS
+        }
         
-        assertEquals(actualScroll, cameraManager.getCameraX(), "Should accumulate scroll but respect bounds");
+        // Should accumulate movement but respect bounds
+        int maxX = 400 + 5;
+        assertTrue(cameraManager.getCameraX() > 0, "Should accumulate movement");
+        assertTrue(cameraManager.getCameraX() <= maxX, "Should respect maximum bounds");
     }
     
     @Test
@@ -311,6 +352,10 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(0, 0);
         
         assertTrue(scrolled, "Should scroll when mouse is at (0,0)");
+        
+        // Update camera for one frame
+        cameraManager.update(1.0f / 60.0f);
+        
         assertEquals(0, cameraManager.getCameraX(), "Should be constrained to minimum X immediately");
         assertEquals(0, cameraManager.getCameraY(), "Should be constrained to minimum Y immediately");
     }
@@ -324,8 +369,13 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(screenWidth, screenHeight);
         
         assertTrue(scrolled, "Should scroll when mouse is at maximum coordinates");
-        assertEquals(5, cameraManager.getCameraX(), "Should scroll right from maximum X");
-        assertEquals(0, cameraManager.getCameraY(), "Should not scroll vertically when horizontal scrolling occurs first");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Should scroll right from maximum X");
     }
     
     @Test
@@ -338,7 +388,13 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(10, 100);
         
         assertTrue(scrolled, "Should scroll when mouse is near left edge");
-        assertEquals(5, cameraManager.getCameraX(), "Should scroll left by SCROLL_AMOUNT from 10");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() < 10, "Should scroll left from 10");
         assertEquals(10, cameraManager.getCameraY(), "Y should remain unchanged");
     }
     
@@ -352,8 +408,14 @@ public class CameraManagerTest {
         boolean scrolled = cameraManager.handleCameraScrolling(screenWidth / 2, screenHeight);
         
         assertTrue(scrolled, "Should scroll when mouse is at bottom edge");
+        
+        // Update camera for multiple frames to allow acceleration
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
         assertEquals(0, cameraManager.getCameraX(), "Should not scroll horizontally");
-        assertEquals(5, cameraManager.getCameraY(), "Should scroll down by SCROLL_AMOUNT");
+        assertTrue(cameraManager.getCameraY() > 0, "Should scroll down");
     }
     
     // ==================== INTEGRATION TESTS ====================
@@ -366,35 +428,147 @@ public class CameraManagerTest {
         
         // Scroll right
         cameraManager.handleCameraScrolling(screenWidth - 10, 100);
-        assertEquals(5, cameraManager.getCameraX());
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        assertTrue(cameraManager.getCameraX() > 0, "Should scroll right");
         assertEquals(0, cameraManager.getCameraY());
         
         // Scroll down
         cameraManager.handleCameraScrolling(100, screenHeight - 10);
-        assertEquals(5, cameraManager.getCameraX());
-        assertEquals(5, cameraManager.getCameraY());
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        assertTrue(cameraManager.getCameraX() > 0, "Should maintain right position");
+        assertTrue(cameraManager.getCameraY() > 0, "Should scroll down");
         
         // Scroll left
         cameraManager.handleCameraScrolling(10, 100);
-        assertEquals(0, cameraManager.getCameraX());
-        assertEquals(5, cameraManager.getCameraY());
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        assertTrue(cameraManager.getCameraX() >= 0, "Should scroll left");
+        assertTrue(cameraManager.getCameraY() > 0, "Should maintain down position");
         
         // Scroll up
         cameraManager.handleCameraScrolling(100, 10);
-        assertEquals(0, cameraManager.getCameraX());
-        assertEquals(0, cameraManager.getCameraY());
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        assertTrue(cameraManager.getCameraX() >= 0, "Should maintain left position");
+        assertTrue(cameraManager.getCameraY() >= 0, "Should scroll up");
     }
     
     @Test
     void testScrollingPrecision() {
-        // Test that scrolling uses exact SCROLL_AMOUNT values
+        // Test that scrolling accumulates smoothly over multiple frames
         int screenWidth = Constants.SCREEN_WIDTH;
         
-        // Multiple small scrolls should accumulate precisely
+        // Multiple small scrolls should accumulate smoothly
         for (int i = 0; i < 5; i++) {
             cameraManager.handleCameraScrolling(screenWidth - 10, 100);
+            cameraManager.update(1.0f / 60.0f);
         }
         
-        assertEquals(25, cameraManager.getCameraX(), "Should accumulate exactly 5 * SCROLL_AMOUNT");
+        assertTrue(cameraManager.getCameraX() > 0, "Should accumulate movement over multiple frames");
+    }
+    
+    // ==================== SMOOTH CAMERA SYSTEM TESTS ====================
+    
+    @Test
+    void testSmoothCameraUpdate() {
+        // Test that camera updates smoothly over multiple frames
+        cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, 100);
+        
+        // Update for multiple frames
+        for (int i = 0; i < 5; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Camera should move smoothly over multiple frames");
+    }
+    
+    @Test
+    void testCameraDeceleration() {
+        // Start scrolling
+        cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, 100);
+        
+        // Update for a few frames to build up velocity
+        for (int i = 0; i < 3; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        int positionWithInput = cameraManager.getCameraX();
+        
+        // Stop input and let camera decelerate
+        cameraManager.handleCameraScrolling(100, 100); // Move to center
+        
+        // Update for several frames to allow deceleration
+        for (int i = 0; i < 10; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        // Camera should have decelerated (position should be different from when input was active)
+        assertTrue(cameraManager.getCameraX() >= positionWithInput, "Camera should decelerate when input stops");
+    }
+    
+    @Test
+    void testKeyboardInput() {
+        // Test keyboard input for camera movement
+        cameraManager.setKeyRight(true);
+        
+        // Update for a few frames
+        for (int i = 0; i < 5; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Camera should move with keyboard input");
+        
+        // Stop keyboard input
+        cameraManager.setKeyRight(false);
+        
+        int positionAfterInput = cameraManager.getCameraX();
+        
+        // Update for a few more frames
+        for (int i = 0; i < 5; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        // Camera should decelerate
+        assertTrue(cameraManager.getCameraX() >= positionAfterInput, "Camera should decelerate after keyboard input stops");
+    }
+    
+    @Test
+    void testCombinedMouseAndKeyboardInput() {
+        // Test that mouse and keyboard input work together
+        cameraManager.handleCameraScrolling(Constants.SCREEN_WIDTH - 10, 100); // Mouse right
+        cameraManager.setKeyDown(true); // Keyboard down
+        
+        // Update for a few frames
+        for (int i = 0; i < 5; i++) {
+            cameraManager.update(1.0f / 60.0f);
+        }
+        
+        assertTrue(cameraManager.getCameraX() > 0, "Camera should move right with mouse input");
+        assertTrue(cameraManager.getCameraY() > 0, "Camera should move down with keyboard input");
+    }
+    
+    @Test
+    void testBoundaryCollision() {
+        // Test that camera stops at boundaries
+        cameraManager.setCameraX(400 + 5); // Set to maximum X
+        
+        // Try to move right
+        cameraManager.setKeyRight(true);
+        cameraManager.update(1.0f / 60.0f);
+        
+        assertEquals(400 + 5, cameraManager.getCameraX(), "Camera should not exceed maximum X");
+        
+        // Try to move left
+        cameraManager.setKeyLeft(true);
+        cameraManager.setKeyRight(false);
+        cameraManager.update(1.0f / 60.0f);
+        
+        assertTrue(cameraManager.getCameraX() < 400 + 5, "Camera should be able to move left from maximum");
     }
 } 

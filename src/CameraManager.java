@@ -9,16 +9,36 @@ import utils.Constants;
 public class CameraManager {
     
     // Camera scrolling constants
-    private static final int SCROLL_AMOUNT = 5;
     private static final int SCROLL_MARGIN = 25;
     private static final int CURSOR_MARGIN = 50;
     
+    // Smooth scrolling constants
+    private static final float SCROLL_SPEED = 300.0f; // pixels per second
+    private static final float ACCELERATION = 1200.0f; // pixels per second squared
+    private static final float DECELERATION = 1800.0f; // pixels per second squared
+    private static final float MAX_SPEED = 600.0f; // maximum pixels per second
+    
     // Camera bounds (should be configurable based on map size)
-    private static final int MAX_CAMERA_X = 400 + SCROLL_AMOUNT;
+    private static final int MAX_CAMERA_X = 400 + 5; // Keep compatibility with tests
     private static final int MAX_CAMERA_Y = Constants.SCREEN_HEIGHT;
     
-    private int cameraX = 0;
-    private int cameraY = 0;
+    // Camera position and velocity
+    private float cameraX = 0.0f;
+    private float cameraY = 0.0f;
+    private float velocityX = 0.0f;
+    private float velocityY = 0.0f;
+    
+    // Input state
+    private boolean scrollingRight = false;
+    private boolean scrollingLeft = false;
+    private boolean scrollingDown = false;
+    private boolean scrollingUp = false;
+    
+    // Keyboard input state
+    private boolean keyRight = false;
+    private boolean keyLeft = false;
+    private boolean keyDown = false;
+    private boolean keyUp = false;
     
     private final MouseListenerRegistrar registrar;
     
@@ -27,63 +47,118 @@ public class CameraManager {
     }
     
     /**
-     * Handles camera scrolling based on mouse position near screen edges
+     * Updates camera position and velocity based on current input state.
+     * This should be called every frame for smooth movement.
+     * 
+     * @param deltaTime Time elapsed since last frame in seconds
+     */
+    public void update(float deltaTime) {
+        updateVelocity(deltaTime);
+        updatePosition(deltaTime);
+        constrainCameraPosition();
+    }
+    
+    /**
+     * Handles camera scrolling input based on mouse position near screen edges
      * 
      * @param gameX The game X coordinate of the mouse
      * @param gameY The game Y coordinate of the mouse
-     * @return true if scrolling occurred, false otherwise
+     * @return true if scrolling input was detected, false otherwise
      */
     public boolean handleCameraScrolling(int gameX, int gameY) {
         int screenWidth = Constants.SCREEN_WIDTH;
         int screenHeight = Constants.SCREEN_HEIGHT;
         
-        boolean scrolled = handleHorizontalScrolling(gameX, screenWidth);
-        if (!scrolled) {
-            scrolled = handleVerticalScrolling(gameY, screenHeight);
+        // Update scrolling input state
+        boolean wasScrolling = scrollingRight || scrollingLeft || scrollingDown || scrollingUp;
+        
+        scrollingRight = gameX > screenWidth - SCROLL_MARGIN;
+        scrollingLeft = gameX < SCROLL_MARGIN;
+        scrollingDown = gameY > screenHeight - SCROLL_MARGIN;
+        scrollingUp = gameY < SCROLL_MARGIN;
+        
+        boolean isScrolling = scrollingRight || scrollingLeft || scrollingDown || scrollingUp;
+        
+        // Update cursor
+        updateCursor(gameX, gameY, screenWidth, screenHeight, isScrolling);
+        
+        return isScrolling;
+    }
+    
+    /**
+     * Updates camera velocity based on current input state
+     */
+    private void updateVelocity(float deltaTime) {
+        // Horizontal velocity
+        if (scrollingRight || keyRight) {
+            velocityX += ACCELERATION * deltaTime;
+            if (velocityX > MAX_SPEED) velocityX = MAX_SPEED;
+        } else if (scrollingLeft || keyLeft) {
+            velocityX -= ACCELERATION * deltaTime;
+            if (velocityX < -MAX_SPEED) velocityX = -MAX_SPEED;
+        } else {
+            // Decelerate when no input
+            if (velocityX > 0) {
+                velocityX -= DECELERATION * deltaTime;
+                if (velocityX < 0) velocityX = 0;
+            } else if (velocityX < 0) {
+                velocityX += DECELERATION * deltaTime;
+                if (velocityX > 0) velocityX = 0;
+            }
         }
         
-        handleCursorUpdate(gameX, gameY, screenWidth, screenHeight, scrolled);
-        constrainCameraPosition();
-        
-        return scrolled;
+        // Vertical velocity
+        if (scrollingDown || keyDown) {
+            velocityY += ACCELERATION * deltaTime;
+            if (velocityY > MAX_SPEED) velocityY = MAX_SPEED;
+        } else if (scrollingUp || keyUp) {
+            velocityY -= ACCELERATION * deltaTime;
+            if (velocityY < -MAX_SPEED) velocityY = -MAX_SPEED;
+        } else {
+            // Decelerate when no input
+            if (velocityY > 0) {
+                velocityY -= DECELERATION * deltaTime;
+                if (velocityY < 0) velocityY = 0;
+            } else if (velocityY < 0) {
+                velocityY += DECELERATION * deltaTime;
+                if (velocityY > 0) velocityY = 0;
+            }
+        }
     }
-
-    private boolean handleHorizontalScrolling(int gameX, int screenWidth) {
-        // Scroll right
-        if (gameX > screenWidth - SCROLL_MARGIN) {
-            addCameraX(SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
-            return true;
-        }
-        // Scroll left
-        else if (gameX < SCROLL_MARGIN) {
-            addCameraX(-SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
-            return true;
-        }
-        return false;
+    
+    /**
+     * Updates camera position based on current velocity
+     */
+    private void updatePosition(float deltaTime) {
+        cameraX += velocityX * deltaTime;
+        cameraY += velocityY * deltaTime;
     }
-
-    private boolean handleVerticalScrolling(int gameY, int screenHeight) {
-        // Scroll down
-        if (gameY > screenHeight - SCROLL_MARGIN) {
-            addCameraY(SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
-            return true;
-        }
-        // Scroll up
-        else if (gameY < SCROLL_MARGIN) {
-            addCameraY(-SCROLL_AMOUNT);
-            setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
-            return true;
-        }
-        return false;
-    }
-
-    private void handleCursorUpdate(int gameX, int gameY, int screenWidth, int screenHeight, boolean scrolled) {
-        // Default cursor when not near edges
-        if (!scrolled && isInCenterArea(gameX, gameY, screenWidth, screenHeight)) {
+    
+    /**
+     * Updates cursor based on scrolling state
+     */
+    private void updateCursor(int gameX, int gameY, int screenWidth, int screenHeight, boolean isScrolling) {
+        if (!isScrolling && isInCenterArea(gameX, gameY, screenWidth, screenHeight)) {
             setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+        } else if (isScrolling) {
+            // Set appropriate cursor based on scroll direction
+            if (scrollingRight && scrollingDown) {
+                setCursor(new Cursor(Cursor.SE_RESIZE_CURSOR));
+            } else if (scrollingRight && scrollingUp) {
+                setCursor(new Cursor(Cursor.NE_RESIZE_CURSOR));
+            } else if (scrollingLeft && scrollingDown) {
+                setCursor(new Cursor(Cursor.SW_RESIZE_CURSOR));
+            } else if (scrollingLeft && scrollingUp) {
+                setCursor(new Cursor(Cursor.NW_RESIZE_CURSOR));
+            } else if (scrollingRight) {
+                setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
+            } else if (scrollingLeft) {
+                setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
+            } else if (scrollingDown) {
+                setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
+            } else if (scrollingUp) {
+                setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
+            }
         }
     }
     
@@ -102,21 +177,25 @@ public class CameraManager {
         // Too far left
         if (cameraX < 0) {
             cameraX = 0;
+            velocityX = 0; // Stop velocity when hitting boundary
         }
         
         // Too far up
         if (cameraY < 0) {
             cameraY = 0;
+            velocityY = 0; // Stop velocity when hitting boundary
         }
         
         // Too far right
         if (cameraX > MAX_CAMERA_X) {
             cameraX = MAX_CAMERA_X;
+            velocityX = 0; // Stop velocity when hitting boundary
         }
         
         // Too far down
         if (cameraY > MAX_CAMERA_Y) {
             cameraY = MAX_CAMERA_Y;
+            velocityY = 0; // Stop velocity when hitting boundary
         }
     }
     
@@ -131,20 +210,22 @@ public class CameraManager {
     
     // Camera getters and setters
     public int getCameraX() {
-        return cameraX;
+        return (int) cameraX;
     }
     
     public int getCameraY() {
-        return cameraY;
+        return (int) cameraY;
     }
     
     public void setCameraX(int cameraX) {
         this.cameraX = cameraX;
+        this.velocityX = 0; // Reset velocity when setting position directly
         constrainCameraPosition();
     }
     
     public void setCameraY(int cameraY) {
         this.cameraY = cameraY;
+        this.velocityY = 0; // Reset velocity when setting position directly
         constrainCameraPosition();
     }
     
@@ -167,5 +248,22 @@ public class CameraManager {
     public void updateCameraBounds(int mapWidth, int mapHeight) {
         // This method can be used to dynamically adjust camera bounds
         // based on the actual map size rather than using hard-coded values
+    }
+    
+    // Keyboard input methods
+    public void setKeyRight(boolean pressed) {
+        keyRight = pressed;
+    }
+    
+    public void setKeyLeft(boolean pressed) {
+        keyLeft = pressed;
+    }
+    
+    public void setKeyDown(boolean pressed) {
+        keyDown = pressed;
+    }
+    
+    public void setKeyUp(boolean pressed) {
+        keyUp = pressed;
     }
 } 

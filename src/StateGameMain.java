@@ -21,7 +21,7 @@ public class StateGameMain extends StateMachine {
 		this.unitManager = unitManager;
 		this.fogWar = fogWar;
 		this.graphicsMain = graphicsMain;
-		this.gameTimer = new GameTimer(1, 0, unitManager);
+		this.gameTimer = new GameTimer(1, 0, stateManager.getFlagManager());
 	}
 
 	@Override
@@ -52,7 +52,7 @@ public class StateGameMain extends StateMachine {
 	}
 
 	private void handleFlagSpawning(int[][] map) {
-		Iterator<GameFlag> itrFlag = unitManager.getFlagManager().getFlagList();
+		Iterator<GameFlag> itrFlag = stateManager.getFlagManager().getFlagList();
 		while (itrFlag.hasNext()) {
 			GameFlag flag = itrFlag.next();
 
@@ -66,6 +66,9 @@ public class StateGameMain extends StateMachine {
 
 		// Update spawn state
 		unitManager.updateSpawnState(gameTimer.getHour());
+		
+		// Update combat effects
+		stateManager.getCombatEffectManager().update();
 	}
 
 
@@ -84,7 +87,7 @@ public class StateGameMain extends StateMachine {
 			}
 
 			// Determine whether the unit is near the flag
-			unitManager.checkFlagStates(unit, factionId);
+			stateManager.checkFlagStates(unit, factionId);
 
 			// Remove dead units
 			if (!unit.isAlive()) {
@@ -109,12 +112,15 @@ public class StateGameMain extends StateMachine {
 
 		// Handle battles
 		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
+		
+		// Handle combat effects
+		handleCombatEffects(playerUnit);
 	}
 
 	private void runEnemyLogic(int[][] map, GameUnit enemyUnit) {
 		// Send enemy units to attack the flag every day at around 06:00 hours
 		if (gameTimer.isEnemyAttackTime()) {
-			GameFlag playerFlag = unitManager.getFlagManager().getPlayerFlag();
+			GameFlag playerFlag = stateManager.getFlagManager().getPlayerFlag();
 			if (playerFlag == null) {
 				System.out.println("No player flag found!");
 				return;
@@ -128,10 +134,13 @@ public class StateGameMain extends StateMachine {
 
 		// Follow the path towards the flag
 		enemyUnit.findPath(map, unitManager.getEnemyList());
+		
+		// Handle combat effects
+		handleCombatEffects(enemyUnit);
 	}
 
 	private void checkTerminatingConditions(int factionId) {
-		if (unitManager.isFlagsListEmpty(factionId)) {
+		if (stateManager.isFlagsListEmpty(factionId)) {
 			if (factionId == GameFlag.FACTION_PLAYER) {
 				stateManager.setNewState(GameState.STATE_GAMEOVER); // Player loses all flags
 			} else if (factionId == GameFlag.FACTION_ENEMY) {
@@ -162,5 +171,43 @@ public class StateGameMain extends StateMachine {
 
 	private boolean isRightClick(GameMouseEvent e) {
 		return e.button == 3; // Right mouse button
+	}
+	
+	/**
+	 * Handles combat effects for a unit including damage numbers, attack animations,
+	 * death animations, and particles.
+	 */
+	private void handleCombatEffects(GameUnit unit) {
+		CombatEffectManager effectManager = stateManager.getCombatEffectManager();
+		
+		// Create attack animation if unit is attacking
+		if (unit.isAttacking()) {
+			effectManager.createAttackAnimation(unit);
+			
+			// Create combat particles
+			effectManager.createCombatParticles(unit.getCurrentPosition(), 5);
+		}
+		
+		// Temporarily disable all damage numbers to reduce distraction
+		// if (unit.getLastDamageDealt() > 0) {
+		// 	if (unit.wasLastHitCritical()) {
+		// 		effectManager.createDamageNumber(
+		// 			unit.getCurrentPosition(), 
+		// 			unit.getLastDamageDealt(), 
+		// 			unit.wasLastHitCritical()
+		// 		);
+		// 	}
+		// 	unit.clearCombatEffects();
+		// }
+		
+		// Clear combat effects without showing damage numbers
+		if (unit.getLastDamageDealt() > 0) {
+			unit.clearCombatEffects();
+		}
+		
+		// Create death animation if unit just died
+		if (!unit.isAlive()) {
+			effectManager.createDeathAnimation(unit);
+		}
 	}
 }

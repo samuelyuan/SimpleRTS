@@ -15,7 +15,7 @@ public class GameFlag {
 	static final int FACTION_PLAYER = 1;
 	private int controlFaction = FACTION_NEUTRAL;
 
-	final int FLAG_RADIUS = 3;
+	public static final int FLAG_RADIUS = 3;
 
 	public GameFlag() {
 		this(0, 0, GameFlag.FACTION_NEUTRAL);
@@ -79,7 +79,10 @@ public class GameFlag {
 	}
 
 	public void shiftToFaction(int unitX, int unitY, int factionId) {
-		if (Math.abs(unitX - this.mapX) + Math.abs(unitY - this.mapY) <= FLAG_RADIUS) {
+		// Use Euclidean distance for circular capture zone instead of Manhattan distance
+		double distance = Math.sqrt(Math.pow(unitX - this.mapX, 2) + Math.pow(unitY - this.mapY, 2));
+		
+		if (distance <= FLAG_RADIUS) {
 			// Adjust the health based on the faction's proximity
 			health += (factionId * 2);
 
@@ -128,6 +131,22 @@ public class GameFlag {
 			default:
 				return Color.BLACK; // Default color if needed
 		}
+	}
+	
+	/**
+	 * Gets the capture progress as a percentage (0-100)
+	 * Positive values indicate player capture progress
+	 * Negative values indicate enemy capture progress
+	 */
+	public int getCaptureProgress() {
+		return health;
+	}
+	
+	/**
+	 * Returns true if the flag is currently being captured
+	 */
+	public boolean isBeingCaptured() {
+		return health != 0 && health != 100 && health != -100;
 	}
 
 	public Rect getBoundingBoxForState(int cameraX, int cameraY) {

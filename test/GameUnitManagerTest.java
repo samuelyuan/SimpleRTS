@@ -10,12 +10,10 @@ import utils.TileCoordinateConverter;
 
 public class GameUnitManagerTest {
     private GameUnitManager unitManager;
-    private GameFlagManager flagManager;
 
     @BeforeEach
     public void setUp() {
-        flagManager = new GameFlagManager();
-        unitManager = new GameUnitManager(flagManager);
+        unitManager = new GameUnitManager();
     }
 
     @Test
@@ -62,41 +60,7 @@ public class GameUnitManagerTest {
         assertEquals(1, unitManager.getEnemyList().size());
     }
 
-    @Test
-    public void testLoadAllFlags() {
-        Map<Point, Integer> flagPositions = new HashMap<>();
-        flagPositions.put(new Point(5, 5), GameFlag.FACTION_PLAYER);
-        flagPositions.put(new Point(10, 10), GameFlag.FACTION_ENEMY);
-        unitManager.loadAllFlags(flagPositions);
-        assertFalse(flagManager.isPlayerFlagsEmpty());
-        assertFalse(flagManager.isEnemyFlagsEmpty());
-    }
 
-    @Test
-    public void testCheckFlagStates() {
-        // Create a unit at a specific position
-        GameUnit unit = new GameUnit(100, 100, true, Constants.UNIT_ID_LIGHT);
-        unitManager.getPlayerList().add(unit);
-        
-        // Add a flag at the same position
-        flagManager.addPlayerFlag(5, 5); // Assuming this converts to the unit's position
-        
-        // Test flag state checking (should not throw exception)
-        assertDoesNotThrow(() -> {
-            unitManager.checkFlagStates(unit, GameFlag.FACTION_PLAYER);
-        });
-    }
-
-    @Test
-    public void testIsFlagsListEmpty() {
-        assertTrue(unitManager.isFlagsListEmpty(GameFlag.FACTION_PLAYER));
-        assertTrue(unitManager.isFlagsListEmpty(GameFlag.FACTION_ENEMY));
-        
-        // Add a flag
-        flagManager.addPlayerFlag(5, 5);
-        assertFalse(unitManager.isFlagsListEmpty(GameFlag.FACTION_PLAYER));
-        assertTrue(unitManager.isFlagsListEmpty(GameFlag.FACTION_ENEMY));
-    }
 
     @Test
     public void testRemoveDeadUnits() {
@@ -244,7 +208,6 @@ public class GameUnitManagerTest {
 		
 		// Create a flag
 		GameFlag flag = new GameFlag(5, 5, GameFlag.FACTION_PLAYER);
-		flagManager.addPlayerFlag(5, 5);
 		
 		// Spawn units near the flag
 		unitManager.spawnUnitsNearFlag(map, flag);

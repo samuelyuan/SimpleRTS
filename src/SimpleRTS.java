@@ -5,6 +5,9 @@ import input.GameMouseListener;
 import input.MouseListenerRegistrar;
 import utils.PathResolver;
 import utils.Constants;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
 
 /*
  * In every map, the player has to eliminate all the enemy forces.
@@ -20,7 +23,7 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 
 	// state handling
 	private GameStateManager stateManager;
-	private InputHandler inputHandler;
+	private MouseHandler mouseHandler;
 	private CameraManager cameraManager;
 	private final ImageService imageService;
 	
@@ -86,13 +89,18 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 		
 		add(gamePanel);
 		
-		// Initialize input handler
-		inputHandler = new InputHandler(this, stateManager, cameraManager);
-		gamePanel.addMouseListener(inputHandler);
-		gamePanel.addMouseMotionListener(inputHandler);
+		// Initialize mouse handler
+		mouseHandler = new MouseHandler(this, stateManager, cameraManager);
+		gamePanel.addMouseListener(mouseHandler);
+		gamePanel.addMouseMotionListener(mouseHandler);
 		
-		// Set initial state in input handler
-		inputHandler.setCurrentState(stateManager.getCurrentState());
+		// Add keyboard input for camera movement
+		gamePanel.setFocusable(true);
+		KeyboardHandler keyboardHandler = new KeyboardHandler(cameraManager);
+		gamePanel.addKeyListener(keyboardHandler);
+		
+		// Set initial state in mouse handler
+		mouseHandler.setCurrentState(stateManager.getCurrentState());
 	}
 
 	private void initializeGameLogic() {
@@ -112,26 +120,51 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 	 * The program begins execution here.
 	 */
 	public void run() {
+		long lastTime = System.nanoTime();
+		long currentTime;
+		float deltaTime;
+		
 		while (true) {
+			currentTime = System.nanoTime();
+			deltaTime = (currentTime - lastTime) / 1_000_000_000.0f; // Convert to seconds
+			lastTime = currentTime;
+			
+			// Cap delta time to prevent large jumps (e.g., when debugging)
+			if (deltaTime > 0.1f) {
+				deltaTime = 0.1f;
+			}
+			
+			// Update camera every frame for smooth scrolling
+			if (cameraManager != null) {
+				cameraManager.update(deltaTime);
+			}
+			
 			gamePanel.repaint();
+			
 			try {
-				Thread.sleep(10);
+				// Target 60 FPS (16.67ms per frame)
+				long sleepTime = 16 - (System.nanoTime() - currentTime) / 1_000_000;
+				if (sleepTime > 0) {
+					Thread.sleep(sleepTime);
+				}
 			} catch (InterruptedException e) {
+				// Thread interrupted, exit loop
+				break;
 			}
 		}
 	}
 
-	// Input abstraction support - delegate to input handler
+	// Input abstraction support - delegate to mouse handler
 	public void addGameMouseListener(GameMouseListener listener) {
-		inputHandler.addGameMouseListener(listener);
+		mouseHandler.addGameMouseListener(listener);
 	}
 
 	public void clearGameMouseListeners() {
-		inputHandler.clearGameMouseListeners();
+		mouseHandler.clearGameMouseListeners();
 	}
 	
-	public InputHandler getInputHandler() {
-		return inputHandler;
+	public MouseHandler getMouseHandler() {
+		return mouseHandler;
 	}
 	
 	// Main method to launch the application

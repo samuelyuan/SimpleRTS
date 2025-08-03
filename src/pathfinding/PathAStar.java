@@ -101,8 +101,8 @@ public class PathAStar {
 			return null;
 		}
 
-		// Early termination if destination is a wall
-		if (getMapTile(map, finalX, finalY) == TILE_WALL) {
+		// Early termination if start or destination is a wall
+		if (getMapTile(map, startX, startY) == TILE_WALL || getMapTile(map, finalX, finalY) == TILE_WALL) {
 			return null;
 		}
 

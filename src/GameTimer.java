@@ -12,22 +12,22 @@ public class GameTimer {
     private long startTime;
     private long prevRunningTime;
     
-    private final GameUnitManager unitManager;
+    private final GameFlagManager flagManager;
     
     public GameTimer(int day, int hour) {
         this.day = day;
         this.hour = hour;
         this.startTime = 0;
         this.prevRunningTime = 0;
-        this.unitManager = null; // Will be set by GameLoop
+        this.flagManager = null; // Will be set by GameLoop
     }
     
-    public GameTimer(int day, int hour, GameUnitManager unitManager) {
+    public GameTimer(int day, int hour, GameFlagManager flagManager) {
         this.day = day;
         this.hour = hour;
         this.startTime = 0;
         this.prevRunningTime = 0;
-        this.unitManager = unitManager;
+        this.flagManager = flagManager;
     }
     
     public void update() {
@@ -50,8 +50,8 @@ public class GameTimer {
         }
         
         // Recalculate the flag counts at 0:00, 6:00, 12:00 and 18:00
-        if (unitManager != null && getHour() % FLAG_RESET_INTERVAL == 0) {
-            unitManager.getFlagManager().reset();
+        if (flagManager != null && getHour() % FLAG_RESET_INTERVAL == 0) {
+            flagManager.reset();
         }
     }
     

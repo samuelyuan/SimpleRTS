@@ -15,7 +15,7 @@ import java.util.ArrayList;
  * Handles all mouse input for the game, converting AWT mouse events
  * to game-specific events and managing input listeners.
  */
-public class InputHandler implements MouseListener, MouseMotionListener {
+public class MouseHandler implements MouseListener, MouseMotionListener {
     
     private final List<GameMouseListener> mouseListeners = new ArrayList<>();
     private final MouseListenerRegistrar registrar;
@@ -25,7 +25,7 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     // Direct state registration
     private StateMachine currentState = null;
     
-    public InputHandler(MouseListenerRegistrar registrar, GameStateManager stateManager, CameraManager cameraManager) {
+    public MouseHandler(MouseListenerRegistrar registrar, GameStateManager stateManager, CameraManager cameraManager) {
         this.registrar = registrar;
         this.stateManager = stateManager;
         this.cameraManager = cameraManager;
@@ -203,12 +203,7 @@ public class InputHandler implements MouseListener, MouseMotionListener {
     
     private void dispatchGameMouseEvent(GameMouseEvent event) {
         for (GameMouseListener listener : mouseListeners) {
-            try {
-                listener.onGameMouseEvent(event);
-            } catch (Exception e) {
-                // Log error but don't crash the input handling
-                System.err.println("Error in mouse listener: " + e.getMessage());
-            }
+            listener.onGameMouseEvent(event);
         }
     }
 } 

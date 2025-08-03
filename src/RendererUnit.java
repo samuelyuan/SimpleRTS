@@ -1,4 +1,7 @@
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.Map;
 import graphics.GameImage;
 import graphics.Color;
 import graphics.Point;
@@ -14,6 +17,10 @@ import utils.TileCoordinateConverter;
  */
 public class RendererUnit {
     private final GraphicsMain graphicsMain;
+    
+    // Cache for rotated sprites to improve performance
+    private final Map<String, BufferedImage> rotationCache = new HashMap<>();
+    private static final int ROTATION_CACHE_SIZE = 100; // Limit cache size
 
     public RendererUnit(GraphicsMain graphicsMain) {
         this.graphicsMain = graphicsMain;
@@ -33,6 +40,7 @@ public class RendererUnit {
         renderUnitSelection(g, unit);
         renderUnitSprite(g, unit);
         renderUnitHealthBar(g, unit);
+        renderUnitFOV(g, unit);
     }
 
     private void renderUnitSelection(IGraphics g, GameUnit unit) {
@@ -83,39 +91,53 @@ public class RendererUnit {
         // Update unit direction if moving
         if (unit.isPathCreated()) {
             Point mapDest = unit.getMapPoint(unit.getDestination());
-            unit.setDirection(calculateDirection(unit.getCurrentPosition(),
-                    TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y)));
+            Point screenDest = TileCoordinateConverter.mapToScreen(mapDest.x, mapDest.y);
+            
+            // Calculate 360-degree rotation angle
+            double targetAngle = calculateRotationAngle(unit.getCurrentPosition(), screenDest);
+            unit.setTargetRotationAngle(targetAngle);
+            
+            // Update rotation smoothly
+            unit.updateRotation();
+            
+            // Keep legacy direction for backward compatibility
+            unit.setDirection(calculateDirection(unit.getCurrentPosition(), screenDest));
+        }
+        // Also update rotation when attacking (even if not moving)
+        else if (unit.isAttacking()) {
+            // Update rotation smoothly to face target (target angle was set in handleAttack)
+            unit.updateRotation();
         }
 
-        // Draw the unit sprite
+        // Draw the unit sprite with rotation
         BufferedImage unitSprite = getUnitSprite(unit);
-        drawImageOnScreen(g, unitSprite, unit.getCurrentPosition().x, unit.getCurrentPosition().y,
+        BufferedImage rotatedSprite = createRotatedSprite(unitSprite, unit.getRotationAngle());
+        drawImageOnScreen(g, rotatedSprite, unit.getCurrentPosition().x, unit.getCurrentPosition().y,
                 Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
     }
 
-    private BufferedImage getUnitSprite(GameUnit unit) {
+    BufferedImage getUnitSprite(GameUnit unit) {
         int classType = unit.getClassType();
         boolean isPlayerUnit = unit.isPlayerUnit();
-        int direction = unit.getDirection();
 
         BufferedImage sprite = null;
 
         switch (classType) {
             case Constants.UNIT_ID_LIGHT:
-                sprite = getLightUnitSprite(isPlayerUnit, direction);
+                sprite = getLightUnitSprite(isPlayerUnit);
                 break;
             case Constants.UNIT_ID_MEDIUM:
                 sprite = getMediumUnitSprite(isPlayerUnit);
                 break;
             case Constants.UNIT_ID_HEAVY:
-                sprite = getHeavyUnitSprite(isPlayerUnit, direction);
+                sprite = getHeavyUnitSprite(isPlayerUnit);
                 break;
         }
 
         return sprite;
     }
 
-    private BufferedImage getLightUnitSprite(boolean isPlayerUnit, int direction) {
+    private BufferedImage getLightUnitSprite(boolean isPlayerUnit) {
         BufferedImage sprite;
         if (isPlayerUnit) {
             sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
@@ -126,18 +148,26 @@ public class RendererUnit {
                     .getTileImage(TileConverter.STR_UNIT_LIGHT_ENEMY, graphicsMain.isNight())
                     .getBackendImage();
         }
-        return sprite.getSubimage(Constants.TILE_WIDTH * direction, 0,
-                Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
+        // Use the east-facing frame (index 2) as base for rotation, which should be more naturally oriented
+        // Frame 0 = North, Frame 1 = South, Frame 2 = East, Frame 3 = West
+        return sprite.getSubimage(Constants.TILE_WIDTH * 2, 0, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
     }
 
     private BufferedImage getMediumUnitSprite(boolean isPlayerUnit) {
-        return (BufferedImage) ImageUtils
-                .addTeamColorToUnit(graphicsMain.getStateManager().getImageService().getTileImage(TileConverter.STR_UNIT_MEDIUM),
-                        isPlayerUnit)
-                .getBackendImage();
+        BufferedImage sprite;
+        if (isPlayerUnit) {
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_MEDIUM_PLAYER, graphicsMain.isNight())
+                    .getBackendImage();
+        } else {
+            sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
+                    .getTileImage(TileConverter.STR_UNIT_MEDIUM_ENEMY, graphicsMain.isNight())
+                    .getBackendImage();
+        }
+        return sprite.getSubimage(0, 0, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
     }
 
-    private BufferedImage getHeavyUnitSprite(boolean isPlayerUnit, int direction) {
+    private BufferedImage getHeavyUnitSprite(boolean isPlayerUnit) {
         BufferedImage sprite;
         if (isPlayerUnit) {
             sprite = (BufferedImage) graphicsMain.getStateManager().getImageService()
@@ -148,8 +178,9 @@ public class RendererUnit {
                     .getTileImage(TileConverter.STR_UNIT_HEAVY_ENEMY, graphicsMain.isNight())
                     .getBackendImage();
         }
-        return sprite.getSubimage(Constants.TILE_WIDTH * direction, 0,
-                Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
+        // Use the east-facing frame (index 2) as base for rotation, which should be more naturally oriented
+        // Frame 0 = North, Frame 1 = South, Frame 2 = East, Frame 3 = West
+        return sprite.getSubimage(Constants.TILE_WIDTH * 2, 0, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
     }
 
     private void renderUnitHealthBar(IGraphics g, GameUnit unit) {
@@ -218,5 +249,165 @@ public class RendererUnit {
         } else {
             return (deltaY > 0) ? Constants.DIR_SOUTH : Constants.DIR_NORTH;
         }
+    }
+
+    private double calculateRotationAngle(Point current, Point destination) {
+        int deltaX = destination.x - current.x;
+        int deltaY = destination.y - current.y;
+        
+        // Calculate the angle in radians
+        double angleRad = Math.atan2(deltaY, deltaX);
+        
+        // Convert radians to degrees
+        double angleDeg = Math.toDegrees(angleRad);
+        
+        // Since we're using the east-facing sprite as base:
+        // Math.atan2 gives 0° = east, 90° = north
+        // Our base sprite faces east (0°), so we don't need to subtract 90°
+        // Just normalize to a 360-degree angle
+        return (angleDeg + 360) % 360;
+    }
+
+    private BufferedImage createRotatedSprite(BufferedImage original, double angle) {
+        // Round angle to nearest degree for caching
+        int roundedAngle = (int) Math.round(angle);
+        
+        // Create cache key
+        String cacheKey = original.hashCode() + "_" + roundedAngle;
+        
+        // Check cache first
+        BufferedImage cached = rotationCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        
+        // Create new rotated sprite
+        int width = original.getWidth();
+        int height = original.getHeight();
+        BufferedImage rotated = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = rotated.createGraphics();
+        
+        // Set rendering hints for better quality
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, 
+                            java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, 
+                            java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, 
+                            java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Rotate around center
+        g2d.rotate(Math.toRadians(angle), width / 2.0, height / 2.0);
+        g2d.drawImage(original, 0, 0, null);
+        g2d.dispose();
+        
+        // Cache the result
+        cacheRotatedSprite(cacheKey, rotated);
+        
+        return rotated;
+    }
+    
+    private void cacheRotatedSprite(String key, BufferedImage sprite) {
+        // Limit cache size
+        if (rotationCache.size() >= ROTATION_CACHE_SIZE) {
+            // Clear half the cache when it gets too large
+            rotationCache.clear();
+        }
+        rotationCache.put(key, sprite);
+    }
+    
+    // Method to clear rotation cache (call when sprites change)
+    public void clearRotationCache() {
+        rotationCache.clear();
+    }
+    
+    /**
+     * Renders the Field of View (FOV) cone for a unit.
+     * Configurable to show FOV for different unit types and selection states.
+     * 
+     * @param g The graphics context
+     * @param unit The unit whose FOV to render
+     */
+    private void renderUnitFOV(IGraphics g, GameUnit unit) {
+        // Master toggle check
+        if (!Constants.FOV_RENDERING_ENABLED) {
+            return;
+        }
+        
+        // Determine if we should render FOV for this unit
+        boolean shouldRender = false;
+        
+        if (unit.isPlayerUnit()) {
+            // For player units: show if selected (when FOV_SHOW_SELECTED_ONLY is true) or always show
+            shouldRender = !Constants.FOV_SHOW_SELECTED_ONLY || unit.isPlayerSelected();
+        } else {
+            // For enemy units: show if FOV_SHOW_ENEMY_UNITS is enabled
+            shouldRender = Constants.FOV_SHOW_ENEMY_UNITS;
+        }
+        
+        if (!shouldRender) {
+            return;
+        }
+        
+        Point unitPos = unit.getCurrentPosition();
+        double rotationAngle = unit.getRotationAngle();
+        
+        // Calculate FOV cone points
+        int[] xPoints = new int[Constants.FOV_RENDER_SEGMENTS + 2];
+        int[] yPoints = new int[Constants.FOV_RENDER_SEGMENTS + 2];
+        
+        // Start with unit position
+        xPoints[0] = unitPos.x + Constants.TILE_WIDTH / 2 - graphicsMain.getCameraX();
+        yPoints[0] = unitPos.y + Constants.TILE_HEIGHT / 2 - graphicsMain.getCameraY();
+        
+        // Calculate cone points
+        double startAngle = rotationAngle - Constants.FOV_HALF_ANGLE;
+        double angleStep = Constants.FOV_ANGLE / Constants.FOV_RENDER_SEGMENTS;
+        int radius = Constants.FOV_RENDER_RADIUS * Constants.TILE_WIDTH;
+        
+        for (int i = 0; i <= Constants.FOV_RENDER_SEGMENTS; i++) {
+            double angle = startAngle + (i * angleStep);
+            double angleRad = Math.toRadians(angle);
+            
+            int x = unitPos.x + Constants.TILE_WIDTH / 2 + (int)(radius * Math.cos(angleRad));
+            int y = unitPos.y + Constants.TILE_HEIGHT / 2 + (int)(radius * Math.sin(angleRad));
+            
+            xPoints[i + 1] = x - graphicsMain.getCameraX();
+            yPoints[i + 1] = y - graphicsMain.getCameraY();
+        }
+        
+        // Choose colors based on unit type
+        Color fillColor, borderColor, directionColor;
+        
+        if (unit.isPlayerUnit()) {
+            // Player units: yellow/orange colors
+            fillColor = new Color(255, 255, 0, 50); // Semi-transparent yellow
+            borderColor = new Color(255, 255, 0, 150); // More opaque yellow border
+            directionColor = new Color(255, 255, 255, 200); // White direction line
+        } else {
+            // Enemy units: red colors for debugging
+            fillColor = new Color(255, 0, 0, 50); // Semi-transparent red
+            borderColor = new Color(255, 0, 0, 150); // More opaque red border
+            directionColor = new Color(255, 255, 255, 200); // White direction line
+        }
+        
+        // Draw FOV cone with semi-transparent fill
+        g.setColor(fillColor);
+        g.fillPolygon(xPoints, yPoints, Constants.FOV_RENDER_SEGMENTS + 2);
+        
+        // Draw FOV cone border
+        g.setColor(borderColor);
+        g.drawPolygon(xPoints, yPoints, Constants.FOV_RENDER_SEGMENTS + 2);
+        
+        // Draw direction indicator (line from unit center in facing direction)
+        int directionX = unitPos.x + Constants.TILE_WIDTH / 2 + (int)(radius * 0.7 * Math.cos(Math.toRadians(rotationAngle)));
+        int directionY = unitPos.y + Constants.TILE_HEIGHT / 2 + (int)(radius * 0.7 * Math.sin(Math.toRadians(rotationAngle)));
+        
+        g.setColor(directionColor);
+        g.drawLine(
+            unitPos.x + Constants.TILE_WIDTH / 2 - graphicsMain.getCameraX(),
+            unitPos.y + Constants.TILE_HEIGHT / 2 - graphicsMain.getCameraY(),
+            directionX - graphicsMain.getCameraX(),
+            directionY - graphicsMain.getCameraY()
+        );
     }
 }

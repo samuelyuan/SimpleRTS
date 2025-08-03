@@ -79,12 +79,13 @@ public class ImageService {
     
     private void loadTileImages() {
         String[][] tileList = {
-            { TileConverter.STR_LAND, "tile-snow.jpg" },
-            { TileConverter.STR_WALL, "tile-wall.jpg" },
-            { TileConverter.STR_FLAG, "tile-flag.jpg" },
+            { TileConverter.STR_LAND, "tile-snow.png" },
+            { TileConverter.STR_WALL, "tile-tree.png" },
+            { TileConverter.STR_FLAG, "tile-flag.png" },
             { TileConverter.STR_UNIT_LIGHT_PLAYER, "unit-infantry-player.png" },
             { TileConverter.STR_UNIT_LIGHT_ENEMY, "unit-infantry-enemy.png" },
-            { TileConverter.STR_UNIT_MEDIUM, "unit-antiarmor.png" },
+            { TileConverter.STR_UNIT_MEDIUM_PLAYER, "unit-antiarmor-player.png" },
+            { TileConverter.STR_UNIT_MEDIUM_ENEMY, "unit-antiarmor-enemy.png" },
             { TileConverter.STR_UNIT_HEAVY_PLAYER, "unit-tank-player.png" },
             { TileConverter.STR_UNIT_HEAVY_ENEMY, "unit-tank-enemy.png" }
         };

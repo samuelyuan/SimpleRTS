@@ -95,6 +95,9 @@ public class GraphicsMain {
 		// Draw the flags
 		renderAllFlags(g, unitManager);
 
+		// Draw combat effects (on top of units)
+		renderCombatEffects(g);
+
 		// draw fog (although this should be done before drawing units, not after
 		renderFog(g, stateManager.getGameMap().getDrawData());
 
@@ -116,7 +119,7 @@ public class GraphicsMain {
 	}
 
 	private void renderAllFlags(IGraphics g, GameUnitManager unitManager) {
-		java.util.Iterator<GameFlag> flagIter = unitManager.getFlagManager().getFlagList();
+		java.util.Iterator<GameFlag> flagIter = stateManager.getFlagManager().getFlagList();
 		while (flagIter.hasNext()) {
 			GameFlag flag = flagIter.next();
 			drawFlag(g, flag);
@@ -295,26 +298,23 @@ public class GraphicsMain {
 		}
 
 		private void drawFlags(IGraphics g) {
-			java.util.Iterator<GameFlag> flagIter = stateManager.getUnitManager().getFlagManager().getFlagList();
+			java.util.Iterator<GameFlag> flagIter = stateManager.getFlagManager().getFlagList();
 			while (flagIter.hasNext()) {
 				GameFlag flag = flagIter.next();
 				int flagX = flag.getMapX();
 				int flagY = flag.getMapY();
 				
-				// Only show flags in visited areas
-				if (fogWar.isTileVisited(flagX, flagY)) {
-					int drawX = minimapX + flagX * tileWidth;
-					int drawY = minimapY + flagY * tileHeight;
-					
-					// Draw flag based on current ownership
-					Color flagColor = flag.getColorForFaction();
-					g.setColor(flagColor);
-					g.fillRect(drawX, drawY, tileWidth, tileHeight);
-					
-					// Draw flag border
-					g.setColor(new Color(255, 255, 255));
-					g.drawRect(drawX, drawY, tileWidth, tileHeight);
-				}
+				int drawX = minimapX + flagX * tileWidth;
+				int drawY = minimapY + flagY * tileHeight;
+				
+				// Always show flags on minimap for strategic planning
+				Color flagColor = flag.getColorForFaction();
+				g.setColor(flagColor);
+				g.fillRect(drawX, drawY, tileWidth, tileHeight);
+				
+				// Draw flag border
+				g.setColor(new Color(255, 255, 255));
+				g.drawRect(drawX, drawY, tileWidth, tileHeight);
 			}
 		}
 
@@ -405,8 +405,78 @@ public class GraphicsMain {
 	}
 
 	public void drawFlag(IGraphics g, GameFlag flag) {
+		// Draw the flag capture radius indicator
+		drawFlagRadius(g, flag);
+		
 		// Get drawing instruction from flag and execute it
 		DrawingInstruction instr = flag.getDrawingInstruction(getCameraX(), getCameraY());
 		drawInstruction(g, instr);
+	}
+	
+	/**
+	 * Draws the flag capture radius indicator
+	 */
+	private void drawFlagRadius(IGraphics g, GameFlag flag) {
+		Point flagScreenPos = TileCoordinateConverter.mapToScreen(flag.getMapX(), flag.getMapY());
+		int flagX = flagScreenPos.x - getCameraX();
+		int flagY = flagScreenPos.y - getCameraY();
+		
+		// Calculate radius in screen coordinates
+		int radiusPixels = GameFlag.FLAG_RADIUS * Constants.TILE_WIDTH;
+		
+		// Draw radius indicator based on flag control
+		Color radiusColor;
+		boolean isCapturing = flag.isBeingCaptured();
+		
+		switch (flag.getControlFaction()) {
+			case GameFlag.FACTION_PLAYER:
+				radiusColor = new Color(0, 100, 255, isCapturing ? 60 : 30); // Brighter when capturing
+				break;
+			case GameFlag.FACTION_ENEMY:
+				radiusColor = new Color(255, 100, 100, isCapturing ? 60 : 30); // Brighter when capturing
+				break;
+			default: // Neutral
+				radiusColor = new Color(150, 150, 150, isCapturing ? 60 : 30); // Brighter when capturing
+				break;
+		}
+		
+		// Draw filled circle for capture zone
+		g.setColor(radiusColor);
+		drawCircle(g, flagX + Constants.TILE_WIDTH/2, flagY + Constants.TILE_HEIGHT/2, radiusPixels, true);
+		
+		// Draw border for better visibility
+		Color borderColor = new Color(radiusColor.r, radiusColor.g, radiusColor.b, 150);
+		g.setColor(borderColor);
+		drawCircle(g, flagX + Constants.TILE_WIDTH/2, flagY + Constants.TILE_HEIGHT/2, radiusPixels, false);
+	}
+	
+	/**
+	 * Draws a circle using polygon approximation
+	 */
+	private void drawCircle(IGraphics g, int centerX, int centerY, int radius, boolean fill) {
+		int segments = 32; // Number of line segments to approximate circle
+		int[] xPoints = new int[segments];
+		int[] yPoints = new int[segments];
+		
+		for (int i = 0; i < segments; i++) {
+			double angle = 2 * Math.PI * i / segments;
+			xPoints[i] = centerX + (int)(radius * Math.cos(angle));
+			yPoints[i] = centerY + (int)(radius * Math.sin(angle));
+		}
+		
+		if (fill) {
+			g.fillPolygon(xPoints, yPoints, segments);
+		} else {
+			g.drawPolygon(xPoints, yPoints, segments);
+		}
+	}
+	
+	/**
+	 * Renders all combat effects including damage numbers, attack animations,
+	 * death animations, and particles.
+	 */
+	private void renderCombatEffects(IGraphics g) {
+		CombatEffectManager effectManager = stateManager.getCombatEffectManager();
+		effectManager.render(g, getCameraX(), getCameraY());
 	}
 }

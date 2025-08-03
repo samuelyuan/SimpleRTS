@@ -115,7 +115,7 @@ public class GameMap {
 		System.out.println("[INFO] Enemy units: " + enemyUnitPositions.size());
 		System.out.println("[INFO] Flags: " + flagPositions.size());
 
-		exportImage();
+		// exportImage();
 	}
 
 	public int tileStrToId(
@@ -131,9 +131,7 @@ public class GameMap {
 	public void exportImage() {
 		MapImageExporter.exportImage(mapData, numLevel, imageService);
 	}
-	
 
-	
 	/**
 	 * Gets all available level numbers
 	 * @return List of available level numbers

@@ -9,15 +9,13 @@ import utils.Constants;
 import utils.TileCoordinateConverter;
 
 public class GameUnitManager {
-	private GameFlagManager flagManager;
 	private ArrayList<GameUnit> playerList;
 	private ArrayList<GameUnit> enemyList;
 	private boolean isSpawned = false; // only spawn once per day
 
-	public GameUnitManager(GameFlagManager flagManager) {
+	public GameUnitManager() {
 		this.playerList = new ArrayList<>();
 		this.enemyList = new ArrayList<>();
-		this.flagManager = flagManager;
 	}
 
 	public ArrayList<GameUnit> getPlayerList() {
@@ -28,14 +26,9 @@ public class GameUnitManager {
 		return enemyList;
 	}
 
-	public GameFlagManager getFlagManager() {
-		return flagManager;
-	}
-
-	public void init(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions, Map<Point, Integer> flagPositions) {
+	public void init(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions) {
 		clearUnits();
 		loadAllUnits(allyUnitPositions, enemyUnitPositions);
-		loadAllFlags(flagPositions);
 	}
 
 	/**
@@ -54,13 +47,6 @@ public class GameUnitManager {
 		loadEnemyUnits(enemyUnitPositions);
 	}
 
-	/**
-	 * Loads all flags from the map.
-	 */
-	public void loadAllFlags(Map<Point, Integer> flagPositions) {
-		loadFlag(flagPositions);
-	}
-
 	public void loadPlayerUnits(Map<Point, Integer> allyUnitPositions) {
 		for (Entry<Point, Integer> entry : allyUnitPositions.entrySet()) {
 			Point initialPosition = entry.getKey();
@@ -76,34 +62,6 @@ public class GameUnitManager {
 			int classType = entry.getValue();
 			enemyList.add(new GameUnit(TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).x, TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).y,
 				false, classType));
-		}
-	}
-
-	public void loadFlag(Map<Point, Integer> flagPositions) {
-		for (Entry<Point, Integer> entry : flagPositions.entrySet()) {
-			Point position = entry.getKey();
-			int faction = entry.getValue();
-			if (faction == GameFlag.FACTION_PLAYER)
-				flagManager.addPlayerFlag(position.x, position.y);
-			else if (faction == GameFlag.FACTION_ENEMY)
-				flagManager.addEnemyFlag(position.x, position.y);
-		}
-	}
-
-	public void checkFlagStates(GameUnit unit, int factionId) {
-		Point unitMapPos = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
-		int unitMapX = unitMapPos.x;
-		int unitMapY = unitMapPos.y;
-		flagManager.checkFlagState(unitMapX, unitMapY, factionId);
-	}
-
-	public boolean isFlagsListEmpty(int factionId) {
-		if (factionId == GameFlag.FACTION_PLAYER) {
-			return flagManager.isPlayerFlagsEmpty();
-		} else if (factionId == GameFlag.FACTION_ENEMY) {
-			return flagManager.isEnemyFlagsEmpty();
-		} else {
-			return true;
 		}
 	}
 

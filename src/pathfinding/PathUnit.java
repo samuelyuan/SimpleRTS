@@ -132,7 +132,7 @@ public class PathUnit {
 				{ 1, 1 }    // Southeast
 		};
 
-		// Check each direction for a walkable tile
+		// First, try the immediate 8 adjacent tiles
 		for (int i = 0; i < directions.length; i++) {
 			int dx = directions[i][0];
 			int dy = directions[i][1];
@@ -148,39 +148,83 @@ public class PathUnit {
 			// Check if tile is walkable
 			if (map[newY][newX] == 0) {
 				newDest = TileCoordinateConverter.mapToScreen(newX, newY);
-				break;
+				return newDest;
 			}
 		}
 
-		/*
-		 * boolean isTileFound = false;
-		 * for (int dy = -1; dy <= 1; dy++)
-		 * {
-		 * //System.out.println("player map dest: " + playerMapDest.x + ", " +
-		 * playerMapDest.y);
-		 * if (playerMapDest.y + dy < 0) continue;
-		 * 
-		 * for (int dx = -1; dx <= 1; dx++)
-		 * {
-		 * if (dy == 0 && dx == 0)
-		 * continue;
-		 * 
-		 * if (playerMapDest.x + dx < 0) continue;
-		 * 
-		 * if (map[playerMapDest.y + dy][playerMapDest.x + dx] == 0)
-		 * {
-		 * newDest.x = (playerMapDest.x + dx) * Constants.TILE_WIDTH;
-		 * newDest.y = (playerMapDest.y + dy) * Constants.TILE_HEIGHT;
-		 * isTileFound = true;
-		 * }
-		 * 
-		 * if (isTileFound) break;
-		 * }
-		 * if (isTileFound) break;
-		 * }
-		 */
+		// If no immediate tile found, search in expanding circles and find the closest one
+		int maxRadius = 8; // Increased max radius but we'll prioritize closer tiles
+		int closestDistance = Integer.MAX_VALUE;
+		Point closestTile = null;
+		
+		// Search in expanding circles, but collect all candidates and pick the closest
+		for (int radius = 2; radius <= maxRadius; radius++) {
+			boolean foundInThisRadius = false;
+			
+			// Search in a circular pattern around the destination
+			for (int dy = -radius; dy <= radius; dy++) {
+				for (int dx = -radius; dx <= radius; dx++) {
+					// Skip corners to make it more circular and efficient
+					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
+						continue;
+					}
+					
+					int newX = playerMapDest.x + dx;
+					int newY = playerMapDest.y + dy;
 
-		// System.out.println("new dest: " + newDest.x + ", " + newDest.y);
+					// Check bounds
+					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
+						continue;
+					}
+
+					// Check if tile is walkable
+					if (map[newY][newX] == 0) {
+						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
+						if (distance < closestDistance) {
+							closestDistance = distance;
+							closestTile = new Point(newX, newY);
+							foundInThisRadius = true;
+						}
+					}
+				}
+			}
+			
+			// If we found tiles in this radius and we're within reasonable distance, use the closest one
+			if (foundInThisRadius && closestDistance <= 4) {
+				break; // Don't search further if we have a reasonably close tile
+			}
+		}
+		
+		// If we found a reasonably close tile, use it
+		if (closestTile != null && closestDistance <= 6) {
+			newDest = TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
+			return newDest;
+		}
+		
+		// If no reasonably close tile found, try to find the closest walkable tile anywhere
+		// but limit the search to avoid extremely long distances
+		if (closestTile == null || closestDistance > 6) {
+			closestDistance = Integer.MAX_VALUE;
+			closestTile = null;
+			
+			// Search in a larger area but still prioritize closer tiles
+			for (int y = Math.max(0, playerMapDest.y - 10); y <= Math.min(mapHeight - 1, playerMapDest.y + 10); y++) {
+				for (int x = Math.max(0, playerMapDest.x - 10); x <= Math.min(mapWidth - 1, playerMapDest.x + 10); x++) {
+					if (map[y][x] == 0) {
+						int distance = Math.abs(x - playerMapDest.x) + Math.abs(y - playerMapDest.y);
+						if (distance < closestDistance) {
+							closestDistance = distance;
+							closestTile = new Point(x, y);
+						}
+					}
+				}
+			}
+		}
+		
+		// If we found any walkable tile, use it
+		if (closestTile != null) {
+			newDest = TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
+		}
 
 		return newDest;
 	}

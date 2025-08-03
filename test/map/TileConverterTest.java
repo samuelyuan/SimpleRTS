@@ -23,8 +23,13 @@ public class TileConverterTest {
     }
 
     @Test
-    public void testTileStrToBaseId_UnitMedium() {
-        assertEquals(TILE_UNIT_MEDIUM, tileStrToBaseId("Unit Medium"));
+    public void testTileStrToBaseId_UnitMediumPlayer() {
+        assertEquals(TILE_UNIT_MEDIUM_PLAYER, tileStrToBaseId("Unit Medium Player"));
+    }
+
+    @Test
+    public void testTileStrToBaseId_UnitMediumEnemy() {
+        assertEquals(TILE_UNIT_MEDIUM_ENEMY, tileStrToBaseId("Unit Medium Enemy"));
     }
 
     @Test
@@ -57,10 +62,10 @@ public class TileConverterTest {
         assertEquals("Land", tileIntToStr(TILE_LAND));
         assertEquals("Wall", tileIntToStr(TILE_WALL));
         assertEquals("Unit Light Player", tileIntToStr(TILE_UNIT_LIGHT_PLAYER));
-        assertEquals("Unit Medium", tileIntToStr(TILE_UNIT_MEDIUM));
-        assertEquals("Unit Medium", tileIntToStr(TILE_UNIT_MEDIUM_ALT)); // maps to same string
+        assertEquals("Unit Medium Player", tileIntToStr(TILE_UNIT_MEDIUM_PLAYER));
         assertEquals("Unit Heavy Player", tileIntToStr(TILE_UNIT_HEAVY_PLAYER));
         assertEquals("Unit Light Enemy", tileIntToStr(TILE_UNIT_LIGHT_ENEMY));
+        assertEquals("Unit Medium Enemy", tileIntToStr(TILE_UNIT_MEDIUM_ENEMY));
         assertEquals("Unit Heavy Enemy", tileIntToStr(TILE_UNIT_HEAVY_ENEMY));
         assertEquals("Flag", tileIntToStr(TILE_FLAG_ALLY));
         assertEquals("Flag", tileIntToStr(TILE_FLAG_ENEMY));
@@ -77,7 +82,8 @@ public class TileConverterTest {
             "Land",
             "Wall",
             "Unit Light Player",
-            "Unit Medium",
+            "Unit Medium Player",
+            "Unit Medium Enemy",
             "Unit Heavy Player",
             "Unit Light Enemy",
             "Unit Heavy Enemy",

@@ -130,7 +130,7 @@ public class GraphicsMainTest {
 
         // Create a mock GameFlagManager
         GameFlagManager mockFlagManager = mock(GameFlagManager.class);
-        when(mockUnitManager.getFlagManager()).thenReturn(mockFlagManager);
+        when(mockStateManager.getFlagManager()).thenReturn(mockFlagManager);
 
         // Create empty lists for units and flags
         when(mockUnitManager.getPlayerList()).thenReturn(new ArrayList<>());

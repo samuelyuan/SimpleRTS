@@ -1,20 +1,29 @@
+import java.util.Map;
+
+import graphics.Point;
+import utils.TileCoordinateConverter;
+
 public class GameStateManager {
     private GameState nextState = GameState.STATE_NULL;
     private StateMachine currentState = null;
     private final SimpleRTS simpleRTS;
     private final ImageService imageService;
     private final GameUnitManager unitManager;
+    private final GameFlagManager flagManager;
     private final GameMap gameMap;
     private final SelectionManager selectionManager;
     private final CameraManager cameraManager;
+    private final CombatEffectManager combatEffectManager;
 
     public GameStateManager(SimpleRTS simpleRTS, CameraManager cameraManager, ImageService imageService) {
         this.simpleRTS = simpleRTS;
         this.cameraManager = cameraManager;
         this.imageService = imageService;
-        this.unitManager = new GameUnitManager(new GameFlagManager());
+        this.flagManager = new GameFlagManager();
+        this.unitManager = new GameUnitManager();
         this.gameMap = new GameMap(imageService);
         this.selectionManager = new SelectionManager();
+        this.combatEffectManager = new CombatEffectManager();
         // Start with menu state
         this.currentState = new StateGameMenu(this);
     }
@@ -48,9 +57,9 @@ public class GameStateManager {
                     currentState = new StateGameWin(this);
                     break;
             }
-            // Notify input handler of state change
-            if (simpleRTS != null && simpleRTS.getInputHandler() != null) {
-                simpleRTS.getInputHandler().setCurrentState(currentState);
+            // Notify mouse handler of state change
+            if (simpleRTS != null && simpleRTS.getMouseHandler() != null) {
+                simpleRTS.getMouseHandler().setCurrentState(currentState);
             }
             nextState = GameState.STATE_NULL;
         }
@@ -60,12 +69,40 @@ public class GameStateManager {
         gameMap.loadMap();
         unitManager.init(
             gameMap.getAllyUnitPositions(),
-            gameMap.getEnemyUnitPositions(),
-            gameMap.getFlagPositions()
+            gameMap.getEnemyUnitPositions()
         );
+        loadFlags(gameMap.getFlagPositions());
         GameFogWar fogWar = new GameFogWar(gameMap.getMapData().length, gameMap.getMapData()[0].length);
         GraphicsMain graphicsMain = new GraphicsMain(this, fogWar, cameraManager);
         return new StateGameMain(this, unitManager, fogWar, graphicsMain);
+    }
+
+    private void loadFlags(Map<Point, Integer> flagPositions) {
+        for (Map.Entry<Point, Integer> entry : flagPositions.entrySet()) {
+            Point position = entry.getKey();
+            int faction = entry.getValue();
+            if (faction == GameFlag.FACTION_PLAYER)
+                flagManager.addPlayerFlag(position.x, position.y);
+            else if (faction == GameFlag.FACTION_ENEMY)
+                flagManager.addEnemyFlag(position.x, position.y);
+        }
+    }
+
+    public void checkFlagStates(GameUnit unit, int factionId) {
+        Point unitMapPos = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
+        int unitMapX = unitMapPos.x;
+        int unitMapY = unitMapPos.y;
+        flagManager.checkFlagState(unitMapX, unitMapY, factionId);
+    }
+
+    public boolean isFlagsListEmpty(int factionId) {
+        if (factionId == GameFlag.FACTION_PLAYER) {
+            return flagManager.isPlayerFlagsEmpty();
+        } else if (factionId == GameFlag.FACTION_ENEMY) {
+            return flagManager.isEnemyFlagsEmpty();
+        } else {
+            return true;
+        }
     }
 
     public StateMachine getCurrentState() {
@@ -88,7 +125,15 @@ public class GameStateManager {
         return cameraManager;
     }
     
+    public GameFlagManager getFlagManager() {
+        return flagManager;
+    }
+    
     public ImageService getImageService() {
         return imageService;
+    }
+    
+    public CombatEffectManager getCombatEffectManager() {
+        return combatEffectManager;
     }
 } 

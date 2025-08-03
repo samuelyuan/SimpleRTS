@@ -54,72 +54,128 @@ public class UnitVisibilityTest {
     }
 
     @Test
-    public void testCheckRowVisible() {
-        // Test row visibility (no walls in the path)
-        assertTrue(UnitVisibility.checkRowVisible(map, 2, 2, 4, 2), 
-                "Should see path without walls");
-
-        // Test row visibility (wall in the path)
-        assertFalse(UnitVisibility.checkRowVisible(map, 2, 2, 5, 2), 
-                "Should not see path due to wall at (5, 2)");
-    }
-
-    @Test
-    public void testCheckColumnVisible() {
-        // Test column visibility (no walls in the path)
-        assertTrue(UnitVisibility.checkColumnVisible(map, 2, 2, 2, 3), 
-                "Should see path without walls");
-
-        // Test column visibility (wall in the path)
-        assertFalse(UnitVisibility.checkColumnVisible(map, 2, 2, 2, 6), 
-                "Should not see path to (2, 6) due to wall at (2, 5)");
-    }
-
-    @Test
-    public void testCheckDiagonalVisible() {
-        // Test diagonal visibility (no walls in the path)
-        assertTrue(UnitVisibility.checkDiagonalVisible(map, 2, 2, 3, 3), 
-                "Should see diagonal path without walls");
-
-        // Test diagonal visibility (wall in the path)
-        assertFalse(UnitVisibility.checkDiagonalVisible(map, 2, 2, 4, 4),
-                "Should not see diagonal path due to wall at (4, 4)");
-    }
-
-    @Test
-    public void testCalculateDistance() {
-        Point point1 = new Point(0, 0);
-        Point point2 = new Point(3, 4);
+    public void testFOVWithRotation() {
+        // Test FOV when observer is rotated
         
-        assertEquals(7, UnitVisibility.calculateDistance(point1, point2), 
-                "Manhattan distance should be 7");
+        // Set observer to face north (270 degrees in game coordinates)
+        observerUnit.setRotationAngle(270.0);
+        
+        // Place target directly north of observer (decreasing Y)
+        targetUnit.setCurrentPosition(new Point(observerUnit.getCurrentPosition().x, observerUnit.getCurrentPosition().y - 100));
+        assertTrue(UnitVisibility.isWithinFOV(observerUnit, targetUnit), 
+                "Target directly north should be within FOV when facing north");
+        
+        // Place target south of observer (behind, increasing Y)
+        targetUnit.setCurrentPosition(new Point(observerUnit.getCurrentPosition().x, observerUnit.getCurrentPosition().y + 100));
+        assertFalse(UnitVisibility.isWithinFOV(observerUnit, targetUnit), 
+                "Target behind should not be within FOV");
     }
 
     @Test
-    public void testCalculateEuclideanDistance() {
-        Point point1 = new Point(0, 0);
-        Point point2 = new Point(3, 4);
+    public void testCompleteVisibilityWithFOV() {
+        // Test that the complete visibility check includes FOV
         
-        assertEquals(5.0, UnitVisibility.calculateEuclideanDistance(point1, point2), 0.001, 
-                "Euclidean distance should be 5.0");
+        // Set observer to face east
+        observerUnit.setRotationAngle(0.0);
+        
+        // Place target behind observer (should fail FOV check)
+        targetUnit.setCurrentPosition(new Point(observerUnit.getCurrentPosition().x - 100, observerUnit.getCurrentPosition().y));
+        assertFalse(UnitVisibility.checkVisible(map, observerUnit, targetUnit), 
+                "Complete visibility check should fail when target is outside FOV");
+        
+        // Place target in front of observer (should pass FOV check)
+        targetUnit.setCurrentPosition(new Point(observerUnit.getCurrentPosition().x + 100, observerUnit.getCurrentPosition().y));
+        assertTrue(UnitVisibility.checkVisible(map, observerUnit, targetUnit), 
+                "Complete visibility check should pass when target is within FOV");
     }
 
     @Test
-    public void testCheckVisibleSamePosition() {
-        // Units at the same position should be visible to each other
-        GameUnit samePosUnit = new GameUnit(2, 2, false, Constants.UNIT_ID_HEAVY);
+    public void testHorizontalVisibility() {
+        // Create a simple test map for horizontal visibility
+        int[][] simpleMap = new int[][]{
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0}
+        };
         
-        assertTrue(UnitVisibility.checkVisible(map, observerUnit, samePosUnit), 
-                "Units at the same position should be visible to each other");
+        Point start = new Point(0, 0);
+        Point end = new Point(2, 0);
+        
+        // Clear horizontal line
+        assertTrue(UnitVisibility.checkHorizontalVisibility(simpleMap, start, end), 
+                "Horizontal visibility should be clear");
+        
+        // Add wall in the middle
+        simpleMap[0][1] = TileConverter.TILE_WALL;
+        assertFalse(UnitVisibility.checkHorizontalVisibility(simpleMap, start, end), 
+                "Horizontal visibility should be blocked by wall");
     }
 
     @Test
-    public void testCheckVisibleEdgeCases() {
-        // Test with units at map edges
-        GameUnit edgeUnit1 = new GameUnit(0, 0, false, Constants.UNIT_ID_LIGHT);
-        GameUnit edgeUnit2 = new GameUnit(6, 6, false, Constants.UNIT_ID_LIGHT);
+    public void testVerticalVisibility() {
+        // Create a simple test map for vertical visibility
+        int[][] simpleMap = new int[][]{
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0}
+        };
         
-        // These should not throw exceptions
-        assertDoesNotThrow(() -> UnitVisibility.checkVisible(map, edgeUnit1, edgeUnit2));
+        Point start = new Point(0, 0);
+        Point end = new Point(0, 2);
+        
+        // Clear vertical line
+        assertTrue(UnitVisibility.checkVerticalVisibility(simpleMap, start, end), 
+                "Vertical visibility should be clear");
+        
+        // Add wall in the middle
+        simpleMap[1][0] = TileConverter.TILE_WALL;
+        assertFalse(UnitVisibility.checkVerticalVisibility(simpleMap, start, end), 
+                "Vertical visibility should be blocked by wall");
+    }
+
+    @Test
+    public void testDiagonalVisibility() {
+        // Create a simple test map for diagonal visibility
+        int[][] simpleMap = new int[][]{
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0},
+            {0, 0, 0, 0}
+        };
+        
+        Point start = new Point(0, 0);
+        Point end = new Point(2, 2);
+        
+        // Clear diagonal line
+        assertTrue(UnitVisibility.checkDiagonalVisibility(simpleMap, start, end), 
+                "Diagonal visibility should be clear");
+        
+        // Add wall in the middle
+        simpleMap[1][1] = TileConverter.TILE_WALL;
+        assertFalse(UnitVisibility.checkDiagonalVisibility(simpleMap, start, end), 
+                "Diagonal visibility should be blocked by wall");
+    }
+
+    @Test
+    public void testCalculateAngleToTarget() {
+        Point from = new Point(0, 0);
+        Point to = new Point(100, 0); // East
+        
+        double angle = UnitVisibility.calculateAngleToTarget(from, to);
+        assertEquals(0.0, angle, 0.1, "Angle to east should be 0 degrees");
+        
+        to = new Point(0, -100); // North (decreasing Y in game coordinates)
+        angle = UnitVisibility.calculateAngleToTarget(from, to);
+        assertEquals(270.0, angle, 0.1, "Angle to north should be 270 degrees in game coordinates");
+        
+        to = new Point(-100, 0); // West
+        angle = UnitVisibility.calculateAngleToTarget(from, to);
+        assertEquals(180.0, angle, 0.1, "Angle to west should be 180 degrees");
+        
+        to = new Point(0, 100); // South (increasing Y in game coordinates)
+        angle = UnitVisibility.calculateAngleToTarget(from, to);
+        assertEquals(90.0, angle, 0.1, "Angle to south should be 90 degrees in game coordinates");
     }
 } 

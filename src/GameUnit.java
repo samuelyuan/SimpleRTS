@@ -2,6 +2,8 @@ import java.util.ArrayList;
 
 import graphics.Point;
 import map.TileConverter;
+import pathfinding.PathAStar;
+import pathfinding.PathNode;
 import pathfinding.PathUnit;
 import utils.Constants;
 import utils.TileCoordinateConverter;
@@ -87,6 +89,10 @@ public class GameUnit {
 	}
 
 	private int direction = 0; // north, south, east, west
+	private double rotationAngle = 0.0; // 360-degree rotation angle in degrees
+	private double targetRotationAngle = 0.0; // Target rotation angle for smooth interpolation
+	private int lastDamageDealt = 0; // Track damage for combat effects
+	private boolean wasCriticalHit = false; // Track if last hit was critical
 
 	public int getDirection() {
 		return this.direction;
@@ -94,6 +100,50 @@ public class GameUnit {
 
 	public void setDirection(int direction) {
 		this.direction = direction;
+	}
+	
+	public double getRotationAngle() {
+		return this.rotationAngle;
+	}
+	
+	public void setRotationAngle(double angle) {
+		this.rotationAngle = angle;
+		// Keep angle within 0-360 range
+		while (this.rotationAngle < 0) this.rotationAngle += 360.0;
+		while (this.rotationAngle >= 360.0) this.rotationAngle -= 360.0;
+	}
+	
+	public double getTargetRotationAngle() {
+		return this.targetRotationAngle;
+	}
+	
+	public void setTargetRotationAngle(double angle) {
+		this.targetRotationAngle = angle;
+		// Keep angle within 0-360 range
+		while (this.targetRotationAngle < 0) this.targetRotationAngle += 360.0;
+		while (this.targetRotationAngle >= 360.0) this.targetRotationAngle -= 360.0;
+	}
+	
+	// Update rotation smoothly towards target angle
+	public void updateRotation() {
+		if (Math.abs(this.rotationAngle - this.targetRotationAngle) > Constants.MIN_ROTATION_THRESHOLD) {
+			// Calculate shortest rotation direction
+			double angleDiff = this.targetRotationAngle - this.rotationAngle;
+			
+			// Handle angle wrapping (e.g., going from 350° to 10°)
+			if (angleDiff > 180.0) {
+				angleDiff -= 360.0;
+			} else if (angleDiff < -180.0) {
+				angleDiff += 360.0;
+			}
+			
+			// Smooth interpolation
+			this.rotationAngle += angleDiff * Constants.ROTATION_SMOOTHING_FACTOR;
+			
+			// Keep angle within 0-360 range
+			while (this.rotationAngle < 0) this.rotationAngle += 360.0;
+			while (this.rotationAngle >= 360.0) this.rotationAngle -= 360.0;
+		}
 	}
 
 	// Mouse selection
@@ -207,6 +257,15 @@ public class GameUnit {
 				currentMapEndX = mapEnd.x;
 				currentMapEndY = mapEnd.y;
 				pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES; // Set cooldown
+			} else {
+				// Pathfinding failed - try to find an alternative destination
+				Point alternativeDest = findAlternativeDestination(map, mapEnd);
+				if (alternativeDest != null) {
+					this.setDestination(alternativeDest);
+					// Reset pathfinding state to try again with new destination
+					pathUnit.setIsPathCreated(false);
+					pathfindingCooldown = 0; // Allow immediate retry
+				}
 			}
 		}
 
@@ -277,10 +336,159 @@ public class GameUnit {
 			if (other == this) continue;
 			if (isSameDestination(other)) {
 				if (!other.pathUnit.getIsPathCreated()) continue;
-				other.setDestination(other.pathUnit.recalculateDest(map, getMapPoint(this.getDestination())));
-				updateCurrentMapEnd(getMapPoint(other.getDestination()));
+				
+				Point newDest = other.pathUnit.recalculateDest(map, getMapPoint(this.getDestination()));
+				
+				// Validate the new destination before setting it
+				if (isValidDestination(newDest, map)) {
+					other.setDestination(newDest);
+					updateCurrentMapEnd(getMapPoint(other.getDestination()));
+				} else {
+					// If recalculateDest failed, try to find a fallback destination
+					Point fallbackDest = findFallbackDestination(map, other);
+					if (fallbackDest != null) {
+						other.setDestination(fallbackDest);
+						updateCurrentMapEnd(getMapPoint(other.getDestination()));
+					}
+					// If no fallback found, the unit will stay in place (better than moving to invalid location)
+				}
 			}
 		}
+	}
+	
+	// Helper method to validate if a destination is valid
+	private boolean isValidDestination(Point dest, int[][] map) {
+		if (dest == null) return false;
+		
+		Point mapPoint = getMapPoint(dest);
+		if (mapPoint.x < 0 || mapPoint.y < 0 || 
+			mapPoint.y >= map.length || mapPoint.x >= map[0].length) {
+			return false;
+		}
+		
+		// Check if the destination is walkable
+		return map[mapPoint.y][mapPoint.x] == 0;
+	}
+	
+	// Fallback method to find a valid destination when recalculateDest fails
+	private Point findFallbackDestination(int[][] map, GameUnit unit) {
+		Point currentPos = getMapPoint(unit.getCurrentPosition());
+		int mapHeight = map.length;
+		int mapWidth = map[0].length;
+		
+		// Search in expanding circles around the unit's current position
+		// but prioritize closer destinations to avoid long travel distances
+		int closestDistance = Integer.MAX_VALUE;
+		Point closestTile = null;
+		
+		for (int radius = 1; radius <= 6; radius++) {
+			boolean foundInThisRadius = false;
+			
+			for (int dy = -radius; dy <= radius; dy++) {
+				for (int dx = -radius; dx <= radius; dx++) {
+					// Skip corners for efficiency
+					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
+						continue;
+					}
+					
+					int newX = currentPos.x + dx;
+					int newY = currentPos.y + dy;
+					
+					// Check bounds
+					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
+						continue;
+					}
+					
+					// Check if tile is walkable
+					if (map[newY][newX] == 0) {
+						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
+						if (distance < closestDistance) {
+							closestDistance = distance;
+							closestTile = new Point(newX, newY);
+							foundInThisRadius = true;
+						}
+					}
+				}
+			}
+			
+			// If we found a reasonably close tile, use it
+			if (foundInThisRadius && closestDistance <= 4) {
+				break;
+			}
+		}
+		
+		// If we found a tile within reasonable distance, use it
+		if (closestTile != null && closestDistance <= 6) {
+			return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
+		}
+		
+		// If no fallback found, return null (unit will stay in place)
+		return null;
+	}
+	
+	// Helper method to find an alternative destination when pathfinding fails
+	private Point findAlternativeDestination(int[][] map, Point originalDest) {
+		int mapHeight = map.length;
+		int mapWidth = map[0].length;
+		
+		// Search in expanding circles around the original destination
+		// but prioritize closer destinations to avoid long travel distances
+		int closestDistance = Integer.MAX_VALUE;
+		Point closestTile = null;
+		
+		for (int radius = 1; radius <= 6; radius++) {
+			boolean foundInThisRadius = false;
+			
+			for (int dy = -radius; dy <= radius; dy++) {
+				for (int dx = -radius; dx <= radius; dx++) {
+					// Skip corners for efficiency
+					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
+						continue;
+					}
+					
+					int newX = originalDest.x + dx;
+					int newY = originalDest.y + dy;
+					
+					// Check bounds
+					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
+						continue;
+					}
+					
+					// Check if tile is walkable
+					if (map[newY][newX] == 0) {
+						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
+						
+						// Only consider tiles within reasonable distance
+						if (distance <= 4) {
+							// Test if we can pathfind to this alternative destination
+							Point testStart = getMapPoint(this.currentPosition);
+							Point testEnd = new Point(newX, newY);
+							
+							// Temporarily create a path to test if it's reachable
+							ArrayList<PathNode> testPath = PathAStar.generatePath(map, testStart.x, testStart.y, testEnd.x, testEnd.y);
+							if (testPath != null && distance < closestDistance) {
+								closestDistance = distance;
+								closestTile = new Point(newX, newY);
+								foundInThisRadius = true;
+							}
+						}
+					}
+				}
+			}
+			
+			// If we found a reasonably close reachable tile, use it
+			if (foundInThisRadius && closestDistance <= 3) {
+				break;
+			}
+		}
+		
+		// If we found a tile within reasonable distance, use it
+		if (closestTile != null && closestDistance <= 4) {
+			return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
+		}
+		
+		// If no alternative found, return null
+		return null;
 	}
 
 	boolean isSameDestination(GameUnit other) {
@@ -310,25 +518,58 @@ public class GameUnit {
 	 * fight each other
 	 */
 	public void interactWithEnemy(int[][] map, ArrayList<GameUnit> enemyList) {
+		boolean canAttackAny = false;
 		for (GameUnit enemy : enemyList) {
 			if (canAttackEnemy(map, enemy)) {
 				handleAttack(enemy);
-			} else {
-				isAttacking = false;
+				canAttackAny = true;
 			}
+		}
+		// Only set isAttacking to false if we can't attack any enemies
+		if (!canAttackAny) {
+			isAttacking = false;
 		}
 	}
 
 	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
 		final int ATTACK_RADIUS = 8;
 		int manhattanDist = TileCoordinateConverter.manhattanDistanceInTiles(currentPosition, enemy.currentPosition);
+		// Now includes FOV check - units can only attack enemies they can see within their field of view
 		return manhattanDist <= ATTACK_RADIUS && UnitVisibility.checkVisible(map, this, enemy);
 	}
 
 	void handleAttack(GameUnit enemy) {
 		isAttacking = true;
-		this.health -= enemy.dealDamagePoints(this);
-		enemy.health -= this.dealDamagePoints(enemy);
+		
+		// Rotate to face the enemy being attacked
+		rotateToFaceTarget(enemy);
+		
+		// Make enemy rotate to face back (for counter-attack)
+		enemy.rotateToFaceTarget(this);
+		
+		// Calculate damage
+		int damageToEnemy = this.dealDamagePoints(enemy);
+		int damageToSelf = enemy.dealDamagePoints(this);
+		
+		// Apply damage
+		this.health -= damageToSelf;
+		enemy.health -= damageToEnemy;
+		
+		// Notify enemy that it took damage (so it can turn to face attacker)
+		enemy.onTakeDamage(this);
+		
+		// Check for critical hits (10% chance)
+		boolean isCriticalHit = Math.random() < 0.1;
+		if (isCriticalHit) {
+			damageToEnemy = (int)(damageToEnemy * 1.5); // 50% bonus damage
+			enemy.health -= (int)(damageToEnemy * 0.5); // Apply bonus damage
+		}
+		
+		// Store damage info for combat effects
+		this.lastDamageDealt = damageToEnemy;
+		this.wasCriticalHit = isCriticalHit;
+		enemy.lastDamageDealt = damageToSelf;
+		enemy.wasCriticalHit = false; // Enemy doesn't get critical hits for now
 	}
 
 	// Different types of units deal different damage
@@ -344,6 +585,56 @@ public class GameUnit {
 		}
 
 		return Constants.DAMAGE_MATRIX[attacker][defender];
+	}
+	
+	/**
+	 * Rotates the unit to face a target unit.
+	 * This is used during combat to ensure units face their enemies.
+	 * 
+	 * @param target The unit to face
+	 */
+	private void rotateToFaceTarget(GameUnit target) {
+		Point myPos = this.currentPosition;
+		Point targetPos = target.getCurrentPosition();
+		
+		// Calculate angle to target
+		double deltaX = targetPos.x - myPos.x;
+		double deltaY = targetPos.y - myPos.y;
+		double angleToTarget = Math.toDegrees(Math.atan2(deltaY, deltaX));
+		
+		// Normalize angle to 0-360 range
+		if (angleToTarget < 0) {
+			angleToTarget += 360.0;
+		}
+		
+		// Set target rotation angle for smooth rotation
+		this.setTargetRotationAngle(angleToTarget);
+	}
+	
+	/**
+	 * Called when this unit takes damage from an attacker.
+	 * This can be used to make the unit turn to face the attacker,
+	 * even if it can't currently attack back (e.g., due to FOV).
+	 * 
+	 * @param attacker The unit that attacked this unit
+	 */
+	public void onTakeDamage(GameUnit attacker) {
+		// Rotate to face the attacker (even if we can't attack back)
+		rotateToFaceTarget(attacker);
+	}
+	
+	// Combat effects getters
+	public int getLastDamageDealt() {
+		return lastDamageDealt;
+	}
+	
+	public boolean wasLastHitCritical() {
+		return wasCriticalHit;
+	}
+	
+	public void clearCombatEffects() {
+		lastDamageDealt = 0;
+		wasCriticalHit = false;
 	}
 
 

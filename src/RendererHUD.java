@@ -14,6 +14,7 @@ public class RendererHUD {
     private final UILabel enemyCountLabel;
     private final UILabel timerDayLabel;
     private final UILabel timerHourLabel;
+    private final UILabel fovStatusLabel;
     private final ImageService imageService;
 
     public RendererHUD(ImageService imageService) {
@@ -23,6 +24,7 @@ public class RendererHUD {
         this.enemyCountLabel = createEnemyCountLabel();
         this.timerDayLabel = createTimerDayLabel();
         this.timerHourLabel = createTimerHourLabel();
+        this.fovStatusLabel = createFOVStatusLabel();
 
         setupHUDHierarchy();
     }
@@ -68,11 +70,19 @@ public class RendererHUD {
         return label;
     }
 
+    private UILabel createFOVStatusLabel() {
+        UILabel label = new UILabel(10, 10, "");
+        label.setFont(new GameFont("Comic Sans", GameFont.PLAIN, 14));
+        label.setColor(Color.YELLOW);
+        return label;
+    }
+
     private void setupHUDHierarchy() {
         hudRoot.addChild(playerCountLabel);
         hudRoot.addChild(enemyCountLabel);
         hudRoot.addChild(timerDayLabel);
         hudRoot.addChild(timerHourLabel);
+        hudRoot.addChild(fovStatusLabel);
     }
 
     /**
@@ -93,6 +103,15 @@ public class RendererHUD {
         enemyCountLabel.setText(""); // intentionally left blank to hide enemy count
         timerDayLabel.setText("Day: " + gameTimer.getDay());
         timerHourLabel.setText(gameTimer.getHour() + ":00");
+        
+        // Update FOV status display
+        StringBuilder fovStatus = new StringBuilder();
+        fovStatus.append("FOV: ").append(Constants.FOV_RENDERING_ENABLED ? "ON" : "OFF");
+        if (Constants.FOV_RENDERING_ENABLED) {
+            fovStatus.append(" | Enemy: ").append(Constants.FOV_SHOW_ENEMY_UNITS ? "ON" : "OFF");
+            fovStatus.append(" | Selected: ").append(Constants.FOV_SHOW_SELECTED_ONLY ? "ON" : "OFF");
+        }
+        fovStatusLabel.setText(fovStatus.toString());
     }
 
     private void renderHUDBackgrounds(IGraphics g) {

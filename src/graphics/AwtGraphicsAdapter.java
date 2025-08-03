@@ -91,4 +91,9 @@ public class AwtGraphicsAdapter implements IGraphics {
     public void drawPolygon(int[] xPoints, int[] yPoints, int nPoints) {
         g.drawPolygon(xPoints, yPoints, nPoints);
     }
+
+    @Override
+    public void drawLine(int x1, int y1, int x2, int y2) {
+        g.drawLine(x1, y1, x2, y2);
+    }
 } 
