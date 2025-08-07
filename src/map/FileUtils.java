@@ -8,8 +8,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import utils.PathResolver;
+import utils.Logger;
 
-public class MapFileLoader {
+public class FileUtils {
     public static ArrayList<String> parseFile(String filename) {
         ArrayList<String> data = new ArrayList<String>();
         try {
@@ -20,10 +21,10 @@ public class MapFileLoader {
                     data.add(line);
                 }
             }
-        } catch (Exception e) {
-            System.out.println("Failed to load file: " + filename + ", error: " + e.getMessage());
-            e.printStackTrace();
-        }
+        		} catch (Exception e) {
+			Logger.error("Failed to load file: " + filename + ", error: " + e.getMessage());
+			e.printStackTrace();
+		}
         return data;
     }
 

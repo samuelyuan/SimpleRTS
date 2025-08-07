@@ -10,7 +10,9 @@ import graphics.IGraphics;
 import graphics.ImageUtils;
 import map.TileConverter;
 import utils.Constants;
+import utils.GameConfig;
 import utils.TileCoordinateConverter;
+import pathfinding.PathNode;
 
 /**
  * Handles rendering of game units.
@@ -21,9 +23,13 @@ public class RendererUnit {
     // Cache for rotated sprites to improve performance
     private final Map<String, BufferedImage> rotationCache = new HashMap<>();
     private static final int ROTATION_CACHE_SIZE = 100; // Limit cache size
+    
+    // Pathfinding renderer for enhanced visualization
+    private final RendererPathfinding pathfindingRenderer;
 
     public RendererUnit(GraphicsMain graphicsMain) {
         this.graphicsMain = graphicsMain;
+        this.pathfindingRenderer = new RendererPathfinding(graphicsMain);
     }
 
     /**
@@ -41,6 +47,8 @@ public class RendererUnit {
         renderUnitSprite(g, unit);
         renderUnitHealthBar(g, unit);
         renderUnitFOV(g, unit);
+        renderPathfindingFailureIndicator(g, unit);
+        renderPathfindingDebug(g, unit); // Add debug rendering
     }
 
     private void renderUnitSelection(IGraphics g, GameUnit unit) {
@@ -329,7 +337,7 @@ public class RendererUnit {
      */
     private void renderUnitFOV(IGraphics g, GameUnit unit) {
         // Master toggle check
-        if (!Constants.FOV_RENDERING_ENABLED) {
+        if (!GameConfig.isFovRenderingEnabled()) {
             return;
         }
         
@@ -337,11 +345,11 @@ public class RendererUnit {
         boolean shouldRender = false;
         
         if (unit.isPlayerUnit()) {
-            // For player units: show if selected (when FOV_SHOW_SELECTED_ONLY is true) or always show
-            shouldRender = !Constants.FOV_SHOW_SELECTED_ONLY || unit.isPlayerSelected();
+            // For player units: always show FOV
+            shouldRender = true;
         } else {
             // For enemy units: show if FOV_SHOW_ENEMY_UNITS is enabled
-            shouldRender = Constants.FOV_SHOW_ENEMY_UNITS;
+            shouldRender = GameConfig.isFovShowEnemyUnits();
         }
         
         if (!shouldRender) {
@@ -410,4 +418,39 @@ public class RendererUnit {
             directionY - graphicsMain.getCameraY()
         );
     }
+    
+    /**
+     * Renders a visual indicator when pathfinding fails
+     */
+    private void renderPathfindingFailureIndicator(IGraphics g, GameUnit unit) {
+        if (!unit.isPathfindingFailed()) {
+            return;
+        }
+
+        Point unitPos = unit.getCurrentPosition();
+        int x = unitPos.x;
+        int y = unitPos.y;
+        
+        // Calculate alpha based on remaining timer for pulsing effect
+        int remainingTime = unit.getPathfindingFailureTimer();
+        int alpha = Math.max(50, Math.min(200, 100 + (int)(100 * Math.sin(remainingTime * 0.2)))); // Clamped pulsing effect
+        
+        // Draw red failure indicator
+        g.setColor(new Color(255, 0, 0, alpha));
+        drawRectOnScreen(g, x - 2, y - 2, Constants.TILE_WIDTH + 4, Constants.TILE_HEIGHT + 4, true);
+        
+        // Draw border
+        g.setColor(new Color(255, 0, 0, 200));
+        drawRectOnScreen(g, x - 2, y - 2, Constants.TILE_WIDTH + 4, Constants.TILE_HEIGHT + 4, false);
+    }
+    
+    /**
+     * Renders pathfinding debug information
+     */
+    public void renderPathfindingDebug(IGraphics g, GameUnit unit) {
+        // Use the new enhanced pathfinding renderer
+        pathfindingRenderer.renderPathfindingDebug(g, unit, graphicsMain.getStateManager().getGameMap().getMapData());
+    }
+    
+
 }

@@ -135,67 +135,66 @@ public class CameraManager {
     }
     
     /**
-     * Updates cursor based on scrolling state
+     * Updates cursor based on mouse position and scrolling state
      */
     private void updateCursor(int gameX, int gameY, int screenWidth, int screenHeight, boolean isScrolling) {
-        if (!isScrolling && isInCenterArea(gameX, gameY, screenWidth, screenHeight)) {
-            setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
-        } else if (isScrolling) {
-            // Set appropriate cursor based on scroll direction
+        // Check if mouse is in center area (no cursor change)
+        if (isInCenterArea(gameX, gameY, screenWidth, screenHeight)) {
+            setCursor(Cursor.getDefaultCursor());
+            return;
+        }
+        
+        // Set cursor based on scrolling direction
+        if (isScrolling) {
             if (scrollingRight && scrollingDown) {
-                setCursor(new Cursor(Cursor.SE_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
             } else if (scrollingRight && scrollingUp) {
-                setCursor(new Cursor(Cursor.NE_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.NE_RESIZE_CURSOR));
             } else if (scrollingLeft && scrollingDown) {
-                setCursor(new Cursor(Cursor.SW_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.SW_RESIZE_CURSOR));
             } else if (scrollingLeft && scrollingUp) {
-                setCursor(new Cursor(Cursor.NW_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.NW_RESIZE_CURSOR));
             } else if (scrollingRight) {
-                setCursor(new Cursor(Cursor.E_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
             } else if (scrollingLeft) {
-                setCursor(new Cursor(Cursor.W_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.W_RESIZE_CURSOR));
             } else if (scrollingDown) {
-                setCursor(new Cursor(Cursor.S_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.S_RESIZE_CURSOR));
             } else if (scrollingUp) {
-                setCursor(new Cursor(Cursor.N_RESIZE_CURSOR));
+                setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
             }
+        } else {
+            setCursor(Cursor.getDefaultCursor());
         }
     }
     
     /**
-     * Checks if the mouse is in the center area (not near edges)
+     * Checks if mouse is in the center area where no cursor change is needed
      */
     private boolean isInCenterArea(int gameX, int gameY, int screenWidth, int screenHeight) {
-        return gameX > CURSOR_MARGIN && gameX < screenWidth - CURSOR_MARGIN
-                && gameY > CURSOR_MARGIN && gameY < screenHeight - CURSOR_MARGIN;
+        return gameX > CURSOR_MARGIN && gameX < screenWidth - CURSOR_MARGIN &&
+               gameY > CURSOR_MARGIN && gameY < screenHeight - CURSOR_MARGIN;
     }
     
     /**
-     * Constrains camera position to stay within map boundaries
+     * Constrains camera position to valid bounds
      */
     private void constrainCameraPosition() {
-        // Too far left
         if (cameraX < 0) {
             cameraX = 0;
-            velocityX = 0; // Stop velocity when hitting boundary
+            velocityX = 0;
         }
-        
-        // Too far up
         if (cameraY < 0) {
             cameraY = 0;
-            velocityY = 0; // Stop velocity when hitting boundary
+            velocityY = 0;
         }
-        
-        // Too far right
         if (cameraX > MAX_CAMERA_X) {
             cameraX = MAX_CAMERA_X;
-            velocityX = 0; // Stop velocity when hitting boundary
+            velocityX = 0;
         }
-        
-        // Too far down
         if (cameraY > MAX_CAMERA_Y) {
             cameraY = MAX_CAMERA_Y;
-            velocityY = 0; // Stop velocity when hitting boundary
+            velocityY = 0;
         }
     }
     
@@ -203,8 +202,8 @@ public class CameraManager {
      * Sets the cursor for the game window
      */
     private void setCursor(Cursor cursor) {
-        if (registrar instanceof SimpleRTS) {
-            ((SimpleRTS) registrar).setCursor(cursor);
+        if (registrar instanceof java.awt.Component) {
+            ((java.awt.Component) registrar).setCursor(cursor);
         }
     }
     

@@ -4,6 +4,7 @@ import java.util.Iterator;
 import graphics.Point;
 import input.GameMouseEvent;
 import utils.TileCoordinateConverter;
+import utils.Logger;
 
 /**
  * Main game state that handles the game loop and input.
@@ -109,6 +110,9 @@ public class StateGameMain extends StateMachine {
 		));
 
 		playerUnit.findPath(map, unitManager.getPlayerList());
+		
+		// Update pathfinding failure timer
+		playerUnit.updatePathfindingFailureTimer();
 
 		// Handle battles
 		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
@@ -122,7 +126,7 @@ public class StateGameMain extends StateMachine {
 		if (gameTimer.isEnemyAttackTime()) {
 			GameFlag playerFlag = stateManager.getFlagManager().getPlayerFlag();
 			if (playerFlag == null) {
-				System.out.println("No player flag found!");
+				Logger.warn("No player flag found!");
 				return;
 			}
 			enemyUnit.setDestination(new Point(
@@ -134,6 +138,9 @@ public class StateGameMain extends StateMachine {
 
 		// Follow the path towards the flag
 		enemyUnit.findPath(map, unitManager.getEnemyList());
+		
+		// Update pathfinding failure timer
+		enemyUnit.updatePathfindingFailureTimer();
 		
 		// Handle combat effects
 		handleCombatEffects(enemyUnit);

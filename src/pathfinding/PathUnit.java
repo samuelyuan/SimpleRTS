@@ -5,6 +5,7 @@ import utils.TileCoordinateConverter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class PathUnit {
 	// steering vehicle data
@@ -16,12 +17,19 @@ public class PathUnit {
 
 	// Path finding
 	private ArrayList<PathNode> movePath = null;
+	private ArrayList<PathNode> exploredNodes = null; // Store explored nodes for visualization
 	private int nodeCounter;
 	private boolean isPathCreated = false;
 
 	// Path caching for performance
-	private static Map<String, ArrayList<PathNode>> pathCache = new HashMap<>();
-	private static final int MAX_CACHE_SIZE = 1000;
+	private static final int MAX_CACHE_SIZE = 100; // Reduced from 1000
+	private static LinkedHashMap<String, ArrayList<PathNode>> pathCache = 
+		new LinkedHashMap<String, ArrayList<PathNode>>(MAX_CACHE_SIZE, 0.75f, true) {
+			@Override
+			protected boolean removeEldestEntry(Map.Entry<String, ArrayList<PathNode>> eldest) {
+				return size() > MAX_CACHE_SIZE;
+			}
+		};
 
 	// physical state
 	private boolean isMoving = false;
@@ -42,11 +50,19 @@ public class PathUnit {
 		return movePath;
 	}
 
+	public ArrayList<PathNode> getExploredNodes() {
+		return exploredNodes;
+	}
+
 	public void setPath(ArrayList<PathNode> path) {
 		this.movePath = new ArrayList<>(path);
 		this.nodeCounter = 1;
 		this.isPathCreated = true;
 		this.isMoving = true;
+	}
+
+	public void setExploredNodes(ArrayList<PathNode> exploredNodes) {
+		this.exploredNodes = exploredNodes != null ? new ArrayList<>(exploredNodes) : null;
 	}
 
 	public void startMoving() {
@@ -83,25 +99,23 @@ public class PathUnit {
 			return true;
 		}
 
-		// Generate new path
-		movePath = PathAStar.generatePath(map, start.x, start.y, end.x, end.y);
-		if (movePath != null) {
-			// Cache the path
-			cachePath(cacheKey, movePath);
+		// Generate new path with explored nodes
+		PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, start.x, start.y, end.x, end.y);
+		if (result != null && result.path != null) {
+			// Cache the path (LRU cache handles eviction automatically)
+			pathCache.put(cacheKey, new ArrayList<>(result.path));
+			movePath = new ArrayList<>(result.path);
+			exploredNodes = result.exploredNodes; // Store explored nodes for visualization
 			nodeCounter = 1;
 			isPathCreated = true;
 			return true;
-		} else
+		} else {
+			// Store explored nodes even if path failed
+			if (result != null) {
+				exploredNodes = result.exploredNodes;
+			}
 			return false;
-	}
-
-	private void cachePath(String key, ArrayList<PathNode> path) {
-		// Limit cache size to prevent memory issues
-		if (pathCache.size() >= MAX_CACHE_SIZE) {
-			// Remove oldest entries (simple approach - clear half the cache)
-			pathCache.clear();
 		}
-		pathCache.put(key, new ArrayList<>(path));
 	}
 
 	// Clear cache when map changes significantly

@@ -1,12 +1,23 @@
 package graphics;
 
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.util.Stack;
 
 public class AwtGraphicsAdapter implements IGraphics {
     private final Graphics g;
+    private final Graphics2D g2d;
+    private final Stack<AffineTransform> transformStack = new Stack<>();
+    private boolean antiAliasingEnabled = false;
 
     public AwtGraphicsAdapter(Graphics g) {
         this.g = g;
+        this.g2d = (Graphics2D) g;
+        
+        // Initialize with current transform
+        transformStack.push(g2d.getTransform());
     }
 
     public Graphics getGraphics() {
@@ -54,22 +65,26 @@ public class AwtGraphicsAdapter implements IGraphics {
     @Override
     public void drawImage(GameImage img, int x, int y, int width, int height) {
         if (img == null) {
-            System.out.println("Warning: Attempted to draw null GameImage");
+            utils.Logger.warn("Attempted to draw null GameImage");
             return;
         }
         
         Object backendImage = img.getBackendImage();
         if (backendImage == null) {
-            System.out.println("Warning: GameImage has null backend image");
+            utils.Logger.warn("GameImage has null backend image");
             return;
         }
         
         if (!(backendImage instanceof java.awt.Image)) {
-            System.out.println("Warning: Backend image is not java.awt.Image: " + backendImage.getClass());
+            utils.Logger.warn("Backend image is not java.awt.Image: " + backendImage.getClass());
             return;
         }
         
-        g.drawImage((java.awt.Image) backendImage, x, y, width, height, null);
+        try {
+            g.drawImage((java.awt.Image) backendImage, x, y, width, height, null);
+        } catch (Exception e) {
+            utils.Logger.error("Failed to draw image", e);
+        }
     }
 
     @Override
@@ -95,5 +110,73 @@ public class AwtGraphicsAdapter implements IGraphics {
     @Override
     public void drawLine(int x1, int y1, int x2, int y2) {
         g.drawLine(x1, y1, x2, y2);
+    }
+
+    // ===== ESSENTIAL NEW METHODS IMPLEMENTATION =====
+
+    @Override
+    public void save() {
+        transformStack.push(g2d.getTransform());
+    }
+
+    @Override
+    public void restore() {
+        if (!transformStack.isEmpty()) {
+            g2d.setTransform(transformStack.pop());
+        }
+    }
+
+    @Override
+    public void translate(double dx, double dy) {
+        g2d.translate(dx, dy);
+    }
+
+    @Override
+    public void scale(double sx, double sy) {
+        g2d.scale(sx, sy);
+    }
+
+    @Override
+    public void rotate(double angle) {
+        g2d.rotate(Math.toRadians(angle));
+    }
+
+    @Override
+    public void drawImage(GameImage img, int x, int y, int width, int height, double rotation) {
+        if (img == null || img.getBackendImage() == null) {
+            return;
+        }
+        
+        if (!(img.getBackendImage() instanceof java.awt.Image)) {
+            return;
+        }
+        
+        java.awt.Image awtImage = (java.awt.Image) img.getBackendImage();
+        
+        // Save current transform
+        AffineTransform originalTransform = g2d.getTransform();
+        
+        // Apply rotation around image center
+        g2d.translate(x + width / 2.0, y + height / 2.0);
+        g2d.rotate(Math.toRadians(rotation));
+        g2d.translate(-width / 2.0, -height / 2.0);
+        
+        // Draw the image
+        g2d.drawImage(awtImage, 0, 0, width, height, null);
+        
+        // Restore original transform
+        g2d.setTransform(originalTransform);
+    }
+
+    @Override
+    public void setAntiAliasing(boolean enabled) {
+        antiAliasingEnabled = enabled;
+        if (enabled) {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        } else {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+        }
     }
 } 

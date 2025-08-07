@@ -2,7 +2,6 @@ import java.util.ArrayList;
 
 import graphics.Point;
 import map.TileConverter;
-import pathfinding.PathAStar;
 import pathfinding.PathNode;
 import pathfinding.PathUnit;
 import utils.Constants;
@@ -190,6 +189,18 @@ public class GameUnit {
 		return pathUnit.getIsMoving();
 	}
 
+	public void stopMoving() {
+		pathUnit.stopMoving();
+	}
+
+	public ArrayList<PathNode> getPath() {
+		return pathUnit.getPath();
+	}
+
+	public ArrayList<PathNode> getExploredNodes() {
+		return pathUnit.getExploredNodes();
+	}
+
 	public GameUnit(int positionX, int positionY, boolean isPlayerUnit, int classType) {
 		this.currentPosition = new Point(positionX, positionY);
 		this.destination = new Point();
@@ -237,6 +248,11 @@ public class GameUnit {
 	private int currentMapEndX = 0, currentMapEndY = 0;
 	private int pathfindingCooldown = 0; // Add cooldown to prevent excessive pathfinding
 	private static final int PATHFINDING_COOLDOWN_FRAMES = 10; // Only recalculate every 10 frames
+	private boolean pathfindingFailed = false; // Track if pathfinding failed
+	private int pathfindingFailureTimer = 0; // Timer for showing failure indicator
+	private static final int PATHFINDING_FAILURE_DISPLAY_FRAMES = 60; // Show failure indicator for 1 second (60 frames)
+	private int pathfindingFailureCount = 0; // Track consecutive failures
+	private static final int MAX_PATHFINDING_RETRIES = 5; // Maximum consecutive failures before giving up
 
 	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
 		Point mapStart = getMapPoint(this.currentPosition);
@@ -250,6 +266,14 @@ public class GameUnit {
 			return;
 		}
 
+		// Stop trying if we've failed too many times
+		if (pathfindingFailureCount >= MAX_PATHFINDING_RETRIES) {
+			stopMoving();
+			pathfindingFailed = true;
+			pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
+			return;
+		}
+
 		// Only recalculate path if destination changed or no path exists
 		if (shouldGeneratePath(map, mapStart, mapEnd)) {
 			if (generatePath(map, mapStart, mapEnd)) {
@@ -257,8 +281,14 @@ public class GameUnit {
 				currentMapEndX = mapEnd.x;
 				currentMapEndY = mapEnd.y;
 				pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES; // Set cooldown
+				pathfindingFailed = false; // Clear failure state on success
+				pathfindingFailureCount = 0; // Reset failure count on success
 			} else {
-				// Pathfinding failed - try to find an alternative destination
+				// Pathfinding failed - increment failure count and try to find an alternative destination
+				pathfindingFailed = true;
+				pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
+				pathfindingFailureCount++;
+				
 				Point alternativeDest = findAlternativeDestination(map, mapEnd);
 				if (alternativeDest != null) {
 					this.setDestination(alternativeDest);
@@ -303,24 +333,6 @@ public class GameUnit {
 	boolean destinationChanged(Point mapEnd) {
 		return currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y;
 	}
-
-	/*
-	 * public void drawPathfinding(IGraphics g, GameStateManager stateManager)
-	 * {
-	 * if (pathUnit.getIsPathCreated() == true)
-	 * {
-	 * //render the complete path from start to finish
-	 * g.setColor(Color.ORANGE);
-	 * for (int i = pathUnit.getPath().size() - 1; i >= 0; i--)
-	 * {
-	 * MapNode pathNode = pathUnit.getPath().get(i);
-	 * int screenX = pathNode.getX() * Constants.TILE_WIDTH - stateManager.getCameraX();
-	 * int screenY = pathNode.getY() * Constants.TILE_HEIGHT - stateManager.getCameraY();
-	 * g.drawRect(screenX, screenY, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
-	 * }
-	 * }
-	 * }
-	 */
 
 	/*
 	 * Change the player position until player reaches waypoint.
@@ -432,11 +444,11 @@ public class GameUnit {
 		int mapWidth = map[0].length;
 		
 		// Search in expanding circles around the original destination
-		// but prioritize closer destinations to avoid long travel distances
+		// Use simple distance-based approach instead of expensive pathfinding tests
 		int closestDistance = Integer.MAX_VALUE;
 		Point closestTile = null;
 		
-		for (int radius = 1; radius <= 6; radius++) {
+		for (int radius = 1; radius <= 4; radius++) { // Reduced max radius
 			boolean foundInThisRadius = false;
 			
 			for (int dy = -radius; dy <= radius; dy++) {
@@ -454,36 +466,28 @@ public class GameUnit {
 						continue;
 					}
 					
-					// Check if tile is walkable
+					// Check if tile is walkable (simple check, no pathfinding test)
 					if (map[newY][newX] == 0) {
 						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
 						
 						// Only consider tiles within reasonable distance
-						if (distance <= 4) {
-							// Test if we can pathfind to this alternative destination
-							Point testStart = getMapPoint(this.currentPosition);
-							Point testEnd = new Point(newX, newY);
-							
-							// Temporarily create a path to test if it's reachable
-							ArrayList<PathNode> testPath = PathAStar.generatePath(map, testStart.x, testStart.y, testEnd.x, testEnd.y);
-							if (testPath != null && distance < closestDistance) {
-								closestDistance = distance;
-								closestTile = new Point(newX, newY);
-								foundInThisRadius = true;
-							}
+						if (distance <= 3 && distance < closestDistance) {
+							closestDistance = distance;
+							closestTile = new Point(newX, newY);
+							foundInThisRadius = true;
 						}
 					}
 				}
 			}
 			
-			// If we found a reasonably close reachable tile, use it
-			if (foundInThisRadius && closestDistance <= 3) {
+			// If we found a reasonably close tile, use it immediately
+			if (foundInThisRadius && closestDistance <= 2) {
 				break;
 			}
 		}
 		
 		// If we found a tile within reasonable distance, use it
-		if (closestTile != null && closestDistance <= 4) {
+		if (closestTile != null && closestDistance <= 3) {
 			return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
 		}
 		
@@ -636,6 +640,30 @@ public class GameUnit {
 		lastDamageDealt = 0;
 		wasCriticalHit = false;
 	}
-
-
+	
+	/**
+	 * Updates the pathfinding failure timer
+	 */
+	public void updatePathfindingFailureTimer() {
+		if (pathfindingFailureTimer > 0) {
+			pathfindingFailureTimer--;
+			if (pathfindingFailureTimer == 0) {
+				pathfindingFailed = false; // Clear failure state when timer expires
+			}
+		}
+	}
+	
+	/**
+	 * Returns true if pathfinding recently failed
+	 */
+	public boolean isPathfindingFailed() {
+		return pathfindingFailed && pathfindingFailureTimer > 0;
+	}
+	
+	/**
+	 * Returns the remaining failure display time
+	 */
+	public int getPathfindingFailureTimer() {
+		return pathfindingFailureTimer;
+	}
 }

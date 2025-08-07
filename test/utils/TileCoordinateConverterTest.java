@@ -30,7 +30,7 @@ public class TileCoordinateConverterTest {
         assert individual.x == 250 : "Expected screen X to be 250, got " + individual.x;
         assert individual.y == 300 : "Expected screen Y to be 300, got " + individual.y;
         
-        System.out.println("✓ Basic conversions work correctly");
+        System.out.println("Basic conversions work correctly");
     }
     
     public static void testCameraConversions() {
@@ -48,7 +48,7 @@ public class TileCoordinateConverterTest {
         assert backToScreen.x == 100 : "Expected screen X to be 100, got " + backToScreen.x;
         assert backToScreen.y == 150 : "Expected screen Y to be 150, got " + backToScreen.y;
         
-        System.out.println("✓ Camera conversions work correctly");
+        System.out.println("Camera conversions work correctly");
     }
     
     public static void testDistanceCalculations() {
@@ -66,6 +66,6 @@ public class TileCoordinateConverterTest {
         int screenManhattanDist = TileCoordinateConverter.manhattanDistanceInTiles(screenPoint1, screenPoint2);
         assert screenManhattanDist == 5 : "Expected screen Manhattan distance to be 5, got " + screenManhattanDist;
         
-        System.out.println("✓ Distance calculations work correctly");
+        System.out.println("Distance calculations work correctly");
     }
 } 

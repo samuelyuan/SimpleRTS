@@ -8,6 +8,7 @@ import graphics.GameImage;
 import graphics.ImageUtils;
 import map.TileConverter;
 import utils.PathResolver;
+import utils.Logger;
 
 public class ImageService {
     private final Map<Integer, GameImage> gameImages = new HashMap<>();
@@ -30,7 +31,9 @@ public class ImageService {
     public GameImage getGameImage(int imageId) {
         GameImage image = gameImages.get(imageId);
         if (image == null) {
-            throw new RuntimeException("Game image not found: " + imageId);
+            // Try to provide a fallback image instead of throwing an exception
+            utils.Logger.warn("Game image not found: " + imageId + ". Using fallback.");
+            return getFallbackImage(imageId);
         }
         return image;
     }
@@ -38,7 +41,8 @@ public class ImageService {
     public GameImage getTileImage(String tileName) {
         GameImage image = tileImages.get(tileName);
         if (image == null) {
-            throw new RuntimeException("Tile image not found: " + tileName);
+            utils.Logger.warn("Tile image not found: " + tileName + ". Using fallback.");
+            return getFallbackTileImage(tileName);
         }
         return image;
     }
@@ -99,9 +103,10 @@ public class ImageService {
         Image newImage = loadRawImage(filename);
         if (newImage != null) {
             imgData.put(imageId, new GameImage(newImage));
-            System.out.println("Added image to map: ID=" + imageId + ", filename=" + filename);
+            		Logger.debug("Loaded image: ID=" + imageId + ", filename=" + filename);
         } else {
-            System.out.println("Failed to add image to map: ID=" + imageId + ", filename=" + filename);
+            Logger.error("Failed to load image: ID=" + imageId + ", filename=" + filename);
+            // Don't add to map - let getGameImage handle the fallback
         }
     }
     
@@ -109,9 +114,10 @@ public class ImageService {
         Image newImage = loadRawImage(filename);
         if (newImage != null) {
             tileData.put(imageStr, new GameImage(newImage));
-            System.out.println("Added tile to map: " + imageStr + ", filename=" + filename);
+            		Logger.debug("Loaded tile: " + imageStr + ", filename=" + filename);
         } else {
-            System.out.println("Failed to add tile to map: " + imageStr + ", filename=" + filename);
+            Logger.error("Failed to load tile: " + imageStr + ", filename=" + filename);
+            // Don't add to map - let getTileImage handle the fallback
         }
     }
     
@@ -119,15 +125,20 @@ public class ImageService {
         String fullPath = pathResolver.resolveImagePath(filename);
         try {
             File file = new File(fullPath);
+            if (!file.exists()) {
+                Logger.error("Image file does not exist: " + fullPath);
+                return null;
+            }
+            
             Image image = ImageIO.read(file);
             if (image != null) {
-                System.out.println("Successfully loaded: " + filename);
+                return image;
             } else {
-                System.out.println("Failed to load image (returned null): " + fullPath);
+                Logger.error("ImageIO.read returned null for: " + fullPath);
+                return null;
             }
-            return image;
         } catch (Exception e) {
-            System.out.println("Failed to load image " + fullPath + ", exception: " + e.getMessage());
+            Logger.error("Exception loading image " + fullPath + ": " + e.getMessage());
             return null;
         }
     }
@@ -139,5 +150,76 @@ public class ImageService {
         for (Map.Entry<String, GameImage> entry : tileImages.entrySet()) {
             darkTileImages.put(entry.getKey(), ImageUtils.darken(entry.getValue()));
         }
+    }
+
+    /**
+     * Provides a fallback image when the requested image is not found
+     */
+    private GameImage getFallbackImage(int imageId) {
+        // Create a simple colored rectangle as fallback
+        java.awt.image.BufferedImage fallbackImage = new java.awt.image.BufferedImage(600, 500, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g2d = fallbackImage.createGraphics();
+        
+        // Choose color based on image type
+        java.awt.Color color = java.awt.Color.GRAY;
+        String text = "Missing Image: " + imageId;
+        
+        if (imageId == ImageConstants.IMGID_MENU_DEFEAT) {
+            color = new java.awt.Color(139, 0, 0); // Dark red
+            text = "DEFEAT";
+        } else if (imageId == ImageConstants.IMGID_MENU_VICTORY) {
+            color = new java.awt.Color(0, 100, 0); // Dark green
+            text = "VICTORY";
+        } else if (imageId == ImageConstants.IMGID_BG_MENU) {
+            color = java.awt.Color.DARK_GRAY;
+            text = "Background";
+        }
+        
+        // Fill background
+        g2d.setColor(color);
+        g2d.fillRect(0, 0, 600, 500);
+        
+        // Add border
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.setStroke(new java.awt.BasicStroke(5));
+        g2d.drawRect(10, 10, 580, 480);
+        
+        // Add text
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        java.awt.FontMetrics fm = g2d.getFontMetrics();
+        int textX = (600 - fm.stringWidth(text)) / 2;
+        int textY = 250;
+        g2d.drawString(text, textX, textY);
+        
+        // Add subtitle for missing images
+        if (imageId != ImageConstants.IMGID_MENU_DEFEAT && imageId != ImageConstants.IMGID_MENU_VICTORY) {
+            g2d.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 24));
+            String subtitle = "Image ID: " + imageId;
+            fm = g2d.getFontMetrics();
+            textX = (600 - fm.stringWidth(subtitle)) / 2;
+            g2d.drawString(subtitle, textX, textY + 40);
+        }
+        
+        g2d.dispose();
+        
+        return new GameImage(fallbackImage);
+    }
+    
+    /**
+     * Provides a fallback tile image when the requested tile is not found
+     */
+    private GameImage getFallbackTileImage(String tileName) {
+        // Create a simple colored rectangle as fallback
+        java.awt.image.BufferedImage fallbackImage = new java.awt.image.BufferedImage(64, 64, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g2d = fallbackImage.createGraphics();
+        
+        g2d.setColor(java.awt.Color.MAGENTA);
+        g2d.fillRect(0, 0, 64, 64);
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.drawString("Missing", 5, 30);
+        g2d.dispose();
+        
+        return new GameImage(fallbackImage);
     }
 } 

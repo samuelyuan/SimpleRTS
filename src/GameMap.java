@@ -3,10 +3,10 @@ import java.util.List;
 import java.util.Map;
 
 import graphics.Point;
-import map.MapFileLoader;
 import map.MapParseResult;
-import map.MapParser;
 import map.MapDescriptionLoader;
+import map.MapJsonParser;
+import utils.Logger;
 
 /*
  * This class basically changes the map array depending on which level needs to be loaded
@@ -65,7 +65,7 @@ public class GameMap {
 		// Use the new JSON-based description loader
 		String description = MapDescriptionLoader.getDescription(numLevel, isBegin);
 		if (description == null) {
-			System.err.println("Warning: No description found for level " + numLevel + " (" + (isBegin ? "begin" : "end") + ")");
+			Logger.warn("No description found for level " + numLevel + " (" + (isBegin ? "begin" : "end") + ")");
 			return new ArrayList<>();
 		}
 		
@@ -73,33 +73,23 @@ public class GameMap {
 		return new ArrayList<>(formattedLines);
 	}
 
-	public MapParseResult parseMapData(List<String> data) {
-		return MapParser.parseMapData(data);
-	}
-
 	public void loadMap() {
-		String filename = "../maps/newmap" + numLevel + ".txt";
-		List<String> data = MapFileLoader.parseFile(filename);
-
-		if (data == null || data.size() < 2) {
-			System.err.println("Error: Failed to load or parse map file: " + filename);
-			return;
-		}
-
-		System.out.println("[INFO] Loaded map file: " + filename);
-		System.out.println("[INFO] Line count: " + data.size());
-
-		MapParseResult result;
+		String jsonFilename = "../maps/newmap" + numLevel + ".json";
+		
+		MapParseResult result = null;
+		
 		try {
-			result = parseMapData(data);
+			result = MapJsonParser.parseMapDataFromJsonFile(jsonFilename);
+			Logger.info("Loaded JSON map file: " + jsonFilename);
 		} catch (Exception e) {
-			System.err.println("Error: Failed to parse map data: " + e.getMessage());
+			Logger.error("Failed to load or parse JSON map file: " + jsonFilename);
+			Logger.error("Error details: " + e.getMessage());
 			e.printStackTrace();
 			return;
 		}
 
 		if (result.mapData == null || result.mapData.length == 0 || result.mapData[0].length == 0) {
-			System.err.println("Error: Parsed map has invalid dimensions.");
+			Logger.error("Parsed map has invalid dimensions.");
 			return;
 		}
 
@@ -110,23 +100,14 @@ public class GameMap {
 		enemyUnitPositions = result.enemyUnitPositions;
 		flagPositions = result.flagPositions;
 
-		System.out.println("[INFO] Map dimensions: " + mapData.length + " x " + mapData[0].length);
-		System.out.println("[INFO] Ally units: " + allyUnitPositions.size());
-		System.out.println("[INFO] Enemy units: " + enemyUnitPositions.size());
-		System.out.println("[INFO] Flags: " + flagPositions.size());
+		Logger.info("Map dimensions: " + mapData.length + " x " + mapData[0].length);
+		Logger.info("Ally units: " + allyUnitPositions.size());
+		Logger.info("Enemy units: " + enemyUnitPositions.size());
+		Logger.info("Flags: " + flagPositions.size());
 
 		// exportImage();
 	}
 
-	public int tileStrToId(
-		String tileStr,
-		int x, int y,
-		Map<Point, Integer> allyUnitPositions,
-		Map<Point, Integer> enemyUnitPositions,
-		Map<Point, Integer> flagPositions
-	) {
-		return MapParser.tileStrToId(tileStr, x, y, allyUnitPositions, enemyUnitPositions, flagPositions);
-	}
 
 	public void exportImage() {
 		MapImageExporter.exportImage(mapData, numLevel, imageService);

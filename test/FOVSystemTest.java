@@ -4,9 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import graphics.Point;
 import utils.Constants;
+import utils.GameConfig;
 
 /**
- * Tests for the Field of View (FOV) system.
+ * Tests for the Field of View (FOV) system using unified GameConfig.
  */
 public class FOVSystemTest {
 
@@ -16,9 +17,7 @@ public class FOVSystemTest {
     @BeforeEach
     public void setUp() {
         // Reset FOV settings to defaults
-        Constants.FOV_RENDERING_ENABLED = true;
-        Constants.FOV_SHOW_ENEMY_UNITS = false;
-        Constants.FOV_SHOW_SELECTED_ONLY = true;
+        GameConfig.resetToDefaults();
         
         // Create test units
         playerUnit = new GameUnit(100, 100, true, Constants.UNIT_ID_LIGHT);
@@ -28,19 +27,18 @@ public class FOVSystemTest {
     @Test
     public void testFOVToggleSettings() {
         // Test initial state
-        assertTrue(Constants.FOV_RENDERING_ENABLED, "FOV should be enabled by default");
-        assertFalse(Constants.FOV_SHOW_ENEMY_UNITS, "Enemy FOV should be disabled by default");
-        assertTrue(Constants.FOV_SHOW_SELECTED_ONLY, "Selected-only mode should be enabled by default");
+        assertFalse(GameConfig.isFovRenderingEnabled(), "FOV should be disabled by default");
+        assertFalse(GameConfig.isFovShowEnemyUnits(), "Enemy FOV should be disabled by default");
+
         
         // Test toggling
-        Constants.FOV_RENDERING_ENABLED = false;
-        assertFalse(Constants.FOV_RENDERING_ENABLED, "FOV should be disabled after toggle");
+        GameConfig.toggleFovRendering();
+        assertTrue(GameConfig.isFovRenderingEnabled(), "FOV should be enabled after toggle");
         
-        Constants.FOV_SHOW_ENEMY_UNITS = true;
-        assertTrue(Constants.FOV_SHOW_ENEMY_UNITS, "Enemy FOV should be enabled after toggle");
+        GameConfig.toggleFovShowEnemyUnits();
+        assertTrue(GameConfig.isFovShowEnemyUnits(), "Enemy FOV should be enabled after toggle");
         
-        Constants.FOV_SHOW_SELECTED_ONLY = false;
-        assertFalse(Constants.FOV_SHOW_SELECTED_ONLY, "Selected-only mode should be disabled after toggle");
+
     }
 
     @Test

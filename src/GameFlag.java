@@ -4,172 +4,173 @@ import utils.Constants;
 import utils.TileCoordinateConverter;
 
 public class GameFlag {
-	private int mapX = 0;
-	private int mapY = 0;
-	private int health = 1;
-	private Color flagColor; // Color for the flag
-	private Rect boundingBox; // Bounding box for health bar display
+    private int mapX = 0;
+    private int mapY = 0;
+    private int health = 1;
+    private Color flagColor; // Color for the flag
+    private Rect boundingBox; // Bounding box for health bar display
 
-	static final int FACTION_ENEMY = -1;
-	static final int FACTION_NEUTRAL = 0;
-	static final int FACTION_PLAYER = 1;
-	private int controlFaction = FACTION_NEUTRAL;
+    static final int FACTION_ENEMY = -1;
+    static final int FACTION_NEUTRAL = 0;
+    static final int FACTION_PLAYER = 1;
+    private int controlFaction = FACTION_NEUTRAL;
 
-	public static final int FLAG_RADIUS = 3;
+    public static final int FLAG_RADIUS = 3;
 
-	public GameFlag() {
-		this(0, 0, GameFlag.FACTION_NEUTRAL);
-	}
+    public GameFlag() {
+        this(0, 0, GameFlag.FACTION_NEUTRAL);
+    }
 
-	public GameFlag(int x, int y, int factionId) {
-		this.mapX = x;
-		this.mapY = y;
-		this.controlFaction = factionId;
+    public GameFlag(int x, int y, int factionId) {
+        this.mapX = x;
+        this.mapY = y;
+        this.controlFaction = factionId;
 
-		if (factionId == GameFlag.FACTION_PLAYER)
-			this.health = 100;
-		else if (factionId == GameFlag.FACTION_ENEMY)
-			this.health = -100;
-		else
-			this.health = 0;
-	}
+        if (factionId == GameFlag.FACTION_PLAYER)
+            this.health = 100;
+        else if (factionId == GameFlag.FACTION_ENEMY)
+            this.health = -100;
+        else
+            this.health = 0;
+    }
 
-	public int getControlFaction() {
-		return controlFaction;
-	}
+    public int getControlFaction() {
+        return controlFaction;
+    }
 
-	public int getMapX() {
-		return mapX;
-	}
+    public int getMapX() {
+        return mapX;
+    }
 
-	public int getMapY() {
-		return mapY;
-	}
+    public int getMapY() {
+        return mapY;
+    }
 
-	public void setMapX(int x) {
-		mapX = x;
-	}
+    public void setMapX(int x) {
+        mapX = x;
+    }
 
-	public void setMapY(int y) {
-		mapY = y;
-	}
+    public void setMapY(int y) {
+        mapY = y;
+    }
 
-	public boolean isFactionPlayer() {
-		return controlFaction == FACTION_PLAYER;
-	}
+    public boolean isFactionPlayer() {
+        return controlFaction == FACTION_PLAYER;
+    }
 
-	public boolean isFactionEnemy() {
-		return controlFaction == FACTION_ENEMY;
-	}
+    public boolean isFactionEnemy() {
+        return controlFaction == FACTION_ENEMY;
+    }
 
-	public int getHealth() {
-		return health;
-	}
+    public int getHealth() {
+        return health;
+    }
 
-	public Color getFlagColor() {
-		return flagColor;
-	}
+    public Color getFlagColor() {
+        return flagColor;
+    }
 
-	public Rect getBoundingBox() {
-		return boundingBox;
-	}
+    public Rect getBoundingBox() {
+        return boundingBox;
+    }
 
-	public void runLogic() {
-		handleControl();
-	}
+    public void runLogic() {
+        handleControl();
+    }
 
-	public void shiftToFaction(int unitX, int unitY, int factionId) {
-		// Use Euclidean distance for circular capture zone instead of Manhattan distance
-		double distance = Math.sqrt(Math.pow(unitX - this.mapX, 2) + Math.pow(unitY - this.mapY, 2));
-		
-		if (distance <= FLAG_RADIUS) {
-			// Adjust the health based on the faction's proximity
-			health += (factionId * 2);
+    public void shiftToFaction(int unitX, int unitY, int factionId) {
+        // Use Euclidean distance for circular capture zone instead of Manhattan
+        // distance
+        double distance = Math.sqrt(Math.pow(unitX - this.mapX, 2) + Math.pow(unitY - this.mapY, 2));
 
-			// Ensure the health stays within bounds (-100 to 100)
-			if (health > 100) {
-				health = 100; // Cap health at 100 for player control
-			} else if (health < -100) {
-				health = -100; // Cap health at -100 for enemy control
-			}
+        if (distance <= FLAG_RADIUS) {
+            // Adjust the health based on the faction's proximity
+            health += (factionId * 2);
 
-			// After adjusting health, call handleControl to check and update the faction
-			// control
-			handleControl();
-		}
-	}
+            // Ensure the health stays within bounds (-100 to 100)
+            if (health > 100) {
+                health = 100; // Cap health at 100 for player control
+            } else if (health < -100) {
+                health = -100; // Cap health at -100 for enemy control
+            }
 
-	public void handleControl() {
-		// Switch flag control to the enemy
-		if (health <= -100 && controlFaction != GameFlag.FACTION_ENEMY) {
-			health = -100;
-			controlFaction = FACTION_ENEMY;
-		}
+            // After adjusting health, call handleControl to check and update the faction
+            // control
+            handleControl();
+        }
+    }
 
-		// Switch flag control to the player
-		if (health >= 100 && controlFaction != GameFlag.FACTION_PLAYER) {
-			health = 100;
-			controlFaction = FACTION_PLAYER;
-		}
+    public void handleControl() {
+        // Switch flag control to the enemy
+        if (health <= -100 && controlFaction != GameFlag.FACTION_ENEMY) {
+            health = -100;
+            controlFaction = FACTION_ENEMY;
+        }
 
-		// Switch flag control to neutral
-		if ((health < 0 && controlFaction == GameFlag.FACTION_PLAYER)
-				|| (health > 0 && controlFaction == GameFlag.FACTION_ENEMY)) {
-			controlFaction = FACTION_NEUTRAL;
-		}
-	}
+        // Switch flag control to the player
+        if (health >= 100 && controlFaction != GameFlag.FACTION_PLAYER) {
+            health = 100;
+            controlFaction = FACTION_PLAYER;
+        }
 
-	public Color getColorForFaction() {
-		// Return the flag's color based on the control faction
-		switch (controlFaction) {
-			case FACTION_PLAYER:
-				return Color.BLUE;
-			case FACTION_NEUTRAL:
-				return Color.GRAY;
-			case FACTION_ENEMY:
-				return Color.RED;
-			default:
-				return Color.BLACK; // Default color if needed
-		}
-	}
-	
-	/**
-	 * Gets the capture progress as a percentage (0-100)
-	 * Positive values indicate player capture progress
-	 * Negative values indicate enemy capture progress
-	 */
-	public int getCaptureProgress() {
-		return health;
-	}
-	
-	/**
-	 * Returns true if the flag is currently being captured
-	 */
-	public boolean isBeingCaptured() {
-		return health != 0 && health != 100 && health != -100;
-	}
+        // Switch flag control to neutral
+        if ((health < 0 && controlFaction == GameFlag.FACTION_PLAYER)
+                || (health > 0 && controlFaction == GameFlag.FACTION_ENEMY)) {
+            controlFaction = FACTION_NEUTRAL;
+        }
+    }
 
-	public Rect getBoundingBoxForState(int cameraX, int cameraY) {
-		// Calculate the bounding box for the health bar
-		int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
-		int height = Constants.TILE_HEIGHT / 8;
-		int x = TileCoordinateConverter.mapToScreen(mapX, mapY).x + 2;
-		int y = TileCoordinateConverter.mapToScreen(mapX, mapY).y + Constants.TILE_HEIGHT / 8;
+    public Color getColorForFaction() {
+        // Return the flag's color based on the control faction
+        switch (controlFaction) {
+            case FACTION_PLAYER:
+                return Color.BLUE;
+            case FACTION_NEUTRAL:
+                return Color.GRAY;
+            case FACTION_ENEMY:
+                return Color.RED;
+            default:
+                return Color.BLACK; // Default color if needed
+        }
+    }
 
-		return new Rect(x, y, width, height);
-	}
+    /**
+     * Gets the capture progress as a percentage (0-100)
+     * Positive values indicate player capture progress
+     * Negative values indicate enemy capture progress
+     */
+    public int getCaptureProgress() {
+        return health;
+    }
 
-	/**
-	 * Returns a DrawingInstruction for rendering this flag.
-	 * This method encapsulates the drawing logic and makes it testable.
-	 * 
-	 * @param cameraX The camera X offset
-	 * @param cameraY The camera Y offset
-	 * @return A DrawingInstruction for rendering the flag
-	 */
-	public DrawingInstruction getDrawingInstruction(int cameraX, int cameraY) {
-		Rect boundingBox = getBoundingBoxForState(cameraX, cameraY);
-		Color flagColor = getColorForFaction();
-		return new DrawingInstruction(boundingBox, flagColor, true); // Fill the flag
-	}
+    /**
+     * Returns true if the flag is currently being captured
+     */
+    public boolean isBeingCaptured() {
+        return health != 0 && health != 100 && health != -100;
+    }
+
+    public Rect getBoundingBoxForState(int cameraX, int cameraY) {
+        // Calculate the bounding box for the health bar
+        int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
+        int height = Constants.TILE_HEIGHT / 8;
+        int x = TileCoordinateConverter.mapToScreen(mapX, mapY).x + 2;
+        int y = TileCoordinateConverter.mapToScreen(mapX, mapY).y + Constants.TILE_HEIGHT / 8;
+
+        return new Rect(x, y, width, height);
+    }
+
+    /**
+     * Returns a DrawingInstruction for rendering this flag.
+     * This method encapsulates the drawing logic and makes it testable.
+     * 
+     * @param cameraX The camera X offset
+     * @param cameraY The camera Y offset
+     * @return A DrawingInstruction for rendering the flag
+     */
+    public DrawingInstruction getDrawingInstruction(int cameraX, int cameraY) {
+        Rect boundingBox = getBoundingBoxForState(cameraX, cameraY);
+        Color flagColor = getColorForFaction();
+        return new DrawingInstruction(boundingBox, flagColor, true); // Fill the flag
+    }
 }

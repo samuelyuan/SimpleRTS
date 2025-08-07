@@ -3,10 +3,11 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import graphics.ImageUtils;
-import map.MapFileLoader;
+import map.FileUtils;
 import map.TileConverter;
 import utils.Constants;
 import utils.PathResolver;
+import utils.Logger;
 
 public class MapImageExporter {
     public static String[][] generateMapTileStrings(int[][] mapData) {
@@ -49,12 +50,12 @@ public class MapImageExporter {
         // Ensure the export directory exists
         String exportDir = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'));
         PathResolver.ensureDirectoryExists(exportDir);
-        MapFileLoader.saveFile(im, new File(resolvedPath));
+        FileUtils.saveFile(im, new File(resolvedPath));
     }
 
     public static void exportImage(int[][] mapdata, int numLevel, ImageService imageService) {
         if (mapdata == null || mapdata.length == 0 || mapdata[0].length == 0) {
-            System.err.println("Error: No map data to export.");
+            Logger.error("No map data to export.");
             return;
         }
 
@@ -62,9 +63,9 @@ public class MapImageExporter {
             String[][] tileStrings = generateMapTileStrings(mapdata);
             BufferedImage im = createMapImage(tileStrings, imageService);
             writeMapImage(im, "../maps/export/map" + numLevel + ".png");
-            System.out.println("[INFO] Map image exported.");
+            Logger.info("Map image exported.");
         } catch (IOException e) {
-            System.err.println("Error exporting map image: " + e.getMessage());
+            Logger.error("Error exporting map image: " + e.getMessage());
             e.printStackTrace();
         }
     }

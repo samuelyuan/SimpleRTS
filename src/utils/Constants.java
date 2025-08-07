@@ -59,11 +59,6 @@ public class Constants {
     public static final int FOV_RENDER_SEGMENTS = 16; // Number of segments for FOV cone rendering
     public static final int FOV_RENDER_RADIUS = 6; // FOV cone radius in tiles for rendering
     
-    // FOV Debug and Toggle settings
-    public static boolean FOV_RENDERING_ENABLED = true; // Master toggle for FOV rendering
-    public static boolean FOV_SHOW_ENEMY_UNITS = false; // Show FOV for enemy units (for debugging)
-    public static boolean FOV_SHOW_SELECTED_ONLY = true; // Only show FOV for selected units (when true)
-
     private Constants() {
         // prevent instantiation
     }

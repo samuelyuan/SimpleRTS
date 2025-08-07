@@ -12,10 +12,74 @@ public class GameUnitManager {
 	private ArrayList<GameUnit> playerList;
 	private ArrayList<GameUnit> enemyList;
 	private boolean isSpawned = false; // only spawn once per day
+	
+	// Spawn configuration
+	private SpawnConfig spawnConfig;
+	
+	/**
+	 * Configuration class for spawn settings
+	 */
+	public static class SpawnConfig {
+		public int defaultUnitCount = 4;
+		public int maxSpawnDistance = 2;
+		public int defaultUnitType = Constants.UNIT_ID_LIGHT;
+		public boolean useRandomSpawns = true;
+		public boolean useFormationSpawns = false;
+		public int maxUnitsPerFaction = 50; // Prevent unlimited spawning
+		public double spawnChance = 1.0; // 100% chance to spawn
+		
+		public SpawnConfig() {}
+		
+		public SpawnConfig(int unitCount, int maxDistance, int unitType) {
+			this.defaultUnitCount = unitCount;
+			this.maxSpawnDistance = maxDistance;
+			this.defaultUnitType = unitType;
+		}
+	}
 
 	public GameUnitManager() {
 		this.playerList = new ArrayList<>();
 		this.enemyList = new ArrayList<>();
+		this.spawnConfig = new SpawnConfig(); // Default configuration
+	}
+	
+	/**
+	 * Sets the spawn configuration
+	 */
+	public void setSpawnConfig(SpawnConfig config) {
+		this.spawnConfig = config;
+	}
+	
+	/**
+	 * Gets the current spawn configuration
+	 */
+	public SpawnConfig getSpawnConfig() {
+		return spawnConfig;
+	}
+	
+	/**
+	 * Checks if spawning is allowed based on current conditions
+	 */
+	public boolean canSpawn(int factionId) {
+		// Check unit limit
+		ArrayList<GameUnit> factionUnits = getUnitList(factionId);
+		if (factionUnits.size() >= spawnConfig.maxUnitsPerFaction) {
+			return false;
+		}
+		
+		// Check spawn chance
+		if (Math.random() > spawnConfig.spawnChance) {
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Gets the total unit count for a faction
+	 */
+	public int getUnitCount(int factionId) {
+		return getUnitList(factionId).size();
 	}
 
 	public ArrayList<GameUnit> getPlayerList() {
@@ -82,9 +146,7 @@ public class GameUnitManager {
 		}
 		return s;
 	}
-	
-	// ==================== UNIT MOVEMENT METHODS ====================
-	
+
 	/**
 	 * Handles unit movement based on mouse input
 	 * 
@@ -232,34 +294,156 @@ public class GameUnitManager {
 		
 		return new Point(center.x + offsetX, center.y + offsetY);
 	}
-	
-	// ==================== UNIT SPAWNING METHODS ====================
-	
+
 	/**
-	 * Spawns units near a flag
+	 * Spawns units near a flag with flexible configuration
 	 */
 	public void spawnUnitsNearFlag(int[][] map, GameFlag flag) {
-		// Spawn four units around the flag (N, S, E, W)
-		for (int i = 0; i < 4; i++) {
-			int flagFactionId = flag.getControlFaction();
+		int factionId = flag.getControlFaction();
+		
+		// Check if spawning is allowed
+		if (!canSpawn(factionId)) {
+			return;
+		}
+		
+		spawnUnitsNearFlag(map, flag, spawnConfig.defaultUnitCount, spawnConfig.maxSpawnDistance, spawnConfig.defaultUnitType);
+	}
+	
+	/**
+	 * Spawns units near a flag with custom parameters
+	 * @param map The game map
+	 * @param flag The flag to spawn units near
+	 * @param unitCount Number of units to spawn
+	 * @param maxDistance Maximum spawn distance from flag
+	 * @param unitType Type of unit to spawn
+	 */
+	public void spawnUnitsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance, int unitType) {
+		int flagFactionId = flag.getControlFaction();
+		
+		// Check if spawning is allowed
+		if (!canSpawn(flagFactionId)) {
+			return;
+		}
+		
+		int flagX = flag.getMapX();
+		int flagY = flag.getMapY();
+		
+		// Try different spawn patterns
+		int spawnedCount = 0;
+		
+		// Pattern 1: Adjacent tiles (distance 1)
+		spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 1, unitCount - spawnedCount);
+		
+		// Pattern 2: Ring around flag (distance 2)
+		if (spawnedCount < unitCount && maxDistance >= 2) {
+			spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 2, unitCount - spawnedCount);
+		}
+		
+		// Pattern 3: Random positions within maxDistance (if enabled)
+		if (spawnedCount < unitCount && spawnConfig.useRandomSpawns) {
+			spawnedCount += spawnRandomly(map, flagX, flagY, flagFactionId, unitType, maxDistance, unitCount - spawnedCount);
+		}
+		
+		// Pattern 4: Formation spawn (if enabled)
+		if (spawnedCount < unitCount && spawnConfig.useFormationSpawns) {
+			spawnUnitsInFormation(map, flagX, flagY, flagFactionId, unitType, unitCount - spawnedCount);
+		}
+	}
+	
+	/**
+	 * Spawns units in a ring pattern around a center point
+	 */
+	private int spawnInPattern(int[][] map, int centerX, int centerY, int factionId, int unitType, int distance, int maxUnits) {
+		int spawned = 0;
+		
+		// Define spawn positions in a ring pattern
+		int[][] spawnPositions = {
+			{centerX - distance, centerY},           // West
+			{centerX + distance, centerY},           // East
+			{centerX, centerY - distance},           // North
+			{centerX, centerY + distance},           // South
+			{centerX - distance, centerY - distance}, // Northwest
+			{centerX + distance, centerY - distance}, // Northeast
+			{centerX - distance, centerY + distance}, // Southwest
+			{centerX + distance, centerY + distance}  // Southeast
+		};
+		
+		// Try each position
+		for (int[] pos : spawnPositions) {
+			if (spawned >= maxUnits) break;
 			
-			// Try WEST first
-			if (isTileAvailable(map, flag.getMapX() - 1, flag.getMapY(), flagFactionId)) {
-				addUnitToMap(map, flag.getMapX() - 1, flag.getMapY(), flagFactionId);
+			if (isTileAvailable(map, pos[0], pos[1], factionId)) {
+				addUnitToMap(map, pos[0], pos[1], factionId, unitType);
+				spawned++;
 			}
-			// Try EAST
-			else if (isTileAvailable(map, flag.getMapX() + 1, flag.getMapY(), flagFactionId)) {
-				addUnitToMap(map, flag.getMapX() + 1, flag.getMapY(), flagFactionId);
+		}
+		
+		return spawned;
+	}
+	
+	/**
+	 * Spawns units at random positions within a given distance
+	 */
+	private int spawnRandomly(int[][] map, int centerX, int centerY, int factionId, int unitType, int maxDistance, int maxUnits) {
+		int spawned = 0;
+		int attempts = 0;
+		int maxAttempts = maxUnits * 10; // Prevent infinite loops
+		
+		while (spawned < maxUnits && attempts < maxAttempts) {
+			// Generate random position within maxDistance
+			int offsetX = (int)(Math.random() * (maxDistance * 2 + 1)) - maxDistance;
+			int offsetY = (int)(Math.random() * (maxDistance * 2 + 1)) - maxDistance;
+			
+			int spawnX = centerX + offsetX;
+			int spawnY = centerY + offsetY;
+			
+			// Check if position is valid and available
+			if (isTileAvailable(map, spawnX, spawnY, factionId)) {
+				addUnitToMap(map, spawnX, spawnY, factionId, unitType);
+				spawned++;
 			}
-			// Try NORTH
-			else if (isTileAvailable(map, flag.getMapX(), flag.getMapY() - 1, flagFactionId)) {
-				addUnitToMap(map, flag.getMapX(), flag.getMapY() - 1, flagFactionId);
+			
+			attempts++;
+		}
+		
+		return spawned;
+	}
+	
+	/**
+	 * Spawns units in a formation pattern (useful for reinforcements)
+	 */
+	public void spawnUnitsInFormation(int[][] map, int centerX, int centerY, int factionId, int unitType, int unitCount) {
+		// Calculate formation radius based on unit count
+		int radius = calculateFormationRadius(unitCount);
+		
+		for (int i = 0; i < unitCount; i++) {
+			Point formationPos = calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
+			
+			if (isTileAvailable(map, formationPos.x, formationPos.y, factionId)) {
+				addUnitToMap(map, formationPos.x, formationPos.y, factionId, unitType);
 			}
-			// Try SOUTH
-			else if (isTileAvailable(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId)) {
-				addUnitToMap(map, flag.getMapX(), flag.getMapY() + 1, flagFactionId);
-			} else {
-				break; // No available tiles
+		}
+	}
+	
+	/**
+	 * Spawns units along a path (useful for reinforcements arriving from off-map)
+	 */
+	public void spawnUnitsAlongPath(int[][] map, Point startPos, Point endPos, int factionId, int unitType, int unitCount) {
+		// Calculate path direction
+		int dx = endPos.x - startPos.x;
+		int dy = endPos.y - startPos.y;
+		
+		// Normalize direction
+		if (dx != 0) dx = dx / Math.abs(dx);
+		if (dy != 0) dy = dy / Math.abs(dy);
+		
+		// Spawn units along the path
+		for (int i = 0; i < unitCount; i++) {
+			int spawnX = startPos.x + (dx * i * 2); // Space units apart
+			int spawnY = startPos.y + (dy * i * 2);
+			
+			if (isTileAvailable(map, spawnX, spawnY, factionId)) {
+				addUnitToMap(map, spawnX, spawnY, factionId, unitType);
 			}
 		}
 	}
@@ -287,12 +471,12 @@ public class GameUnitManager {
 		return true;
 	}
 	
-	private void addUnitToMap(int[][] map, int x, int y, int factionId) {
+	private void addUnitToMap(int[][] map, int x, int y, int factionId, int unitType) {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 		
 		// Create new unit
 		GameUnit newUnit = new GameUnit(TileCoordinateConverter.mapToScreen(x, y).x, TileCoordinateConverter.mapToScreen(x, y).y,
-				(factionId == GameFlag.FACTION_PLAYER), Constants.UNIT_ID_LIGHT);
+				(factionId == GameFlag.FACTION_PLAYER), unitType);
 		newUnit.spawn(map, new Point(x, y), factionId);
 		
 		// Add unit to list

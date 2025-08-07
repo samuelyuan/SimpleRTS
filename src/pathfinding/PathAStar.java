@@ -43,11 +43,26 @@ public class PathAStar {
 	public static final int TILE_START = 2;
 	public static final int TILE_END = 3;
 
+	// Performance limits to prevent infinite loops
+	private static final int MAX_ITERATIONS = 5000;
+	private static final int MAX_OPEN_NODES = 2000;
+
 	// Comparator for PriorityQueue to sort by F-cost
 	private static class MapNodeComparator implements Comparator<PathNode> {
 		@Override
 		public int compare(PathNode a, PathNode b) {
 			return Integer.compare(a.getF(), b.getF());
+		}
+	}
+
+	// Result class to hold both path and explored nodes
+	public static class PathfindingResult {
+		public final ArrayList<PathNode> path;
+		public final ArrayList<PathNode> exploredNodes;
+		
+		public PathfindingResult(ArrayList<PathNode> path, ArrayList<PathNode> exploredNodes) {
+			this.path = path;
+			this.exploredNodes = exploredNodes;
 		}
 	}
 
@@ -90,11 +105,19 @@ public class PathAStar {
 	}
 
 	public static ArrayList<PathNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
+		PathfindingResult result = generatePathWithExploredNodes(map, startX, startY, finalX, finalY);
+		return result != null ? result.path : null;
+	}
+
+	public static PathfindingResult generatePathWithExploredNodes(int[][] map, int startX, int startY, int finalX, int finalY) {
 		// Use PriorityQueue for efficient min F-cost retrieval
 		PriorityQueue<PathNode> openList = new PriorityQueue<>(new MapNodeComparator());
 		// Use HashSet for O(1) lookup in closed list
 		HashSet<String> closedSet = new HashSet<>();
 		ArrayList<PathNode> finalList = new ArrayList<PathNode>();
+		ArrayList<PathNode> exploredNodes = new ArrayList<PathNode>();
+
+		int iterationCount = 0;
 
 		// Early termination if start or end is invalid
 		if (!isValidLocation(map, startX, startY) || !isValidLocation(map, finalX, finalY)) {
@@ -117,8 +140,12 @@ public class PathAStar {
 			{1, -1},  {1, 0},  {1, 1}
 		};
 
-		while (!openList.isEmpty()) {
+		while (!openList.isEmpty() && iterationCount < MAX_ITERATIONS && openList.size() < MAX_OPEN_NODES) {
+			iterationCount++;
 			PathNode currentNode = openList.poll();
+			
+			// Add to explored nodes for visualization
+			exploredNodes.add(currentNode);
 			
 			// Check if we reached the destination
 			if (currentNode.getX() == finalX && currentNode.getY() == finalY) {
@@ -130,7 +157,7 @@ public class PathAStar {
 				} while (tempNode != null);
 				
 				Collections.reverse(finalList);
-				return finalList;
+				return new PathfindingResult(finalList, exploredNodes);
 			}
 
 			// Add to closed set
@@ -172,7 +199,7 @@ public class PathAStar {
 			}
 		}
 
-		// No path found
-		return null;
+		// No path found (either due to no path or performance limits)
+		return new PathfindingResult(null, exploredNodes);
 	}
 }

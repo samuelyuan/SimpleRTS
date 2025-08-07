@@ -4,6 +4,7 @@ import graphics.IGraphics;
 import ui.UIComponent;
 import ui.UILabel;
 import utils.Constants;
+import utils.GameConfig;
 
 /**
  * Handles rendering of the Heads-Up Display (HUD).
@@ -106,11 +107,7 @@ public class RendererHUD {
         
         // Update FOV status display
         StringBuilder fovStatus = new StringBuilder();
-        fovStatus.append("FOV: ").append(Constants.FOV_RENDERING_ENABLED ? "ON" : "OFF");
-        if (Constants.FOV_RENDERING_ENABLED) {
-            fovStatus.append(" | Enemy: ").append(Constants.FOV_SHOW_ENEMY_UNITS ? "ON" : "OFF");
-            fovStatus.append(" | Selected: ").append(Constants.FOV_SHOW_SELECTED_ONLY ? "ON" : "OFF");
-        }
+        fovStatus.append(GameConfig.getFovStatusString());
         fovStatusLabel.setText(fovStatus.toString());
     }
 

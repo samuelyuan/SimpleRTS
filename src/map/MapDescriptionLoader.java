@@ -10,6 +10,7 @@ import java.util.HashMap;
 import org.json.JSONObject;
 import org.json.JSONException;
 import utils.PathResolver;
+import utils.Logger;
 
 public class MapDescriptionLoader {
     
@@ -36,14 +37,14 @@ public class MapDescriptionLoader {
             }
             
             descriptionsData = new JSONObject(content.toString());
-            System.out.println("[INFO] Loaded map descriptions from: " + resolvedPath);
+            Logger.info("Loaded map descriptions from: " + resolvedPath);
             
         } catch (IOException e) {
-            System.err.println("Error: Failed to load descriptions file: " + DESCRIPTIONS_FILE);
+            Logger.error("Failed to load descriptions file: " + DESCRIPTIONS_FILE);
             e.printStackTrace();
             descriptionsData = new JSONObject(); // Empty object as fallback
         } catch (JSONException e) {
-            System.err.println("Error: Invalid JSON in descriptions file: " + DESCRIPTIONS_FILE);
+            Logger.error("Invalid JSON in descriptions file: " + DESCRIPTIONS_FILE);
             e.printStackTrace();
             descriptionsData = new JSONObject(); // Empty object as fallback
         }
@@ -61,7 +62,7 @@ public class MapDescriptionLoader {
         try {
             String levelKey = String.valueOf(levelNumber);
             if (!descriptionsData.has("levels") || !descriptionsData.getJSONObject("levels").has(levelKey)) {
-                System.err.println("Warning: No description found for level " + levelNumber);
+                Logger.warn("No description found for level " + levelNumber);
                 return null;
             }
             
@@ -69,14 +70,14 @@ public class MapDescriptionLoader {
             String descriptionKey = isBegin ? "begin" : "end";
             
             if (!levelData.has(descriptionKey)) {
-                System.err.println("Warning: No " + descriptionKey + " description found for level " + levelNumber);
+                Logger.warn("No " + descriptionKey + " description found for level " + levelNumber);
                 return null;
             }
             
             return levelData.getString(descriptionKey);
             
         } catch (JSONException e) {
-            System.err.println("Error: Failed to parse description for level " + levelNumber);
+            Logger.error("Failed to parse description for level " + levelNumber);
             e.printStackTrace();
             return null;
         }
@@ -99,12 +100,12 @@ public class MapDescriptionLoader {
                     try {
                         levels.add(Integer.parseInt(key));
                     } catch (NumberFormatException e) {
-                        System.err.println("Warning: Invalid level key: " + key);
+                        Logger.warn("Invalid level key: " + key);
                     }
                 }
             }
         } catch (JSONException e) {
-            System.err.println("Error: Failed to parse available levels");
+            Logger.error("Failed to parse available levels");
             e.printStackTrace();
         }
         
