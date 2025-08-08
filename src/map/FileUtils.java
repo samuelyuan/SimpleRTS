@@ -1,4 +1,5 @@
 package map;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -21,10 +22,10 @@ public class FileUtils {
                     data.add(line);
                 }
             }
-        		} catch (Exception e) {
-			Logger.error("Failed to load file: " + filename + ", error: " + e.getMessage());
-			e.printStackTrace();
-		}
+        } catch (Exception e) {
+            Logger.error("Failed to load file: " + filename + ", error: " + e.getMessage());
+            e.printStackTrace();
+        }
         return data;
     }
 
@@ -42,4 +43,4 @@ public class FileUtils {
     public static void saveFile(BufferedImage im, File file) throws IOException {
         ImageIO.write(im, "png", file);
     }
-} 
+}

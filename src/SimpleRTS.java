@@ -91,12 +91,13 @@ public class SimpleRTS extends JFrame implements MouseListenerRegistrar, Runnabl
 	}
 
 	private void renderGame(Graphics g) {
-		// Clear back buffer to black
-		offscr.setColor(Color.black);
-		offscr.fillRect(0, 0, width, height);
+		// Create graphics adapter
+		graphics.IGraphics ig = new graphics.AwtGraphicsAdapter(offscr);
+		
+		// Clear back buffer to black using abstraction
+		ig.clear(graphics.Color.BLACK);
 
 		// Render game state
-		graphics.IGraphics ig = new graphics.AwtGraphicsAdapter(offscr);
 		stateManager.getCurrentState().run(ig);
 		stateManager.changeState();
 

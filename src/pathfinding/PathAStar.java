@@ -1,47 +1,23 @@
 package pathfinding;
 
-import graphics.Point;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Comparator;
+import map.MapValidator;
+
 
 public class PathAStar {
 	/*
-	 * key:
-	 * 0 - empty space
+	 * Tile values:
+	 * 0 - empty space (Land)
 	 * 1 - wall
-	 * 2 - start (at map[3][1])
-	 * 3 - finish (at map[3][5])
+	 * Note: Start and end points are now passed as explicit coordinates
+	 * rather than being encoded in the map tiles
 	 */
 
-	// Simple Test Case #1
-	/*
-	 * public static int [][] map = {
-	 * { 0, 0, 0, 0, 0, 0, 0 } ,
-	 * { 0, 0, 0, 0, 0, 0, 0 } ,
-	 * { 0, 0, 0, 1, 0, 0, 0 } ,
-	 * { 0, 2, 0, 1, 0, 3, 0 } ,
-	 * { 0, 0, 0, 1, 0, 0, 0 } ,
-	 * { 0, 0, 0, 0, 0, 0, 0 }
-	 * };
-	 */
 
-	/*
-	 * Test Case #2
-	 * public static int [][] map = {
-	 * { 0, 0, 0, 0, 0, 0, 0 } ,
-	 * { 0, 1, 1, 1, 1, 1, 0 } ,
-	 * { 0, 1, 0, 0, 0, 1, 0 } ,
-	 * { 0, 1, 0, 0, 0, 1, 0 } ,
-	 * { 0, 1, 1, 1, 1, 1, 0 } ,
-	 * { 0, 2, 1, 3, 0, 0, 0 }
-	 */
-
-	public static final int TILE_WALL = 1;
-	public static final int TILE_START = 2;
-	public static final int TILE_END = 3;
 
 	// Performance limits to prevent infinite loops
 	private static final int MAX_ITERATIONS = 5000;
@@ -59,57 +35,22 @@ public class PathAStar {
 	public static class PathfindingResult {
 		public final ArrayList<PathNode> path;
 		public final ArrayList<PathNode> exploredNodes;
-		
+
 		public PathfindingResult(ArrayList<PathNode> path, ArrayList<PathNode> exploredNodes) {
 			this.path = path;
 			this.exploredNodes = exploredNodes;
 		}
 	}
 
-	public static int getMapTile(int[][] map, int x, int y) {
-		return map[y][x];
-	}
 
-	public static boolean isValidLocation(int[][] map, int x, int y) {
-		// map height != map width
-		if (x >= 0 && y >= 0 && x < map[0].length && y < map.length)
-			return true;
-		else
-			return false;
-	}
-
-	public static Point getStartPoint(int[][] map) {
-		// Search through all the map tiles until the start point is found.
-		for (int y = 0; y < map.length; y++) {
-			for (int x = 0; x < map[y].length; x++) {
-				if (getMapTile(map, x, y) == TILE_START)
-					return new Point(x, y);
-			}
-		}
-
-		// Point can't be found
-		return null;
-	}
-
-	public static Point getEndPoint(int[][] map) {
-		// Search through all the map tiles until the end point is found.
-		for (int y = 0; y < map.length; y++) {
-			for (int x = 0; x < map[y].length; x++) {
-				if (getMapTile(map, x, y) == TILE_END)
-					return new Point(x, y);
-			}
-		}
-
-		// Point can't be found
-		return null;
-	}
 
 	public static ArrayList<PathNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
 		PathfindingResult result = generatePathWithExploredNodes(map, startX, startY, finalX, finalY);
 		return result != null ? result.path : null;
 	}
 
-	public static PathfindingResult generatePathWithExploredNodes(int[][] map, int startX, int startY, int finalX, int finalY) {
+	public static PathfindingResult generatePathWithExploredNodes(int[][] map, int startX, int startY, int finalX,
+			int finalY) {
 		// Use PriorityQueue for efficient min F-cost retrieval
 		PriorityQueue<PathNode> openList = new PriorityQueue<>(new MapNodeComparator());
 		// Use HashSet for O(1) lookup in closed list
@@ -119,13 +60,13 @@ public class PathAStar {
 
 		int iterationCount = 0;
 
-		// Early termination if start or end is invalid
-		if (!isValidLocation(map, startX, startY) || !isValidLocation(map, finalX, finalY)) {
+		// Early termination if start or end coordinates are invalid
+		if (!MapValidator.isValidLocation(map, startX, startY) || !MapValidator.isValidLocation(map, finalX, finalY)) {
 			return null;
 		}
 
 		// Early termination if start or destination is a wall
-		if (getMapTile(map, startX, startY) == TILE_WALL || getMapTile(map, finalX, finalY) == TILE_WALL) {
+		if (MapValidator.isWall(map, startX, startY) || MapValidator.isWall(map, finalX, finalY)) {
 			return null;
 		}
 
@@ -135,18 +76,18 @@ public class PathAStar {
 
 		// Direction arrays for 8-directional movement
 		int[][] directions = {
-			{-1, -1}, {-1, 0}, {-1, 1},
-			{0, -1},           {0, 1},
-			{1, -1},  {1, 0},  {1, 1}
+				{ -1, -1 }, { -1, 0 }, { -1, 1 },
+				{ 0, -1 }, { 0, 1 },
+				{ 1, -1 }, { 1, 0 }, { 1, 1 }
 		};
 
 		while (!openList.isEmpty() && iterationCount < MAX_ITERATIONS && openList.size() < MAX_OPEN_NODES) {
 			iterationCount++;
 			PathNode currentNode = openList.poll();
-			
+
 			// Add to explored nodes for visualization
 			exploredNodes.add(currentNode);
-			
+
 			// Check if we reached the destination
 			if (currentNode.getX() == finalX && currentNode.getY() == finalY) {
 				// Reconstruct path
@@ -155,7 +96,7 @@ public class PathAStar {
 					finalList.add(tempNode);
 					tempNode = tempNode.getParent();
 				} while (tempNode != null);
-				
+
 				Collections.reverse(finalList);
 				return new PathfindingResult(finalList, exploredNodes);
 			}
@@ -172,13 +113,8 @@ public class PathAStar {
 				int newX = currentNode.getX() + dir[0];
 				int newY = currentNode.getY() + dir[1];
 
-				// Skip if out of bounds
-				if (!isValidLocation(map, newX, newY)) {
-					continue;
-				}
-
-				// Skip if wall
-				if (getMapTile(map, newX, newY) == TILE_WALL) {
+				// Skip if out of bounds or wall
+				if (!MapValidator.isWalkable(map, newX, newY)) {
 					continue;
 				}
 

@@ -7,7 +7,7 @@ import java.awt.Graphics2D;
 import graphics.*;
 
 /**
- * Test class for the simplified graphics abstraction layer
+ * Test class for the enhanced graphics abstraction layer
  */
 public class GraphicsAbstractionTest {
     private BufferedImage testImage;
@@ -54,40 +54,24 @@ public class GraphicsAbstractionTest {
     
     @Test
     void testTransformMethods() {
-        // Test transformation methods
-        graphicsAdapter.save();
-        graphicsAdapter.translate(100, 100);
-        graphicsAdapter.rotate(45);
-        graphicsAdapter.scale(2.0, 2.0);
-        
-        // Draw something with transformation
-        graphicsAdapter.setColor(Color.RED);
-        graphicsAdapter.fillRect(0, 0, 25, 25);
-        
-        graphicsAdapter.restore();
-        
-        // Should not throw exceptions
+        // Test transform methods
         assertDoesNotThrow(() -> {
-            graphicsAdapter.translate(50, 50);
-            graphicsAdapter.rotate(30);
-            graphicsAdapter.scale(1.5, 1.5);
+            graphicsAdapter.save();
+            graphicsAdapter.translate(10, 20);
+            graphicsAdapter.scale(2.0, 2.0);
+            graphicsAdapter.rotate(45);
+            graphicsAdapter.restore();
         });
     }
     
     @Test
-    void testImageDrawingWithRotation() {
-        // Test drawing image with rotation
+    void testEnhancedDrawingMethods() {
+        // Test enhanced drawing methods
         assertDoesNotThrow(() -> {
-            graphicsAdapter.drawImage(gameImage, 100, 100, 64, 64, 45);
-        });
-    }
-    
-    @Test
-    void testAntiAliasing() {
-        // Test anti-aliasing
-        assertDoesNotThrow(() -> {
-            graphicsAdapter.setAntiAliasing(true);
-            graphicsAdapter.setAntiAliasing(false);
+            graphicsAdapter.setColor(Color.RED);
+            graphicsAdapter.drawCircle(100, 100, 50, true);
+            graphicsAdapter.drawEllipse(200, 200, 100, 50, false);
+            graphicsAdapter.drawRoundRect(300, 300, 80, 40, 10, 10, true);
         });
     }
     
@@ -108,9 +92,27 @@ public class GraphicsAbstractionTest {
         assertEquals(32, scaled.getWidth());
         assertEquals(32, scaled.getHeight());
         
+        // Test scaling with factors
+        GameImage scaledByFactor = gameImage.getScaled(0.5, 0.5, true);
+        assertNotNull(scaledByFactor);
+        assertEquals(32, scaledByFactor.getWidth());
+        assertEquals(32, scaledByFactor.getHeight());
+        
         // Test rotation
         GameImage rotated = gameImage.getRotated(45);
         assertNotNull(rotated);
+        
+        // Test cropping
+        GameImage cropped = gameImage.getCropped(16, 16, 32, 32);
+        assertNotNull(cropped);
+        assertEquals(32, cropped.getWidth());
+        assertEquals(32, cropped.getHeight());
+        
+        // Test copying
+        GameImage copied = gameImage.copy();
+        assertNotNull(copied);
+        assertEquals(gameImage.getWidth(), copied.getWidth());
+        assertEquals(gameImage.getHeight(), copied.getHeight());
         
         // Test disposal
         gameImage.dispose();
@@ -144,5 +146,64 @@ public class GraphicsAbstractionTest {
         assertTrue(lighter.r >= color.r);
         assertTrue(lighter.g >= color.g);
         assertTrue(lighter.b >= color.b);
+    }
+    
+    @Test
+    void testImageUtilsEnhancements() {
+        // Test ImageUtils enhancements
+        assertDoesNotThrow(() -> {
+            // Test tinting
+            GameImage tinted = ImageUtils.tint(gameImage, Color.BLUE, 0.5);
+            assertNotNull(tinted);
+            
+            // Test grayscale
+            GameImage grayscale = ImageUtils.grayscale(gameImage);
+            assertNotNull(grayscale);
+            
+            // Test flipping
+            GameImage flippedH = ImageUtils.flip(gameImage, true, false);
+            assertNotNull(flippedH);
+            
+            GameImage flippedV = ImageUtils.flip(gameImage, false, true);
+            assertNotNull(flippedV);
+            
+            // Test team coloring
+            GameImage playerUnit = ImageUtils.addTeamColorToUnit(gameImage, true);
+            assertNotNull(playerUnit);
+            
+            GameImage enemyUnit = ImageUtils.addTeamColorToUnit(gameImage, false);
+            assertNotNull(enemyUnit);
+        });
+    }
+    
+    @Test
+    void testGraphicsAdapterState() {
+        // Test state management
+        Color testColor = new Color(255, 0, 0);
+        GameFont testFont = new GameFont("Times", GameFont.BOLD, 16);
+        
+        graphicsAdapter.setColor(testColor);
+        graphicsAdapter.setFont(testFont);
+        
+        assertEquals(testColor, graphicsAdapter.getColor());
+        assertEquals(testFont, graphicsAdapter.getFont());
+    }
+    
+    @Test
+    void testClearMethod() {
+        // Test clear method
+        assertDoesNotThrow(() -> {
+            graphicsAdapter.clear(Color.WHITE);
+            // Should not throw exception
+        });
+    }
+    
+    @Test
+    void testStrokeWidth() {
+        // Test stroke width setting
+        assertDoesNotThrow(() -> {
+            graphicsAdapter.setStrokeWidth(3.0f);
+            graphicsAdapter.drawRect(10, 10, 50, 50);
+        });
     }
 } 

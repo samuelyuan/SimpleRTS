@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 /**
  * Integration tests for pathfinding system.
- * Tests the interaction between PathAStar, PathUnit, and PathNode components.
+ * Tests the interaction between PathAStar, MovementController, and PathNode components.
  */
 public class PathfindingTest {
     
@@ -46,11 +46,11 @@ public class PathfindingTest {
         System.out.println("100 pathfinding calls took: " + (endTime - startTime) + "ms");
         
         // Test path caching
-        PathUnit pathUnit = new PathUnit(50, 150);
+        MovementController movementController = new MovementController(50, 150);
         startTime = System.currentTimeMillis();
         
         for (int i = 0; i < 100; i++) {
-            pathUnit.findPath(map, start, end);
+            movementController.findPath(map, start, end);
         }
         
         endTime = System.currentTimeMillis();
@@ -67,12 +67,12 @@ public class PathfindingTest {
         path.add(new PathNode(3, 1, 20, 20, path.get(1)));
         path.add(new PathNode(4, 1, 30, 30, path.get(2)));
         
-        PathUnit pathUnit = new PathUnit(50, 50);
-        pathUnit.setPath(path);
+        MovementController movementController = new MovementController(50, 50);
+        movementController.setPath(path);
         
         // Test movement with smoothing
         for (int i = 0; i < 10; i++) {
-            Point newPos = pathUnit.run();
+            Point newPos = movementController.run();
             System.out.println("Position: (" + newPos.x + ", " + newPos.y + ")");
         }
     }
@@ -93,16 +93,16 @@ public class PathfindingTest {
         Point start = new Point(0, 0);
         Point end = new Point(6, 5);
         
-        PathUnit pathUnit = new PathUnit(0, 0);
-        boolean pathFound = pathUnit.findPath(complexMap, start, end);
+        MovementController movementController = new MovementController(0, 0);
+        boolean pathFound = movementController.findPath(complexMap, start, end);
         
         if (pathFound) {
             System.out.println("Complex path found successfully");
             
             // Test movement along the path
             int steps = 0;
-            while (pathUnit.getIsPathCreated() && steps < 20) {
-                Point pos = pathUnit.run();
+            while (movementController.getIsPathCreated() && steps < 20) {
+                Point pos = movementController.run();
                 if (pos != null) {
                     System.out.println("Step " + steps + ": (" + pos.x + ", " + pos.y + ")");
                 }
@@ -122,13 +122,13 @@ public class PathfindingTest {
             {0, 0, 0, 0, 0}
         };
         
-        PathUnit dynamicPathUnit = new PathUnit(0, 0);
-        dynamicPathUnit.findPath(dynamicMap, new Point(0, 0), new Point(4, 4));
+        MovementController dynamicMovementController = new MovementController(0, 0);
+        dynamicMovementController.findPath(dynamicMap, new Point(0, 0), new Point(4, 4));
         
         // Add obstacle during movement
         dynamicMap[2][2] = 1;
         
-        Point newDest = dynamicPathUnit.recalculateDest(dynamicMap, new Point(4, 4));
+        Point newDest = dynamicMovementController.recalculateDest(dynamicMap, new Point(4, 4));
         if (newDest != null) {
             System.out.println("Recalculated destination: (" + newDest.x + ", " + newDest.y + ")");
         } else {

@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 
 /**
  * Enhanced GameImage class with essential resource management and transformation support
@@ -134,6 +135,19 @@ public class GameImage {
     }
     
     /**
+     * Creates a scaled version of this image using scale factors
+     * @param scaleX The X scale factor
+     * @param scaleY The Y scale factor
+     * @param highQuality Whether to use high-quality scaling
+     * @return A new GameImage with the scaled content
+     */
+    public GameImage getScaled(double scaleX, double scaleY, boolean highQuality) {
+        int newWidth = (int) (width * scaleX);
+        int newHeight = (int) (height * scaleY);
+        return getScaled(newWidth, newHeight, highQuality);
+    }
+    
+    /**
      * Creates a rotated version of this image
      * @param angle Rotation angle in degrees
      * @return A new GameImage with the rotated content
@@ -173,6 +187,61 @@ public class GameImage {
         g2d.dispose();
         
         return new GameImage(rotated, path, format);
+    }
+    
+    /**
+     * Creates a cropped version of this image
+     * @param x The X coordinate of the crop area
+     * @param y The Y coordinate of the crop area
+     * @param cropWidth The width of the crop area
+     * @param cropHeight The height of the crop area
+     * @return A new GameImage with the cropped content
+     */
+    public GameImage getCropped(int x, int y, int cropWidth, int cropHeight) {
+        if (disposed || backendImage == null) {
+            return null;
+        }
+        
+        if (!(backendImage instanceof BufferedImage)) {
+            return null;
+        }
+        
+        BufferedImage original = (BufferedImage) backendImage;
+        
+        // Ensure crop area is within bounds
+        x = Math.max(0, x);
+        y = Math.max(0, y);
+        cropWidth = Math.min(cropWidth, width - x);
+        cropHeight = Math.min(cropHeight, height - y);
+        
+        if (cropWidth <= 0 || cropHeight <= 0) {
+            return null;
+        }
+        
+        BufferedImage cropped = original.getSubimage(x, y, cropWidth, cropHeight);
+        return new GameImage(cropped, path, format);
+    }
+    
+    /**
+     * Creates a copy of this image
+     * @return A new GameImage with the same content
+     */
+    public GameImage copy() {
+        if (disposed || backendImage == null) {
+            return null;
+        }
+        
+        if (!(backendImage instanceof BufferedImage)) {
+            return null;
+        }
+        
+        BufferedImage original = (BufferedImage) backendImage;
+        BufferedImage copy = new BufferedImage(width, height, original.getType());
+        Graphics2D g2d = copy.createGraphics();
+        g2d.drawImage(original, 0, 0, null);
+        g2d.dispose();
+        
+        return new GameImage(copy, path, format);
     }
     
     /**

@@ -28,8 +28,13 @@ public class PathNode {
 	}
 
 	public static int findH(int nodeX, int nodeY, int finalX, int finalY) {
-		return (10 * Math.abs(nodeX - finalX) + 10 * Math.abs(nodeY - finalY));
+		// Use Euclidean distance for more accurate heuristic
+		double dx = Math.abs(nodeX - finalX);
+		double dy = Math.abs(nodeY - finalY);
+		return (int)(10 * Math.sqrt(dx * dx + dy * dy));
 	}
+	
+
 
 	public static int findG(int nodeX1, int nodeY1, int nodeX2, int nodeY2) {
 		int dx = Math.abs(nodeX1 - nodeX2);

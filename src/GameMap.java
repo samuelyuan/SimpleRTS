@@ -120,36 +120,4 @@ public class GameMap {
 	public List<Integer> getAvailableLevels() {
 		return MapDescriptionLoader.getAvailableLevels();
 	}
-
-	/*
-	 * //convert from the old format to the new one
-	 * public static void updateMapFile(int numLevel)
-	 * {
-	 * ArrayList<String> data = new ArrayList<String>();
-	 * 
-	 * int mapWidth = mapdata[0].length, mapHeight = mapdata.length;
-	 * data.add(String.valueOf(mapHeight));
-	 * data.add(String.valueOf(mapWidth));
-	 * 
-	 * for (int y = 0; y < mapHeight; y++)
-	 * {
-	 * for (int x = 0; x < mapWidth; x++)
-	 * {
-	 * int tile = mapdata[y][x];
-	 * if (tile == 0) { data.add("Land"); }
-	 * else if (tile == 1) { data.add("Wall"); }
-	 * else if (tile == 2) { data.add("Unit +1 1"); }
-	 * else if (tile == 3) { data.add("Unit +1 2"); }
-	 * else if (tile == 4) { data.add("Unit +1 3"); }
-	 * else if (tile == 5) { data.add("Unit -1 1"); }
-	 * else if (tile == 6) { data.add("Unit -1 2"); }
-	 * else if (tile == 7) { data.add("Unit -1 3"); }
-	 * else if (tile == 8) { data.add("Flag +1"); }
-	 * else if (tile == 9) { data.add("Flag -1"); }
-	 * }
-	 * }
-	 * 
-	 * saveFile(data, new File("../maps/newmap" + numLevel + ".txt"));
-	 * }
-	 */
 }

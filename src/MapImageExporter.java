@@ -3,6 +3,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import graphics.ImageUtils;
+import graphics.GameImage;
 import map.FileUtils;
 import map.TileConverter;
 import utils.Constants;
@@ -33,12 +34,18 @@ public class MapImageExporter {
             for (int x = 0; x < mapWidth; ++x) {
                 String tileStr = tileStrings[y][x];
 
-                Image tileImg = (java.awt.Image) imageService.getTileImage(tileStr).getBackendImage();
-                tileImg = ImageUtils.scale((BufferedImage) tileImg, BufferedImage.TYPE_INT_ARGB, imgTileWidth, imgTileHeight,
-                        (double) imgTileWidth / Constants.TILE_WIDTH,
-                        (double) imgTileHeight / Constants.TILE_HEIGHT);
-
-                im.getGraphics().drawImage(tileImg, x * imgTileWidth, y * imgTileHeight, null);
+                GameImage tileGameImage = imageService.getTileImage(tileStr);
+                if (tileGameImage != null && tileGameImage.getBackendImage() instanceof BufferedImage) {
+                    // Use GameImage's scaling method
+                    double scaleX = (double) imgTileWidth / Constants.TILE_WIDTH;
+                    double scaleY = (double) imgTileHeight / Constants.TILE_HEIGHT;
+                    GameImage scaledTile = tileGameImage.getScaled(scaleX, scaleY, true);
+                    
+                    if (scaledTile != null && scaledTile.getBackendImage() instanceof BufferedImage) {
+                        BufferedImage scaledBufferedImage = (BufferedImage) scaledTile.getBackendImage();
+                        im.getGraphics().drawImage(scaledBufferedImage, x * imgTileWidth, y * imgTileHeight, null);
+                    }
+                }
             }
         }
 

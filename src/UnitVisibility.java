@@ -1,5 +1,6 @@
 import graphics.Point;
 import map.TileConverter;
+import map.MapValidator;
 import utils.Constants;
 
 /**
@@ -27,7 +28,8 @@ public class UnitVisibility {
         Point targetPos = new Point(observer.getMapPoint(target.getCurrentPosition()));
         
         // Validate positions are within map bounds
-        if (!isValidPosition(map, observerPos) || !isValidPosition(map, targetPos)) {
+        if (!MapValidator.isValidLocation(map, observerPos.x, observerPos.y) ||
+            !MapValidator.isValidLocation(map, targetPos.x, targetPos.y)) {
             return false;
         }
 
@@ -104,14 +106,6 @@ public class UnitVisibility {
         }
         
         return angle;
-    }
-    
-    /**
-     * Validates if a position is within the map bounds.
-     */
-    private static boolean isValidPosition(int[][] map, Point position) {
-        return position.x >= 0 && position.x < map[0].length && 
-               position.y >= 0 && position.y < map.length;
     }
     
     /**

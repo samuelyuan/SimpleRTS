@@ -4,6 +4,7 @@ import java.util.Map;
 
 import graphics.Point;
 import input.GameMouseEvent;
+import map.MapValidator;
 import map.TileConverter;
 import utils.Constants;
 import utils.TileCoordinateConverter;
@@ -267,7 +268,6 @@ public class GameUnitManager {
 		}
 		
 		// Calculate position in a grid pattern around the center
-		int gridSize = radius * 2 + 1;
 		int unitsPerRing = 8; // 8 directions around the center
 		
 		int ring = (unitIndex - 1) / unitsPerRing + 1;
@@ -452,7 +452,7 @@ public class GameUnitManager {
 		ArrayList<GameUnit> unitList = getUnitList(factionId);
 		
 		// Check bounds
-		if (x < 0 || y < 0 || y >= map.length || x >= map[0].length) {
+		if (!MapValidator.isValidLocation(map, x, y)) {
 			return false;
 		}
 		

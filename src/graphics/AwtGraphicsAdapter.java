@@ -4,6 +4,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.RoundRectangle2D;
 import java.util.Stack;
 
 public class AwtGraphicsAdapter implements IGraphics {
@@ -11,6 +13,8 @@ public class AwtGraphicsAdapter implements IGraphics {
     private final Graphics2D g2d;
     private final Stack<AffineTransform> transformStack = new Stack<>();
     private boolean antiAliasingEnabled = false;
+    private Color currentColor = Color.BLACK;
+    private GameFont currentFont = new GameFont("Arial", GameFont.PLAIN, 12);
 
     public AwtGraphicsAdapter(Graphics g) {
         this.g = g;
@@ -26,11 +30,13 @@ public class AwtGraphicsAdapter implements IGraphics {
 
     @Override
     public void setColor(graphics.Color color) {
+        this.currentColor = color;
         g.setColor(color.toAwtColor());
     }
 
     @Override
     public void setFont(GameFont font) {
+        this.currentFont = font;
         g.setFont(toAwtFont(font));
     }
 
@@ -178,5 +184,60 @@ public class AwtGraphicsAdapter implements IGraphics {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
         }
+    }
+
+    // ===== ADDITIONAL UTILITY METHODS IMPLEMENTATION =====
+
+    @Override
+    public void drawCircle(int x, int y, int radius, boolean fill) {
+        Ellipse2D circle = new Ellipse2D.Double(x - radius, y - radius, radius * 2, radius * 2);
+        if (fill) {
+            g2d.fill(circle);
+        } else {
+            g2d.draw(circle);
+        }
+    }
+
+    @Override
+    public void clear(Color color) {
+        Color originalColor = currentColor;
+        setColor(color);
+        g.fillRect(0, 0, 10000, 10000); // Large rectangle to clear entire area
+        setColor(originalColor);
+    }
+
+    @Override
+    public Color getColor() {
+        return currentColor;
+    }
+
+    @Override
+    public GameFont getFont() {
+        return currentFont;
+    }
+    
+    @Override
+    public void drawEllipse(int x, int y, int width, int height, boolean fill) {
+        Ellipse2D ellipse = new Ellipse2D.Double(x, y, width, height);
+        if (fill) {
+            g2d.fill(ellipse);
+        } else {
+            g2d.draw(ellipse);
+        }
+    }
+
+    @Override
+    public void drawRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight, boolean fill) {
+        RoundRectangle2D roundRect = new RoundRectangle2D.Double(x, y, width, height, arcWidth, arcHeight);
+        if (fill) {
+            g2d.fill(roundRect);
+        } else {
+            g2d.draw(roundRect);
+        }
+    }
+
+    @Override
+    public void setStrokeWidth(float width) {
+        g2d.setStroke(new java.awt.BasicStroke(width));
     }
 } 

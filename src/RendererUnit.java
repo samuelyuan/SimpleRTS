@@ -7,12 +7,10 @@ import graphics.Color;
 import graphics.Point;
 import graphics.Rect;
 import graphics.IGraphics;
-import graphics.ImageUtils;
 import map.TileConverter;
 import utils.Constants;
 import utils.GameConfig;
 import utils.TileCoordinateConverter;
-import pathfinding.PathNode;
 
 /**
  * Handles rendering of game units.

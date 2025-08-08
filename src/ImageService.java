@@ -100,10 +100,10 @@ public class ImageService {
     }
     
     private void loadImage(Map<Integer, GameImage> imgData, int imageId, String filename) {
-        Image newImage = loadRawImage(filename);
+        GameImage newImage = loadGameImage(filename);
         if (newImage != null) {
-            imgData.put(imageId, new GameImage(newImage));
-            		Logger.debug("Loaded image: ID=" + imageId + ", filename=" + filename);
+            imgData.put(imageId, newImage);
+            Logger.debug("Loaded image: ID=" + imageId + ", filename=" + filename);
         } else {
             Logger.error("Failed to load image: ID=" + imageId + ", filename=" + filename);
             // Don't add to map - let getGameImage handle the fallback
@@ -111,17 +111,17 @@ public class ImageService {
     }
     
     private void loadTile(Map<String, GameImage> tileData, String imageStr, String filename) {
-        Image newImage = loadRawImage(filename);
+        GameImage newImage = loadGameImage(filename);
         if (newImage != null) {
-            tileData.put(imageStr, new GameImage(newImage));
-            		Logger.debug("Loaded tile: " + imageStr + ", filename=" + filename);
+            tileData.put(imageStr, newImage);
+            Logger.debug("Loaded tile: " + imageStr + ", filename=" + filename);
         } else {
             Logger.error("Failed to load tile: " + imageStr + ", filename=" + filename);
             // Don't add to map - let getTileImage handle the fallback
         }
     }
     
-    private Image loadRawImage(String filename) {
+    private GameImage loadGameImage(String filename) {
         String fullPath = pathResolver.resolveImagePath(filename);
         try {
             File file = new File(fullPath);
@@ -130,9 +130,10 @@ public class ImageService {
                 return null;
             }
             
-            Image image = ImageIO.read(file);
-            if (image != null) {
-                return image;
+            java.awt.image.BufferedImage awtImage = ImageIO.read(file);
+            if (awtImage != null) {
+                GameImage.ImageFormat format = determineImageFormat(filename);
+                return new GameImage(awtImage, fullPath, format);
             } else {
                 Logger.error("ImageIO.read returned null for: " + fullPath);
                 return null;
@@ -141,6 +142,15 @@ public class ImageService {
             Logger.error("Exception loading image " + fullPath + ": " + e.getMessage());
             return null;
         }
+    }
+    
+    private GameImage.ImageFormat determineImageFormat(String filename) {
+        String lowerFilename = filename.toLowerCase();
+        if (lowerFilename.endsWith(".png")) return GameImage.ImageFormat.PNG;
+        if (lowerFilename.endsWith(".jpg") || lowerFilename.endsWith(".jpeg")) return GameImage.ImageFormat.JPG;
+        if (lowerFilename.endsWith(".gif")) return GameImage.ImageFormat.GIF;
+        if (lowerFilename.endsWith(".bmp")) return GameImage.ImageFormat.BMP;
+        return GameImage.ImageFormat.UNKNOWN;
     }
     
     private void generateDarkImages() {
@@ -157,42 +167,29 @@ public class ImageService {
      */
     private GameImage getFallbackImage(int imageId) {
         // Create a simple colored rectangle as fallback
-        java.awt.image.BufferedImage fallbackImage = new java.awt.image.BufferedImage(600, 500, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.image.BufferedImage fallbackImage = new java.awt.image.BufferedImage(600, 400, java.awt.image.BufferedImage.TYPE_INT_RGB);
         java.awt.Graphics2D g2d = fallbackImage.createGraphics();
         
-        // Choose color based on image type
-        java.awt.Color color = java.awt.Color.GRAY;
-        String text = "Missing Image: " + imageId;
-        
+        // Set background color based on image type
         if (imageId == ImageConstants.IMGID_MENU_DEFEAT) {
-            color = new java.awt.Color(139, 0, 0); // Dark red
-            text = "DEFEAT";
+            g2d.setColor(java.awt.Color.RED);
         } else if (imageId == ImageConstants.IMGID_MENU_VICTORY) {
-            color = new java.awt.Color(0, 100, 0); // Dark green
-            text = "VICTORY";
-        } else if (imageId == ImageConstants.IMGID_BG_MENU) {
-            color = java.awt.Color.DARK_GRAY;
-            text = "Background";
+            g2d.setColor(java.awt.Color.GREEN);
+        } else {
+            g2d.setColor(java.awt.Color.GRAY);
         }
-        
-        // Fill background
-        g2d.setColor(color);
-        g2d.fillRect(0, 0, 600, 500);
-        
-        // Add border
-        g2d.setColor(java.awt.Color.WHITE);
-        g2d.setStroke(new java.awt.BasicStroke(5));
-        g2d.drawRect(10, 10, 580, 480);
+        g2d.fillRect(0, 0, 600, 400);
         
         // Add text
         g2d.setColor(java.awt.Color.WHITE);
-        g2d.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        g2d.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         java.awt.FontMetrics fm = g2d.getFontMetrics();
-        int textX = (600 - fm.stringWidth(text)) / 2;
-        int textY = 250;
-        g2d.drawString(text, textX, textY);
-        
-        // Add subtitle for missing images
+        String title = imageId == ImageConstants.IMGID_MENU_DEFEAT ? "DEFEAT" : 
+                      imageId == ImageConstants.IMGID_MENU_VICTORY ? "VICTORY" : "Missing Image";
+        int textX = (600 - fm.stringWidth(title)) / 2;
+        int textY = 200;
+        g2d.drawString(title, textX, textY);
+
         if (imageId != ImageConstants.IMGID_MENU_DEFEAT && imageId != ImageConstants.IMGID_MENU_VICTORY) {
             g2d.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 24));
             String subtitle = "Image ID: " + imageId;
@@ -203,7 +200,7 @@ public class ImageService {
         
         g2d.dispose();
         
-        return new GameImage(fallbackImage);
+        return new GameImage(fallbackImage, "fallback_" + imageId, GameImage.ImageFormat.PNG);
     }
     
     /**
@@ -220,6 +217,6 @@ public class ImageService {
         g2d.drawString("Missing", 5, 30);
         g2d.dispose();
         
-        return new GameImage(fallbackImage);
+        return new GameImage(fallbackImage, "fallback_tile_" + tileName, GameImage.ImageFormat.PNG);
     }
 } 

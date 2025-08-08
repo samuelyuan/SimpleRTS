@@ -61,4 +61,62 @@ public interface IGraphics {
      * @param enabled Whether to enable anti-aliasing
      */
     void setAntiAliasing(boolean enabled);
+    
+    // === Additional Drawing Methods ===
+    /**
+     * Draws a circle
+     * @param x X coordinate of center
+     * @param y Y coordinate of center
+     * @param radius Radius of circle
+     * @param fill Whether to fill the circle
+     */
+    void drawCircle(int x, int y, int radius, boolean fill);
+    
+    // === Utility Methods ===
+    /**
+     * Clears the entire drawing area with a color
+     * @param color The color to clear with
+     */
+    void clear(Color color);
+    
+    /**
+     * Gets the current color
+     * @return Current color
+     */
+    Color getColor();
+    
+    /**
+     * Gets the current font
+     * @return Current font
+     */
+    GameFont getFont();
+    
+    // === Additional Shape Methods (for testing) ===
+    /**
+     * Draws an ellipse
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @param width Width of ellipse
+     * @param height Height of ellipse
+     * @param fill Whether to fill the ellipse
+     */
+    void drawEllipse(int x, int y, int width, int height, boolean fill);
+    
+    /**
+     * Draws a rounded rectangle
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @param width Width of rectangle
+     * @param height Height of rectangle
+     * @param arcWidth Arc width for corners
+     * @param arcHeight Arc height for corners
+     * @param fill Whether to fill the rectangle
+     */
+    void drawRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight, boolean fill);
+    
+    /**
+     * Sets the stroke width for drawing
+     * @param width Stroke width
+     */
+    void setStrokeWidth(float width);
 } 

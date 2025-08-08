@@ -7,6 +7,7 @@ import java.util.List;
 
 import graphics.Point;
 import map.TileConverter;
+import pathfinding.PathfindingUtils;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
@@ -146,10 +147,10 @@ public class GameUnitTest {
         playerUnit.moveToDestination(map, new ArrayList<>(List.of(playerUnit)));
         // Simulate no change
         playerUnit.setCurrentMapEnd(mapEnd);
-        assertFalse(playerUnit.destinationChanged(mapEnd), "Should not detect change if same");
+        assertFalse(PathfindingUtils.destinationChanged(3, 3, mapEnd), "Should not detect change if same");
         // Simulate change
         playerUnit.setCurrentMapEnd(0, 0);
-        assertTrue(playerUnit.destinationChanged(mapEnd), "Should detect change if different");
+        assertTrue(PathfindingUtils.destinationChanged(0, 0, mapEnd), "Should detect change if different");
     }
 
     @Test
@@ -159,7 +160,7 @@ public class GameUnitTest {
         Point end = new Point(2, 2);
         testMap[start.y][start.x] = 5;
         testMap[end.y][end.x] = 0;
-        playerUnit.updateMapAfterPathfinding(testMap, start, end);
+        PathfindingUtils.updateMapAfterPathfinding(testMap, start, end, playerUnit.getClassType());
         assertEquals(0, testMap[start.y][start.x], "Start tile should be cleared");
         assertEquals(playerUnit.getClassType() + 1, testMap[end.y][end.x], "End tile should be set to classType+1");
     }

@@ -1,9 +1,10 @@
 import java.util.ArrayList;
 
 import graphics.Point;
-import map.TileConverter;
 import pathfinding.PathNode;
-import pathfinding.PathUnit;
+import pathfinding.MovementController;
+import pathfinding.PathfindingState;
+import pathfinding.PathfindingUtils;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
@@ -34,16 +35,8 @@ public class GameUnit {
 		this.destination = destination;
 	}
 
-	// Physical state
-	private boolean isAttacking = false; // if attacking, stand still. if not, then move.
-
-	public boolean isAttacking() {
-		return this.isAttacking;
-	}
-
-	public void setAttacking(boolean attacking) {
-		this.isAttacking = attacking;
-	}
+	// Combat system
+	private CombatSystem combatSystem;
 
 	private int classType;
 
@@ -90,8 +83,7 @@ public class GameUnit {
 	private int direction = 0; // north, south, east, west
 	private double rotationAngle = 0.0; // 360-degree rotation angle in degrees
 	private double targetRotationAngle = 0.0; // Target rotation angle for smooth interpolation
-	private int lastDamageDealt = 0; // Track damage for combat effects
-	private boolean wasCriticalHit = false; // Track if last hit was critical
+
 
 	public int getDirection() {
 		return this.direction;
@@ -175,36 +167,38 @@ public class GameUnit {
 	}
 
 	// Misc data
-	private PathUnit pathUnit;
+	private MovementController movementController;
 
 	public boolean isPathCreated() {
-		return pathUnit.getIsPathCreated();
+		return movementController.getIsPathCreated();
 	}
 
 	public void startMoving() {
-		pathUnit.startMoving();
+		movementController.startMoving();
 	}
 	
 	public boolean isMoving() {
-		return pathUnit.getIsMoving();
+		return movementController.getIsMoving();
 	}
 
 	public void stopMoving() {
-		pathUnit.stopMoving();
+		movementController.stopMoving();
 	}
 
 	public ArrayList<PathNode> getPath() {
-		return pathUnit.getPath();
+		return movementController.getPath();
 	}
 
 	public ArrayList<PathNode> getExploredNodes() {
-		return pathUnit.getExploredNodes();
+		return movementController.getExploredNodes();
 	}
 
 	public GameUnit(int positionX, int positionY, boolean isPlayerUnit, int classType) {
 		this.currentPosition = new Point(positionX, positionY);
 		this.destination = new Point();
-		this.pathUnit = new PathUnit(positionX, positionY);
+		this.movementController = new MovementController(positionX, positionY);
+		this.combatSystem = new CombatSystem(this);
+		this.pathfindingState = new PathfindingState();
 
 		this.isPlayerUnit = isPlayerUnit;
 		this.classType = classType;
@@ -245,122 +239,103 @@ public class GameUnit {
 	 * Use AStar pathfinding algorithm to find an optimal path that takes obstacles
 	 * into account
 	 */
-	private int currentMapEndX = 0, currentMapEndY = 0;
-	private int pathfindingCooldown = 0; // Add cooldown to prevent excessive pathfinding
-	private static final int PATHFINDING_COOLDOWN_FRAMES = 10; // Only recalculate every 10 frames
-	private boolean pathfindingFailed = false; // Track if pathfinding failed
-	private int pathfindingFailureTimer = 0; // Timer for showing failure indicator
-	private static final int PATHFINDING_FAILURE_DISPLAY_FRAMES = 60; // Show failure indicator for 1 second (60 frames)
-	private int pathfindingFailureCount = 0; // Track consecutive failures
-	private static final int MAX_PATHFINDING_RETRIES = 5; // Maximum consecutive failures before giving up
+	private PathfindingState pathfindingState;
 
 	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
 		Point mapStart = getMapPoint(this.currentPosition);
 		Point mapEnd = getMapPoint(this.getDestination());
 
-		if (!pathUnit.getIsMoving()) return;
+		if (!movementController.getIsMoving()) return;
 
 		// Add cooldown to prevent excessive pathfinding
-		if (pathfindingCooldown > 0) {
-			pathfindingCooldown--;
+		if (pathfindingState.isOnCooldown()) {
+			pathfindingState.decrementCooldown();
 			return;
 		}
 
 		// Stop trying if we've failed too many times
-		if (pathfindingFailureCount >= MAX_PATHFINDING_RETRIES) {
+		if (pathfindingState.hasExceededMaxRetries()) {
 			stopMoving();
-			pathfindingFailed = true;
-			pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
+			pathfindingState.recordFailure();
 			return;
 		}
 
 		// Only recalculate path if destination changed or no path exists
 		if (shouldGeneratePath(map, mapStart, mapEnd)) {
 			if (generatePath(map, mapStart, mapEnd)) {
-				updateMapAfterPathfinding(map, mapStart, mapEnd);
-				currentMapEndX = mapEnd.x;
-				currentMapEndY = mapEnd.y;
-				pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES; // Set cooldown
-				pathfindingFailed = false; // Clear failure state on success
-				pathfindingFailureCount = 0; // Reset failure count on success
+				PathfindingUtils.updateMapAfterPathfinding(map, mapStart, mapEnd, classType);
+				pathfindingState.updateDestination(mapEnd);
+				pathfindingState.setCooldown(); // Set cooldown
+				pathfindingState.recordSuccess(); // Clear failure state on success
 			} else {
 				// Pathfinding failed - increment failure count and try to find an alternative destination
-				pathfindingFailed = true;
-				pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
-				pathfindingFailureCount++;
+				pathfindingState.recordFailure();
 				
-				Point alternativeDest = findAlternativeDestination(map, mapEnd);
+				Point alternativeDest = PathfindingUtils.findAlternativeDestination(map, mapEnd);
 				if (alternativeDest != null) {
 					this.setDestination(alternativeDest);
 					// Reset pathfinding state to try again with new destination
-					pathUnit.setIsPathCreated(false);
-					pathfindingCooldown = 0; // Allow immediate retry
+					movementController.setIsPathCreated(false);
+					pathfindingState.resetCooldown(); // Allow immediate retry
 				}
 			}
 		}
 
-		if (pathUnit.isPathFound()) {
+		if (movementController.isPathFound()) {
 			handlePathFound(map, mapEnd, unitList);
 		}
 	}
 
 	boolean shouldGeneratePath(int[][] map, Point mapStart, Point mapEnd) {
 		// Only generate path if we don't have one or destination changed
-		return !pathUnit.getIsPathCreated() || destinationChanged(mapEnd);
+		return !movementController.getIsPathCreated() || pathfindingState.destinationChanged(mapEnd);
 	}
 
 	boolean generatePath(int[][] map, Point mapStart, Point mapEnd) {
-		return pathUnit.findPath(map, mapStart, mapEnd);
-	}
-
-	void updateMapAfterPathfinding(int[][] map, Point mapStart, Point mapEnd) {
-		if (map[mapStart.y][mapStart.x] != TileConverter.TILE_WALL
-				&& map[mapStart.y][mapStart.x] != 8 && map[mapStart.y][mapStart.x] != 9)
-			map[mapStart.y][mapStart.x] = 0;
-
-		if (map[mapEnd.y][mapEnd.x] != TileConverter.TILE_WALL
-				&& map[mapEnd.y][mapEnd.x] != 8 && map[mapEnd.y][mapEnd.x] != 9)
-			map[mapEnd.y][mapEnd.x] = classType + 1;
+		return movementController.findPath(map, mapStart, mapEnd);
 	}
 
 	private void handlePathFound(int[][] map, Point mapEnd, ArrayList<GameUnit> unitList) {
-		if (destinationChanged(mapEnd)) {
-			pathUnit.setIsPathCreated(false);
+		if (pathfindingState.destinationChanged(mapEnd)) {
+			movementController.setIsPathCreated(false);
 		}
 		moveToDestination(map, unitList);
 	}
 
-	boolean destinationChanged(Point mapEnd) {
-		return currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y;
-	}
+
 
 	/*
 	 * Change the player position until player reaches waypoint.
 	 */
 	public void moveToDestination(int[][] map, ArrayList<GameUnit> unitList) {
-		if (!pathUnit.getIsMoving()) return;
+		if (!movementController.getIsMoving()) return;
 		updateGroupDestinations(map, unitList);
-		currentPosition = pathUnit.run();
+		currentPosition = movementController.run();
 	}
 
 	private void updateGroupDestinations(int[][] map, ArrayList<GameUnit> unitList) {
+		// Get all units for collision detection
+		ArrayList<GameUnit> allUnits = new ArrayList<>();
+		allUnits.addAll(unitList);
+		// Note: In a full implementation, you'd also add enemy units here
+		
 		for (GameUnit other : unitList) {
 			if (other == this) continue;
 			if (isSameDestination(other)) {
-				if (!other.pathUnit.getIsPathCreated()) continue;
+				if (!other.movementController.getIsPathCreated()) continue;
 				
-				Point newDest = other.pathUnit.recalculateDest(map, getMapPoint(this.getDestination()));
+				Point newDest = other.movementController.recalculateDest(map, getMapPoint(this.getDestination()));
 				
 				// Validate the new destination before setting it
-				if (isValidDestination(newDest, map)) {
+				if (PathfindingUtils.isValidDestination(newDest, map) && !isDestinationOccupiedByUnit(newDest, allUnits)) {
 					other.setDestination(newDest);
-					updateCurrentMapEnd(getMapPoint(other.getDestination()));
+					other.pathfindingState.updateDestination(getMapPoint(other.getDestination()));
 				} else {
 					// If recalculateDest failed, try to find a fallback destination
-					Point fallbackDest = findFallbackDestination(map, other);
+					Point fallbackDest = PathfindingUtils.findFallbackDestination(map, getMapPoint(other.getCurrentPosition()));
 					if (fallbackDest != null) {
 						other.setDestination(fallbackDest);
-						updateCurrentMapEnd(getMapPoint(other.getDestination()));
+						other.pathfindingState.updateDestination(getMapPoint(other.getDestination()));
 					}
 					// If no fallback found, the unit will stay in place (better than moving to invalid location)
 				}
@@ -368,132 +343,34 @@ public class GameUnit {
 		}
 	}
 	
-	// Helper method to validate if a destination is valid
-	private boolean isValidDestination(Point dest, int[][] map) {
-		if (dest == null) return false;
-		
-		Point mapPoint = getMapPoint(dest);
-		if (mapPoint.x < 0 || mapPoint.y < 0 || 
-			mapPoint.y >= map.length || mapPoint.x >= map[0].length) {
-			return false;
-		}
-		
-		// Check if the destination is walkable
-		return map[mapPoint.y][mapPoint.x] == 0;
-	}
+
+
+// Check if a destination is occupied by another unit
+private boolean isDestinationOccupiedByUnit(Point dest, ArrayList<GameUnit> allUnits) {
+	if (allUnits == null) return false;
 	
-	// Fallback method to find a valid destination when recalculateDest fails
-	private Point findFallbackDestination(int[][] map, GameUnit unit) {
-		Point currentPos = getMapPoint(unit.getCurrentPosition());
-		int mapHeight = map.length;
-		int mapWidth = map[0].length;
+	for (GameUnit unit : allUnits) {
+		if (unit == this) continue; // Skip self
+		if (!unit.isAlive()) continue; // Skip dead units
 		
-		// Search in expanding circles around the unit's current position
-		// but prioritize closer destinations to avoid long travel distances
-		int closestDistance = Integer.MAX_VALUE;
-		Point closestTile = null;
+		// Check if unit is at or very close to the destination
+		Point unitPos = unit.getCurrentPosition();
+		double distance = Math.sqrt(
+			Math.pow(dest.x - unitPos.x, 2) + 
+			Math.pow(dest.y - unitPos.y, 2)
+		);
 		
-		for (int radius = 1; radius <= 6; radius++) {
-			boolean foundInThisRadius = false;
-			
-			for (int dy = -radius; dy <= radius; dy++) {
-				for (int dx = -radius; dx <= radius; dx++) {
-					// Skip corners for efficiency
-					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
-						continue;
-					}
-					
-					int newX = currentPos.x + dx;
-					int newY = currentPos.y + dy;
-					
-					// Check bounds
-					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
-						continue;
-					}
-					
-					// Check if tile is walkable
-					if (map[newY][newX] == 0) {
-						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-						if (distance < closestDistance) {
-							closestDistance = distance;
-							closestTile = new Point(newX, newY);
-							foundInThisRadius = true;
-						}
-					}
-				}
-			}
-			
-			// If we found a reasonably close tile, use it
-			if (foundInThisRadius && closestDistance <= 4) {
-				break;
-			}
+		// If unit is within 25 pixels (half a tile), consider it occupied
+		if (distance < 25) {
+			return true;
 		}
-		
-		// If we found a tile within reasonable distance, use it
-		if (closestTile != null && closestDistance <= 6) {
-			return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-		}
-		
-		// If no fallback found, return null (unit will stay in place)
-		return null;
 	}
+	return false;
+}
+
+
 	
-	// Helper method to find an alternative destination when pathfinding fails
-	private Point findAlternativeDestination(int[][] map, Point originalDest) {
-		int mapHeight = map.length;
-		int mapWidth = map[0].length;
-		
-		// Search in expanding circles around the original destination
-		// Use simple distance-based approach instead of expensive pathfinding tests
-		int closestDistance = Integer.MAX_VALUE;
-		Point closestTile = null;
-		
-		for (int radius = 1; radius <= 4; radius++) { // Reduced max radius
-			boolean foundInThisRadius = false;
-			
-			for (int dy = -radius; dy <= radius; dy++) {
-				for (int dx = -radius; dx <= radius; dx++) {
-					// Skip corners for efficiency
-					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
-						continue;
-					}
-					
-					int newX = originalDest.x + dx;
-					int newY = originalDest.y + dy;
-					
-					// Check bounds
-					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
-						continue;
-					}
-					
-					// Check if tile is walkable (simple check, no pathfinding test)
-					if (map[newY][newX] == 0) {
-						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-						
-						// Only consider tiles within reasonable distance
-						if (distance <= 3 && distance < closestDistance) {
-							closestDistance = distance;
-							closestTile = new Point(newX, newY);
-							foundInThisRadius = true;
-						}
-					}
-				}
-			}
-			
-			// If we found a reasonably close tile, use it immediately
-			if (foundInThisRadius && closestDistance <= 2) {
-				break;
-			}
-		}
-		
-		// If we found a tile within reasonable distance, use it
-		if (closestTile != null && closestDistance <= 3) {
-			return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-		}
-		
-		// If no alternative found, return null
-		return null;
-	}
+
 
 	boolean isSameDestination(GameUnit other) {
 		Point otherMapDest = getMapPoint(other.getDestination());
@@ -501,20 +378,13 @@ public class GameUnit {
 		return otherMapDest.equals(playerMapDest);
 	}
 
-	private void updateCurrentMapEnd(Point currentEnd) {
-		currentMapEndX = currentEnd.x;
-		currentMapEndY = currentEnd.y;
-	}
-
 	// Package-private setters for testing
 	void setCurrentMapEnd(Point p) {
-		this.currentMapEndX = p.x;
-		this.currentMapEndY = p.y;
+		pathfindingState.setCurrentMapEnd(p);
 	}
 
 	void setCurrentMapEnd(int x, int y) {
-		this.currentMapEndX = x;
-		this.currentMapEndY = y;
+		pathfindingState.setCurrentMapEnd(x, y);
 	}
 
 	/*
@@ -524,146 +394,81 @@ public class GameUnit {
 	public void interactWithEnemy(int[][] map, ArrayList<GameUnit> enemyList) {
 		boolean canAttackAny = false;
 		for (GameUnit enemy : enemyList) {
-			if (canAttackEnemy(map, enemy)) {
-				handleAttack(enemy);
+			if (combatSystem.canAttackEnemy(map, enemy)) {
+				combatSystem.handleAttack(enemy);
 				canAttackAny = true;
 			}
 		}
 		// Only set isAttacking to false if we can't attack any enemies
 		if (!canAttackAny) {
-			isAttacking = false;
+			combatSystem.setAttacking(false);
 		}
 	}
 
-	boolean canAttackEnemy(int[][] map, GameUnit enemy) {
-		final int ATTACK_RADIUS = 8;
-		int manhattanDist = TileCoordinateConverter.manhattanDistanceInTiles(currentPosition, enemy.currentPosition);
-		// Now includes FOV check - units can only attack enemies they can see within their field of view
-		return manhattanDist <= ATTACK_RADIUS && UnitVisibility.checkVisible(map, this, enemy);
-	}
 
-	void handleAttack(GameUnit enemy) {
-		isAttacking = true;
-		
-		// Rotate to face the enemy being attacked
-		rotateToFaceTarget(enemy);
-		
-		// Make enemy rotate to face back (for counter-attack)
-		enemy.rotateToFaceTarget(this);
-		
-		// Calculate damage
-		int damageToEnemy = this.dealDamagePoints(enemy);
-		int damageToSelf = enemy.dealDamagePoints(this);
-		
-		// Apply damage
-		this.health -= damageToSelf;
-		enemy.health -= damageToEnemy;
-		
-		// Notify enemy that it took damage (so it can turn to face attacker)
-		enemy.onTakeDamage(this);
-		
-		// Check for critical hits (10% chance)
-		boolean isCriticalHit = Math.random() < 0.1;
-		if (isCriticalHit) {
-			damageToEnemy = (int)(damageToEnemy * 1.5); // 50% bonus damage
-			enemy.health -= (int)(damageToEnemy * 0.5); // Apply bonus damage
-		}
-		
-		// Store damage info for combat effects
-		this.lastDamageDealt = damageToEnemy;
-		this.wasCriticalHit = isCriticalHit;
-		enemy.lastDamageDealt = damageToSelf;
-		enemy.wasCriticalHit = false; // Enemy doesn't get critical hits for now
-	}
-
-	// Different types of units deal different damage
-	// (ex. a light unit would do more damage to a medium unit, but less to a heavy
-	// unit)
-	public int dealDamagePoints(GameUnit enemy) {
-		int attacker = this.classType - 1; // UNIT_ID_LIGHT = 1 → index 0
-		int defender = enemy.classType - 1;
-
-		if (attacker < 0 || attacker >= Constants.DAMAGE_MATRIX.length ||
-			defender < 0 || defender >= Constants.DAMAGE_MATRIX[0].length) {
-			return 1; // fallback value
-		}
-
-		return Constants.DAMAGE_MATRIX[attacker][defender];
-	}
-	
-	/**
-	 * Rotates the unit to face a target unit.
-	 * This is used during combat to ensure units face their enemies.
-	 * 
-	 * @param target The unit to face
-	 */
-	private void rotateToFaceTarget(GameUnit target) {
-		Point myPos = this.currentPosition;
-		Point targetPos = target.getCurrentPosition();
-		
-		// Calculate angle to target
-		double deltaX = targetPos.x - myPos.x;
-		double deltaY = targetPos.y - myPos.y;
-		double angleToTarget = Math.toDegrees(Math.atan2(deltaY, deltaX));
-		
-		// Normalize angle to 0-360 range
-		if (angleToTarget < 0) {
-			angleToTarget += 360.0;
-		}
-		
-		// Set target rotation angle for smooth rotation
-		this.setTargetRotationAngle(angleToTarget);
-	}
-	
-	/**
-	 * Called when this unit takes damage from an attacker.
-	 * This can be used to make the unit turn to face the attacker,
-	 * even if it can't currently attack back (e.g., due to FOV).
-	 * 
-	 * @param attacker The unit that attacked this unit
-	 */
-	public void onTakeDamage(GameUnit attacker) {
-		// Rotate to face the attacker (even if we can't attack back)
-		rotateToFaceTarget(attacker);
-	}
-	
-	// Combat effects getters
-	public int getLastDamageDealt() {
-		return lastDamageDealt;
-	}
-	
-	public boolean wasLastHitCritical() {
-		return wasCriticalHit;
-	}
-	
-	public void clearCombatEffects() {
-		lastDamageDealt = 0;
-		wasCriticalHit = false;
-	}
 	
 	/**
 	 * Updates the pathfinding failure timer
 	 */
 	public void updatePathfindingFailureTimer() {
-		if (pathfindingFailureTimer > 0) {
-			pathfindingFailureTimer--;
-			if (pathfindingFailureTimer == 0) {
-				pathfindingFailed = false; // Clear failure state when timer expires
-			}
-		}
+		pathfindingState.updateFailureTimer();
 	}
 	
 	/**
 	 * Returns true if pathfinding recently failed
 	 */
 	public boolean isPathfindingFailed() {
-		return pathfindingFailed && pathfindingFailureTimer > 0;
+		return pathfindingState.isPathfindingFailed();
 	}
 	
 	/**
 	 * Returns the remaining failure display time
 	 */
 	public int getPathfindingFailureTimer() {
-		return pathfindingFailureTimer;
+		return pathfindingState.getFailureTimer();
+	}
+	
+	/**
+	 * Returns the combat system for this unit
+	 */
+	public CombatSystem getCombatSystem() {
+		return combatSystem;
+	}
+	
+	/**
+	 * Returns the pathfinding state for this unit
+	 */
+	public PathfindingState getPathfindingState() {
+		return pathfindingState;
+	}
+	
+	// Combat delegation methods for backward compatibility
+	public boolean isAttacking() {
+		return combatSystem.isAttacking();
+	}
+	
+	public void setAttacking(boolean attacking) {
+		combatSystem.setAttacking(attacking);
+	}
+	
+	public int getLastDamageDealt() {
+		return combatSystem.getLastDamageDealt();
+	}
+	
+	public boolean wasLastHitCritical() {
+		return combatSystem.wasLastHitCritical();
+	}
+	
+	public void clearCombatEffects() {
+		combatSystem.clearCombatEffects();
+	}
+	
+	// Direct combat methods for testing compatibility
+	public boolean canAttackEnemy(int[][] map, GameUnit enemy) {
+		return combatSystem.canAttackEnemy(map, enemy);
+	}
+	
+	public void handleAttack(GameUnit target) {
+		combatSystem.handleAttack(target);
 	}
 }

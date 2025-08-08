@@ -1,13 +1,13 @@
 package pathfinding;
 import graphics.Point;
 import utils.TileCoordinateConverter;
+import map.MapValidator;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.LinkedHashMap;
 
-public class PathUnit {
+public class MovementController {
 	// steering vehicle data
 	private PathVector2D currentVelocity, currentLocation;
 	private double maxVelocity, maxForce;
@@ -34,6 +34,12 @@ public class PathUnit {
 	// physical state
 	private boolean isMoving = false;
 
+	// Stuck detection and recovery
+	private PathVector2D lastPosition = null;
+	private int stuckCounter = 0;
+	private static final int STUCK_THRESHOLD = 30; // frames
+	private static final double STUCK_DISTANCE_THRESHOLD = 5.0; // pixels
+	
 	public boolean getIsPathCreated() {
 		return isPathCreated;
 	}
@@ -73,9 +79,10 @@ public class PathUnit {
 		this.isMoving = false;
 	}
 
-	public PathUnit(int playerX, int playerY) {
+	public MovementController(int playerX, int playerY) {
 		currentLocation = new PathVector2D(playerX, playerY);
 		currentVelocity = new PathVector2D(1, 1);
+		lastPosition = new PathVector2D(playerX, playerY);
 
 		maxVelocity = 1.5;
 		maxForce = 1.0;
@@ -93,154 +100,77 @@ public class PathUnit {
 		ArrayList<PathNode> cachedPath = pathCache.get(cacheKey);
 		
 		if (cachedPath != null) {
-			movePath = new ArrayList<>(cachedPath); // Create a copy
-			nodeCounter = 1;
-			isPathCreated = true;
+			setPath(cachedPath);
 			return true;
 		}
 
-		// Generate new path with explored nodes
+		// Create new path using A* algorithm
 		PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, start.x, start.y, end.x, end.y);
-		if (result != null && result.path != null) {
-			// Cache the path (LRU cache handles eviction automatically)
+		
+		if (result != null && result.path != null && result.path.size() > 0) {
+			// Cache the successful path
 			pathCache.put(cacheKey, new ArrayList<>(result.path));
-			movePath = new ArrayList<>(result.path);
-			exploredNodes = result.exploredNodes; // Store explored nodes for visualization
-			nodeCounter = 1;
-			isPathCreated = true;
+			setPath(result.path);
+			setExploredNodes(result.exploredNodes);
 			return true;
-		} else {
-			// Store explored nodes even if path failed
-			if (result != null) {
-				exploredNodes = result.exploredNodes;
-			}
-			return false;
 		}
+		
+		return false;
 	}
 
-	// Clear cache when map changes significantly
 	public static void clearPathCache() {
 		pathCache.clear();
 	}
 
 	public Point recalculateDest(int map[][], Point playerMapDest) {
-		Point newDest = new Point();
-
-		// Check if map is null or empty
-		if (map == null || map.length == 0 || map[0].length == 0) {
-			return newDest;
-		}
-
-		int mapHeight = map.length;
-		int mapWidth = map[0].length;
-
-		// Define 8 directions: N, S, E, W, NW, NE, SW, SE
-		int[][] directions = new int[][] {
-				{ 0, -1 },  // North
-				{ 0, 1 },   // South
-				{ 1, 0 },   // East
-				{ -1, 0 },  // West
-				{ -1, -1 }, // Northwest
-				{ 1, -1 },  // Northeast
-				{ -1, 1 },  // Southwest
-				{ 1, 1 }    // Southeast
-		};
-
-		// First, try the immediate 8 adjacent tiles
-		for (int i = 0; i < directions.length; i++) {
-			int dx = directions[i][0];
-			int dy = directions[i][1];
-			
-			int newX = playerMapDest.x + dx;
-			int newY = playerMapDest.y + dy;
-
-			// Check bounds
-			if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
-				continue;
-			}
-
-			// Check if tile is walkable
-			if (map[newY][newX] == 0) {
-				newDest = TileCoordinateConverter.mapToScreen(newX, newY);
-				return newDest;
+		// If we have a valid path, try to find a new destination near the original
+		if (movePath != null && movePath.size() > 0) {
+			// Start from the current waypoint and look for alternative destinations
+			for (int i = nodeCounter; i < movePath.size(); i++) {
+				PathNode waypoint = movePath.get(i);
+				
+				// Check if this waypoint is walkable
+				if (MapValidator.isWalkable(map, waypoint.getX(), waypoint.getY())) {
+					// Found a valid waypoint, return it as screen coordinates
+					return TileCoordinateConverter.mapToScreen(waypoint.getX(), waypoint.getY());
+				}
 			}
 		}
-
-		// If no immediate tile found, search in expanding circles and find the closest one
-		int maxRadius = 8; // Increased max radius but we'll prioritize closer tiles
-		int closestDistance = Integer.MAX_VALUE;
-		Point closestTile = null;
 		
-		// Search in expanding circles, but collect all candidates and pick the closest
-		for (int radius = 2; radius <= maxRadius; radius++) {
-			boolean foundInThisRadius = false;
-			
-			// Search in a circular pattern around the destination
+		// If no valid waypoint found in current path, try to find a new path to a nearby location
+		Point currentPos = new Point((int) currentLocation.getX(), (int) currentLocation.getY());
+		Point mapPos = TileCoordinateConverter.screenToMap(currentPos);
+		
+		// Search in expanding circles around the original destination
+		for (int radius = 1; radius <= 3; radius++) {
 			for (int dy = -radius; dy <= radius; dy++) {
 				for (int dx = -radius; dx <= radius; dx++) {
-					// Skip corners to make it more circular and efficient
+					// Skip corners for efficiency
 					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
 						continue;
 					}
 					
 					int newX = playerMapDest.x + dx;
 					int newY = playerMapDest.y + dy;
-
-					// Check bounds
-					if (newY < 0 || newY >= mapHeight || newX < 0 || newX >= mapWidth) {
-						continue;
-					}
-
+					
 					// Check if tile is walkable
-					if (map[newY][newX] == 0) {
-						int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-						if (distance < closestDistance) {
-							closestDistance = distance;
-							closestTile = new Point(newX, newY);
-							foundInThisRadius = true;
-						}
-					}
-				}
-			}
-			
-			// If we found tiles in this radius and we're within reasonable distance, use the closest one
-			if (foundInThisRadius && closestDistance <= 4) {
-				break; // Don't search further if we have a reasonably close tile
-			}
-		}
-		
-		// If we found a reasonably close tile, use it
-		if (closestTile != null && closestDistance <= 6) {
-			newDest = TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-			return newDest;
-		}
-		
-		// If no reasonably close tile found, try to find the closest walkable tile anywhere
-		// but limit the search to avoid extremely long distances
-		if (closestTile == null || closestDistance > 6) {
-			closestDistance = Integer.MAX_VALUE;
-			closestTile = null;
-			
-			// Search in a larger area but still prioritize closer tiles
-			for (int y = Math.max(0, playerMapDest.y - 10); y <= Math.min(mapHeight - 1, playerMapDest.y + 10); y++) {
-				for (int x = Math.max(0, playerMapDest.x - 10); x <= Math.min(mapWidth - 1, playerMapDest.x + 10); x++) {
-					if (map[y][x] == 0) {
-						int distance = Math.abs(x - playerMapDest.x) + Math.abs(y - playerMapDest.y);
-						if (distance < closestDistance) {
-							closestDistance = distance;
-							closestTile = new Point(x, y);
+					if (MapValidator.isWalkable(map, newX, newY)) {
+						// Try to find a path to this location
+						PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, mapPos.x, mapPos.y, newX, newY);
+						
+						if (result != null && result.path != null && result.path.size() > 0) {
+							// Found a valid path, update our path and return the new destination
+							setPath(result.path);
+							setExploredNodes(result.exploredNodes);
+							return TileCoordinateConverter.mapToScreen(newX, newY);
 						}
 					}
 				}
 			}
 		}
 		
-		// If we found any walkable tile, use it
-		if (closestTile != null) {
-			newDest = TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-		}
-
-		return newDest;
+		// If no alternative found, return null
+		return null;
 	}
 
 	public boolean isPathFound() {
@@ -252,8 +182,13 @@ public class PathUnit {
 		if (movePath.size() == 0 || nodeCounter >= movePath.size()) {
 			stopMoving();
 			isPathCreated = false;
-
+			resetStuckDetection();
 			return new Point((int) currentLocation.getX(), (int) currentLocation.getY());
+		}
+
+		// Check if unit is stuck
+		if (isStuck()) {
+			handleStuckUnit();
 		}
 
 		// Get location of next waypoint with path smoothing
@@ -272,6 +207,52 @@ public class PathUnit {
 		}
 
 		return newLocation;
+	}
+	
+	// Check if unit is stuck (hasn't moved significantly)
+	private boolean isStuck() {
+		if (lastPosition == null) {
+			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
+			return false;
+		}
+		
+		double distance = PathVector2D.getDistance(currentLocation, lastPosition);
+		if (distance < STUCK_DISTANCE_THRESHOLD) {
+			stuckCounter++;
+		} else {
+			stuckCounter = 0;
+			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
+		}
+		
+		return stuckCounter > STUCK_THRESHOLD;
+	}
+	
+	// Handle stuck unit recovery
+	private void handleStuckUnit() {
+		// Reset stuck detection
+		resetStuckDetection();
+		
+		// Force path recalculation
+		isPathCreated = false;
+		
+		// Add some random movement to break out of stuck position
+		double randomAngle = Math.random() * 2 * Math.PI;
+		double randomDistance = 10 + Math.random() * 20; // 10-30 pixels
+		
+		PathVector2D randomOffset = new PathVector2D(
+			Math.cos(randomAngle) * randomDistance,
+			Math.sin(randomAngle) * randomDistance
+		);
+		
+		currentLocation = currentLocation.add(randomOffset);
+	}
+	
+	// Reset stuck detection
+	private void resetStuckDetection() {
+		stuckCounter = 0;
+		if (lastPosition != null) {
+			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
+		}
 	}
 
 	private Point getSmoothedTarget(PathNode currentNode) {
@@ -303,6 +284,7 @@ public class PathUnit {
 		currentVelocity.limit(maxVelocity);
 		currentLocation = currentLocation.add(currentVelocity);
 	}
+	
 
 	private PathVector2D seek(PathVector2D targetLocation) {
 		PathVector2D desiredVelocity = targetLocation.subtract(currentLocation);

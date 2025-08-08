@@ -58,8 +58,8 @@ public class GraphicsMain {
 
 	// helper functions
 
-	public void drawImageOnScreen(IGraphics g, java.awt.Image img, int x, int y, int width, int height) {
-		g.drawImage(new GameImage(img), x - getCameraX(), y - getCameraY(), width, height);
+	public void drawImageOnScreen(IGraphics g, GameImage img, int x, int y, int width, int height) {
+		g.drawImage(img, x - getCameraX(), y - getCameraY(), width, height);
 	}
 
 	public void drawRectOnScreen(IGraphics g, int x, int y, int width, int height, boolean fill) {
@@ -163,7 +163,7 @@ public class GraphicsMain {
 						.getBackendImage();
 
 				Point screenPos = TileCoordinateConverter.mapToScreen(x, y);
-				drawImageOnScreen(g, tempImg, screenPos.x, screenPos.y,
+				drawImageOnScreen(g, new GameImage(tempImg), screenPos.x, screenPos.y,
 						Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
 			}
 		}
