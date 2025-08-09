@@ -114,8 +114,8 @@ public class StateGameMain extends StateMachine {
 		// Update pathfinding failure timer
 		playerUnit.updatePathfindingFailureTimer();
 
-		// Handle battles
-		playerUnit.interactWithEnemy(map, unitManager.getEnemyList());
+		// Handle battles using GameUnitManager
+		unitManager.handleUnitInteractions(map);
 		
 		// Handle combat effects
 		handleCombatEffects(playerUnit);

@@ -6,6 +6,7 @@ import graphics.Point;
 import input.GameMouseEvent;
 import map.MapValidator;
 import map.TileConverter;
+import pathfinding.PathCache;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
@@ -13,6 +14,9 @@ public class GameUnitManager {
 	private ArrayList<GameUnit> playerList;
 	private ArrayList<GameUnit> enemyList;
 	private boolean isSpawned = false; // only spawn once per day
+	
+	// Pathfinding manager
+	private MultiUnitPathfindingManager pathfindingManager;
 	
 	// Spawn configuration
 	private SpawnConfig spawnConfig;
@@ -41,6 +45,7 @@ public class GameUnitManager {
 	public GameUnitManager() {
 		this.playerList = new ArrayList<>();
 		this.enemyList = new ArrayList<>();
+		this.pathfindingManager = new MultiUnitPathfindingManager(); // Default pathfinding manager
 		this.spawnConfig = new SpawnConfig(); // Default configuration
 	}
 	
@@ -102,6 +107,8 @@ public class GameUnitManager {
 	public void clearUnits() {
 		playerList.clear();
 		enemyList.clear();
+		// Clear the shared path cache when all units are cleared
+		pathfindingManager.clearPathCache();
 	}
 
 	/**
@@ -117,7 +124,7 @@ public class GameUnitManager {
 			Point initialPosition = entry.getKey();
 			int classType = entry.getValue();
 			playerList.add(new GameUnit(TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).x, TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).y,
-				true, classType));
+				true, classType, pathfindingManager.getSharedPathCache()));
 		}
 	}
 
@@ -126,13 +133,13 @@ public class GameUnitManager {
 			Point initialPosition = entry.getKey();
 			int classType = entry.getValue();
 			enemyList.add(new GameUnit(TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).x, TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).y,
-				false, classType));
+				false, classType, pathfindingManager.getSharedPathCache()));
 		}
 	}
 
 	public void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
 		GameUnit deadUnit = unitList.get(deadUnitIndex);
-		deadUnit.die(map);
+		removeUnit(deadUnit, map);
 		unitList.remove(deadUnitIndex);
 	}
 
@@ -476,8 +483,8 @@ public class GameUnitManager {
 		
 		// Create new unit
 		GameUnit newUnit = new GameUnit(TileCoordinateConverter.mapToScreen(x, y).x, TileCoordinateConverter.mapToScreen(x, y).y,
-				(factionId == GameFlag.FACTION_PLAYER), unitType);
-		newUnit.spawn(map, new Point(x, y), factionId);
+				(factionId == GameFlag.FACTION_PLAYER), unitType, pathfindingManager.getSharedPathCache());
+		spawnUnit(newUnit, map, new Point(x, y), factionId);
 		
 		// Add unit to list
 		unitList.add(newUnit);
@@ -496,6 +503,21 @@ public class GameUnitManager {
 		return isSpawned;
 	}
 	
+	/**
+	 * Gets the shared path cache instance.
+	 * @return The shared PathCache instance
+	 */
+	public PathCache getSharedPathCache() {
+		return pathfindingManager.getSharedPathCache();
+	}
+	
+	/**
+	 * Clears the shared path cache.
+	 */
+	public void clearPathCache() {
+		pathfindingManager.clearPathCache();
+	}
+	
 	public void updateSpawnState(int currentHour) {
 		// Set to true at spawn hour to prevent repeated spawning
 		if (currentHour == GameTimer.SPAWN_HOUR && !isSpawned) {
@@ -506,5 +528,85 @@ public class GameUnitManager {
 		if (currentHour > GameTimer.SPAWN_HOUR) {
 			isSpawned = false;
 		}
+	}
+	
+	/**
+	 * Spawns a unit on the map at the specified position
+	 * @param unit The unit to spawn
+	 * @param map The game map
+	 * @param mapPos The map position to spawn at
+	 * @param factionId The faction ID
+	 */
+	public void spawnUnit(GameUnit unit, int[][] map, Point mapPos, int factionId) {
+		// 2,3,4 - player units
+		// 5,6,7 - enemy units
+		// initial value is 1, but map stores values differently
+		// make sure to adjust values (+1 for ally since code is 2, +4 for enemy, since
+		// code is 5)
+		if (factionId == GameFlag.FACTION_PLAYER)
+			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 1;
+		else if (factionId == GameFlag.FACTION_ENEMY)
+			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 4;
+	}
+	
+	/**
+	 * Removes a unit from the map
+	 * @param unit The unit to remove
+	 * @param map The game map
+	 */
+	public void removeUnit(GameUnit unit, int[][] map) {
+		Point curMap = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
+		map[curMap.y][curMap.x] = 0;
+
+		Point destMap = TileCoordinateConverter.screenToMap(unit.getDestination());
+		map[destMap.y][destMap.x] = 0;
+	}
+	
+	/**
+	 * Handles interactions between player units and enemy units
+	 * @param map The game map
+	 */
+	public void handleUnitInteractions(int[][] map) {
+		// Handle player units attacking enemies
+		for (GameUnit playerUnit : playerList) {
+			if (playerUnit.isAlive()) {
+				handleUnitEnemyInteraction(playerUnit, map, enemyList);
+			}
+		}
+		
+		// Handle enemy units attacking players
+		for (GameUnit enemyUnit : enemyList) {
+			if (enemyUnit.isAlive()) {
+				handleUnitEnemyInteraction(enemyUnit, map, playerList);
+			}
+		}
+	}
+	
+	/**
+	 * Handles interaction between a single unit and a list of potential enemies
+	 * @param unit The unit performing the interaction
+	 * @param map The game map
+	 * @param enemyList The list of potential enemies
+	 */
+	private void handleUnitEnemyInteraction(GameUnit unit, int[][] map, ArrayList<GameUnit> enemyList) {
+		boolean canAttackAny = false;
+		for (GameUnit enemy : enemyList) {
+			if (unit.getCombatSystem().canAttackEnemy(map, enemy)) {
+				unit.getCombatSystem().handleAttack(enemy);
+				canAttackAny = true;
+			}
+		}
+		// Only set isAttacking to false if we can't attack any enemies
+		if (!canAttackAny) {
+			unit.getCombatSystem().setAttacking(false);
+		}
+	}
+	
+	/**
+	 * Updates group destinations for units moving to the same destination
+	 * @param map The game map
+	 */
+	public void updateGroupDestinations(int[][] map) {
+		pathfindingManager.updateGroupDestinations(map, playerList, enemyList);
 	}
 }

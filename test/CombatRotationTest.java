@@ -14,6 +14,7 @@ public class CombatRotationTest {
     private GameUnit playerUnit;
     private GameUnit enemyUnit;
     private int[][] map;
+    private GameUnitManager unitManager;
 
     @BeforeEach
     public void setUp() {
@@ -25,6 +26,9 @@ public class CombatRotationTest {
             {0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0}
         };
+        
+        // Create unit manager
+        unitManager = new GameUnitManager();
         
         // Create test units
         playerUnit = new GameUnit(100, 100, true, Constants.UNIT_ID_LIGHT);
@@ -41,10 +45,12 @@ public class CombatRotationTest {
         assertEquals(0.0, playerUnit.getRotationAngle(), 0.1, "Player should start facing east");
         assertEquals(180.0, enemyUnit.getRotationAngle(), 0.1, "Enemy should start facing west");
         
-        // Simulate combat interaction
-        ArrayList<GameUnit> enemyList = new ArrayList<>();
-        enemyList.add(enemyUnit);
-        playerUnit.interactWithEnemy(map, enemyList);
+        // Add units to manager lists
+        unitManager.getPlayerList().add(playerUnit);
+        unitManager.getEnemyList().add(enemyUnit);
+        
+        // Simulate combat interaction using GameUnitManager
+        unitManager.handleUnitInteractions(map);
         
         // Update rotations many times to allow smooth rotation to complete
         for (int i = 0; i < 100; i++) {
@@ -127,10 +133,12 @@ public class CombatRotationTest {
         assertFalse(playerUnit.isAttacking(), "Player should not be attacking initially");
         assertFalse(enemyUnit.isAttacking(), "Enemy should not be attacking initially");
         
-        // Start combat
-        ArrayList<GameUnit> enemyList = new ArrayList<>();
-        enemyList.add(enemyUnit);
-        playerUnit.interactWithEnemy(map, enemyList);
+        // Add units to manager lists
+        unitManager.getPlayerList().add(playerUnit);
+        unitManager.getEnemyList().add(enemyUnit);
+        
+        // Start combat using GameUnitManager
+        unitManager.handleUnitInteractions(map);
         
         // Player should be attacking if it can see the enemy
         if (playerUnit.canAttackEnemy(map, enemyUnit)) {

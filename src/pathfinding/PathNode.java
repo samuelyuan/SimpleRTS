@@ -33,8 +33,6 @@ public class PathNode {
 		double dy = Math.abs(nodeY - finalY);
 		return (int)(10 * Math.sqrt(dx * dx + dy * dy));
 	}
-	
-
 
 	public static int findG(int nodeX1, int nodeY1, int nodeX2, int nodeY2) {
 		int dx = Math.abs(nodeX1 - nodeX2);

@@ -4,42 +4,45 @@ import utils.TileCoordinateConverter;
 import map.MapValidator;
 
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.LinkedHashMap;
 
 public class MovementController {
-	// steering vehicle data
-	private PathVector2D currentVelocity, currentLocation;
-	private double maxVelocity, maxForce;
-	private double mass;
+	// Movement physics component
+	private MovementPhysics physics;
 
-	private PathVector2D nextLocation;
+	// Cached target location to avoid object creation
+	private double targetX, targetY;
 
 	// Path finding
 	private ArrayList<PathNode> movePath = null;
-	private ArrayList<PathNode> exploredNodes = null; // Store explored nodes for visualization
+	private ArrayList<PathNode> exploredNodes = null;
+	
+	// Path smoothing strategy
+	private PathSmoother.SmoothingStrategy smoothingStrategy = PathSmoother.getDefaultStrategy();
+	
+	// Current map reference for obstacle detection
+	private int[][] currentMap = null;
 	private int nodeCounter;
 	private boolean isPathCreated = false;
 
-	// Path caching for performance
-	private static final int MAX_CACHE_SIZE = 100; // Reduced from 1000
-	private static LinkedHashMap<String, ArrayList<PathNode>> pathCache = 
-		new LinkedHashMap<String, ArrayList<PathNode>>(MAX_CACHE_SIZE, 0.75f, true) {
-			@Override
-			protected boolean removeEldestEntry(Map.Entry<String, ArrayList<PathNode>> eldest) {
-				return size() > MAX_CACHE_SIZE;
-			}
-		};
+	// Path cache instance
+	private PathCache pathCache;
 
 	// physical state
 	private boolean isMoving = false;
 
-	// Stuck detection and recovery
-	private PathVector2D lastPosition = null;
-	private int stuckCounter = 0;
-	private static final int STUCK_THRESHOLD = 30; // frames
-	private static final double STUCK_DISTANCE_THRESHOLD = 5.0; // pixels
+	// Pathfinding state management
+	private int currentMapEndX = 0;
+	private int currentMapEndY = 0;
+	private int pathfindingCooldown = 0;
+	private boolean pathfindingFailed = false;
+	private int pathfindingFailureTimer = 0;
+	private int pathfindingFailureCount = 0;
 	
+	// Constants
+	private static final int PATHFINDING_COOLDOWN_FRAMES = 10; // Only recalculate every 10 frames
+	private static final int PATHFINDING_FAILURE_DISPLAY_FRAMES = 60; // Show failure indicator for 1 second (60 frames)
+	private static final int MAX_PATHFINDING_RETRIES = 5; // Maximum consecutive failures before giving up
+
 	public boolean getIsPathCreated() {
 		return isPathCreated;
 	}
@@ -58,6 +61,40 @@ public class MovementController {
 
 	public ArrayList<PathNode> getExploredNodes() {
 		return exploredNodes;
+	}
+
+	/**
+	 * Gets the current position from the physics component.
+	 * @return Current position
+	 */
+	public Point getCurrentPosition() {
+		return physics.getCurrentPosition();
+	}
+
+	/**
+	 * Gets the current X position from the physics component.
+	 * @return Current X position
+	 */
+	public double getCurrentX() {
+		return physics.getCurrentX();
+	}
+
+	/**
+	 * Gets the current Y position from the physics component.
+	 * @return Current Y position
+	 */
+	public double getCurrentY() {
+		return physics.getCurrentY();
+	}
+
+	/**
+	 * Sets the physics properties.
+	 * @param maxVelocity Maximum velocity
+	 * @param maxForce Maximum steering force
+	 * @param mass Mass of the object
+	 */
+	public void setPhysicsProperties(double maxVelocity, double maxForce, double mass) {
+		physics.setPhysicsProperties(maxVelocity, maxForce, mass);
 	}
 
 	public void setPath(ArrayList<PathNode> path) {
@@ -80,36 +117,68 @@ public class MovementController {
 	}
 
 	public MovementController(int playerX, int playerY) {
-		currentLocation = new PathVector2D(playerX, playerY);
-		currentVelocity = new PathVector2D(1, 1);
-		lastPosition = new PathVector2D(playerX, playerY);
-
-		maxVelocity = 1.5;
-		maxForce = 1.0;
-		mass = 1;
-
+		this(playerX, playerY, new PathCache());
+	}
+	
+	public MovementController(int playerX, int playerY, PathCache pathCache) {
+		physics = new MovementPhysics(playerX, playerY);
+		this.pathCache = pathCache;
 		nodeCounter = 1;
+	}
+
+	/**
+	 * Main pathfinding coordination method.
+	 * Simplified version that focuses on core functionality.
+	 * @return Alternative destination if pathfinding failed, null otherwise
+	 */
+	public Point coordinatePathfinding(int[][] map, Point currentPosition, Point destination, int unitClassType) {
+		Point mapStart = TileCoordinateConverter.screenToMap(currentPosition);
+		Point mapEnd = TileCoordinateConverter.screenToMap(destination);
+		
+		if (!isMoving) return null;
+		
+		// Update failure timer for visual feedback
+		updateFailureTimer();
+		
+		// Simple pathfinding: if we don't have a path or destination changed, find a new path
+		if (!isPathCreated || destinationChanged(mapEnd)) {
+			if (findPath(map, mapStart, mapEnd)) {
+				// Path found successfully
+				updateDestination(mapEnd);
+				recordSuccess(); // Clear any previous failure state
+			} else {
+				// Pathfinding failed, try to find alternative
+				Point alternativeDest = PathfindingUtils.findAlternativeDestination(map, mapEnd);
+				if (alternativeDest != null) {
+					setIsPathCreated(false);
+					return TileCoordinateConverter.mapToScreen(alternativeDest);
+				} else {
+					// No alternative found, record failure for visual feedback
+					recordFailure();
+				}
+				return null;
+			}
+		}
+		
+		// If we have a path, move along it
+		if (isPathFound()) {
+			run();
+		}
+		
+		return null;
 	}
 
 	public boolean findPath(int map[][], Point start, Point end) {
 		if (isPathCreated == true)
 			return false;
 
-		// Check cache first
-		String cacheKey = start.x + "," + start.y + "->" + end.x + "," + end.y;
-		ArrayList<PathNode> cachedPath = pathCache.get(cacheKey);
-		
-		if (cachedPath != null) {
-			setPath(cachedPath);
-			return true;
-		}
+		// Store map reference for obstacle detection
+		this.currentMap = map;
 
 		// Create new path using A* algorithm
 		PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, start.x, start.y, end.x, end.y);
 		
 		if (result != null && result.path != null && result.path.size() > 0) {
-			// Cache the successful path
-			pathCache.put(cacheKey, new ArrayList<>(result.path));
 			setPath(result.path);
 			setExploredNodes(result.exploredNodes);
 			return true;
@@ -118,8 +187,32 @@ public class MovementController {
 		return false;
 	}
 
-	public static void clearPathCache() {
+	public void clearPathCache() {
 		pathCache.clear();
+	}
+	
+	/**
+	 * Sets the path smoothing strategy
+	 * @param strategy The smoothing strategy to use
+	 */
+	public void setSmoothingStrategy(PathSmoother.SmoothingStrategy strategy) {
+		this.smoothingStrategy = strategy;
+	}
+	
+	/**
+	 * Gets the current path smoothing strategy
+	 * @return The current smoothing strategy
+	 */
+	public PathSmoother.SmoothingStrategy getSmoothingStrategy() {
+		return smoothingStrategy;
+	}
+	
+	/**
+	 * Updates the current map reference for obstacle detection
+	 * @param map The current game map
+	 */
+	public void updateMap(int[][] map) {
+		this.currentMap = map;
 	}
 
 	public Point recalculateDest(int map[][], Point playerMapDest) {
@@ -138,7 +231,7 @@ public class MovementController {
 		}
 		
 		// If no valid waypoint found in current path, try to find a new path to a nearby location
-		Point currentPos = new Point((int) currentLocation.getX(), (int) currentLocation.getY());
+		Point currentPos = physics.getCurrentPosition();
 		Point mapPos = TileCoordinateConverter.screenToMap(currentPos);
 		
 		// Search in expanding circles around the original destination
@@ -179,120 +272,177 @@ public class MovementController {
 
 	public Point run() {
 		// Empty path || reached destination
-		if (movePath.size() == 0 || nodeCounter >= movePath.size()) {
+		if (movePath == null || movePath.size() == 0 || nodeCounter >= movePath.size()) {
 			stopMoving();
 			isPathCreated = false;
-			resetStuckDetection();
-			return new Point((int) currentLocation.getX(), (int) currentLocation.getY());
+			return physics.getCurrentPosition();
 		}
 
-		// Check if unit is stuck
-		if (isStuck()) {
-			handleStuckUnit();
-		}
-
-		// Get location of next waypoint with path smoothing
-		PathNode mapLocation = movePath.get(nodeCounter);
-		Point targetPoint = getSmoothedTarget(mapLocation);
+		// Get location of next waypoint with optimized path smoothing
+		PathNode currentNode = movePath.get(nodeCounter);
+		PathNode nextNode = (nodeCounter + 1 < movePath.size()) ? movePath.get(nodeCounter + 1) : null;
 		
-		nextLocation = new PathVector2D(targetPoint.x, targetPoint.y);
-		updateLocation(nextLocation);
-
-		Point newLocation = new Point((int) currentLocation.getX(), (int) currentLocation.getY());
+		// Use PathSmoother to calculate target position
+		PathSmoother.SmoothingResult result = PathSmoother.calculateTargetPosition(
+			currentNode, nextNode, smoothingStrategy, currentMap);
+		
+		if (result.isValid) {
+			targetX = result.targetX;
+			targetY = result.targetY;
+			physics.updatePosition(targetX, targetY);
+		}
 
 		// Increased waypoint threshold for smoother movement
-		// Units will move more fluidly between waypoints
-		if (PathVector2D.getDistance(currentLocation, nextLocation) < 15) {  // Increased from 5
+		if (MovementPhysics.getDistance(physics.getCurrentX(), physics.getCurrentY(), targetX, targetY) < 15) {
 			nodeCounter++;
 		}
 
-		return newLocation;
+		return physics.getCurrentPosition();
+	}
+
+	/**
+	 * Checks if pathfinding should be skipped due to cooldown
+	 */
+	public boolean isOnCooldown() {
+		return pathfindingCooldown > 0;
 	}
 	
-	// Check if unit is stuck (hasn't moved significantly)
-	private boolean isStuck() {
-		if (lastPosition == null) {
-			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
-			return false;
+	/**
+	 * Decrements the cooldown timer
+	 */
+	public void decrementCooldown() {
+		if (pathfindingCooldown > 0) {
+			pathfindingCooldown--;
 		}
-		
-		double distance = PathVector2D.getDistance(currentLocation, lastPosition);
-		if (distance < STUCK_DISTANCE_THRESHOLD) {
-			stuckCounter++;
-		} else {
-			stuckCounter = 0;
-			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
-		}
-		
-		return stuckCounter > STUCK_THRESHOLD;
 	}
 	
-	// Handle stuck unit recovery
-	private void handleStuckUnit() {
-		// Reset stuck detection
-		resetStuckDetection();
-		
-		// Force path recalculation
-		isPathCreated = false;
-		
-		// Add some random movement to break out of stuck position
-		double randomAngle = Math.random() * 2 * Math.PI;
-		double randomDistance = 10 + Math.random() * 20; // 10-30 pixels
-		
-		PathVector2D randomOffset = new PathVector2D(
-			Math.cos(randomAngle) * randomDistance,
-			Math.sin(randomAngle) * randomDistance
-		);
-		
-		currentLocation = currentLocation.add(randomOffset);
+	/**
+	 * Sets the cooldown timer to the maximum value
+	 */
+	public void setCooldown() {
+		pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES;
 	}
 	
-	// Reset stuck detection
-	private void resetStuckDetection() {
-		stuckCounter = 0;
-		if (lastPosition != null) {
-			lastPosition = new PathVector2D(currentLocation.getX(), currentLocation.getY());
-		}
-	}
-
-	private Point getSmoothedTarget(PathNode currentNode) {
-		// Basic smoothing: interpolate between current and next waypoint
-		Point destPos = TileCoordinateConverter.mapToScreen(currentNode.getX(), currentNode.getY());
-		
-		// If we have a next waypoint, smooth the path
-		if (nodeCounter + 1 < movePath.size()) {
-			PathNode nextNode = movePath.get(nodeCounter + 1);
-			Point nextPos = TileCoordinateConverter.mapToScreen(nextNode.getX(), nextNode.getY());
-			
-			// Simple linear interpolation for smoother movement
-			double smoothingFactor = 0.3; // Adjust for more/less smoothing
-			int smoothedX = (int) (destPos.x * (1 - smoothingFactor) + nextPos.x * smoothingFactor);
-			int smoothedY = (int) (destPos.y * (1 - smoothingFactor) + nextPos.y * smoothingFactor);
-			
-			return new Point(smoothedX, smoothedY);
-		}
-		
-		return destPos;
-	}
-
-	private void updateLocation(PathVector2D targetLocation) {
-		PathVector2D seekForce = seek(targetLocation);
-		seekForce.scale(1 / mass); // F = ma --> a = F / m
-		PathVector2D currentAcceleration = seekForce;
-
-		currentVelocity = currentVelocity.add(currentAcceleration);
-		currentVelocity.limit(maxVelocity);
-		currentLocation = currentLocation.add(currentVelocity);
+	/**
+	 * Resets the cooldown timer to allow immediate pathfinding
+	 */
+	public void resetCooldown() {
+		pathfindingCooldown = 0;
 	}
 	
-
-	private PathVector2D seek(PathVector2D targetLocation) {
-		PathVector2D desiredVelocity = targetLocation.subtract(currentLocation);
-		desiredVelocity.limit(maxVelocity);
-
-		PathVector2D steeringForce = desiredVelocity.subtract(currentVelocity);
-		steeringForce.limit(maxForce);
-
-		return steeringForce;
+	/**
+	 * Checks if pathfinding has failed too many times consecutively
+	 */
+	public boolean hasExceededMaxRetries() {
+		return pathfindingFailureCount >= MAX_PATHFINDING_RETRIES;
+	}
+	
+	/**
+	 * Records a pathfinding failure
+	 */
+	public void recordFailure() {
+		pathfindingFailed = true;
+		pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
+		pathfindingFailureCount++;
+	}
+	
+	/**
+	 * Records a pathfinding success
+	 */
+	public void recordSuccess() {
+		pathfindingFailed = false;
+		pathfindingFailureCount = 0;
+	}
+	
+	/**
+	 * Updates the failure timer
+	 */
+	public void updateFailureTimer() {
+		if (pathfindingFailureTimer > 0) {
+			pathfindingFailureTimer--;
+			if (pathfindingFailureTimer == 0) {
+				pathfindingFailed = false; // Clear failure state when timer expires
+			}
+		}
+	}
+	
+	/**
+	 * Checks if pathfinding recently failed and is still showing the failure indicator
+	 */
+	public boolean isPathfindingFailed() {
+		return pathfindingFailed && pathfindingFailureTimer > 0;
+	}
+	
+	/**
+	 * Gets the remaining failure display time
+	 */
+	public int getFailureTimer() {
+		return pathfindingFailureTimer;
+	}
+	
+	/**
+	 * Gets the current failure count
+	 */
+	public int getFailureCount() {
+		return pathfindingFailureCount;
+	}
+	
+	/**
+	 * Checks if destination coordinates have changed
+	 */
+	public boolean destinationChanged(Point mapEnd) {
+		return currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y;
+	}
+	
+	/**
+	 * Updates the current destination coordinates
+	 */
+	public void updateDestination(Point mapEnd) {
+		currentMapEndX = mapEnd.x;
+		currentMapEndY = mapEnd.y;
+	}
+	
+	/**
+	 * Gets the current map end X coordinate
+	 */
+	public int getCurrentMapEndX() {
+		return currentMapEndX;
+	}
+	
+	/**
+	 * Gets the current map end Y coordinate
+	 */
+	public int getCurrentMapEndY() {
+		return currentMapEndY;
+	}
+	
+	/**
+	 * Sets the current map end coordinates
+	 */
+	public void setCurrentMapEnd(int x, int y) {
+		this.currentMapEndX = x;
+		this.currentMapEndY = y;
+	}
+	
+	/**
+	 * Sets the current map end coordinates from a Point
+	 */
+	public void setCurrentMapEnd(Point p) {
+		this.currentMapEndX = p.x;
+		this.currentMapEndY = p.y;
+	}
+	
+	/**
+	 * Gets the maximum number of pathfinding retries
+	 */
+	public static int getMaxPathfindingRetries() {
+		return MAX_PATHFINDING_RETRIES;
+	}
+	
+	/**
+	 * Gets the pathfinding failure display frames
+	 */
+	public static int getPathfindingFailureDisplayFrames() {
+		return PATHFINDING_FAILURE_DISPLAY_FRAMES;
 	}
 }

@@ -1,8 +1,7 @@
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import graphics.ImageUtils;
+
 import graphics.GameImage;
 import map.FileUtils;
 import map.TileConverter;

@@ -175,11 +175,14 @@ public class MovementControllerTest {
     }
 
     @Test
-    @DisplayName("run should throw NullPointerException when no path exists")
+    @DisplayName("run should handle null path gracefully")
     void testRunWithoutPath() {
-        assertThrows(NullPointerException.class, () -> {
-            movementController.run();
-        }, "Should throw NullPointerException when no path exists");
+        // Should not throw exception, should handle null path gracefully
+        Point result = movementController.run();
+        
+        assertNotNull(result, "Should return current position even without path");
+        assertFalse(movementController.getIsMoving(), "Should not be moving without path");
+        assertFalse(movementController.getIsPathCreated(), "Should not have path created");
     }
 
     @Test
@@ -305,10 +308,10 @@ public class MovementControllerTest {
     @DisplayName("Cache clearing should work")
     void testCacheClearing() {
         // Clear cache
-        MovementController.clearPathCache();
+        movementController.clearPathCache();
         
         // Should not throw exception
-        assertDoesNotThrow(() -> MovementController.clearPathCache(), "Cache clearing should not throw exceptions");
+        assertDoesNotThrow(() -> movementController.clearPathCache(), "Cache clearing should not throw exceptions");
     }
 
     @Test
@@ -369,6 +372,31 @@ public class MovementControllerTest {
         // Should not cause memory issues
         assertTrue(true, "Memory management should work correctly");
     }
+    
+    @Test
+    @DisplayName("Shared cache should work between multiple controllers")
+    void testSharedCache() {
+        // Create a shared cache
+        PathCache sharedCache = new PathCache();
+        
+        // Create two controllers with the same cache
+        MovementController controller1 = new MovementController(0, 0, sharedCache);
+        MovementController controller2 = new MovementController(0, 0, sharedCache);
+        
+        Point start = new Point(0, 0);
+        Point end = new Point(4, 4);
+        
+        // First controller creates a path
+        boolean result1 = controller1.findPath(simpleMap, start, end);
+        assertTrue(result1, "First controller should create path");
+        
+        // Second controller should use cached path
+        boolean result2 = controller2.findPath(simpleMap, start, end);
+        assertTrue(result2, "Second controller should use cached path");
+        
+        // Both should have the same path
+        assertEquals(controller1.getPath().size(), controller2.getPath().size(), "Both controllers should have same path size");
+    }
 
     @Test
     @DisplayName("Integration test with real pathfinding scenario")
@@ -396,5 +424,50 @@ public class MovementControllerTest {
         // Test movement along path
         Point nextPos = movementController.run();
         assertNotNull(nextPos, "Should be able to move along path");
+    }
+
+    @Test
+    @DisplayName("Path smoothing strategy should be configurable")
+    void testPathSmoothingStrategy() {
+        // Test default strategy
+        assertEquals(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION, 
+                    movementController.getSmoothingStrategy(), 
+                    "Default strategy should be LINEAR_INTERPOLATION");
+        
+        // Test setting different strategies
+        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE);
+        assertEquals(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE, 
+                    movementController.getSmoothingStrategy(), 
+                    "Strategy should be updated to OBSTACLE_AWARE");
+        
+        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION);
+        assertEquals(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION, 
+                    movementController.getSmoothingStrategy(), 
+                    "Strategy should be updated back to LINEAR_INTERPOLATION");
+    }
+
+    @Test
+    @DisplayName("Movement with different smoothing strategies should work")
+    void testMovementWithDifferentSmoothingStrategies() {
+        // Create a simple path
+        ArrayList<PathNode> testPath = new ArrayList<>();
+        testPath.add(new PathNode(1, 1, 0, 0, null));
+        testPath.add(new PathNode(2, 2, 10, 10, testPath.get(0)));
+        testPath.add(new PathNode(3, 3, 20, 20, testPath.get(1)));
+        
+        movementController.setPath(testPath);
+        
+        // Update map reference for obstacle detection
+        movementController.updateMap(simpleMap);
+        
+        // Test with linear interpolation
+        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION);
+        Point pos1 = movementController.run();
+        assertNotNull(pos1, "Movement should work with linear interpolation");
+        
+        // Test with obstacle-aware smoothing
+        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE);
+        Point pos2 = movementController.run();
+        assertNotNull(pos2, "Movement should work with obstacle-aware smoothing");
     }
 }
