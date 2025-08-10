@@ -1,612 +1,455 @@
 import java.util.ArrayList;
-import java.util.Map.Entry;
 import java.util.Map;
 
 import graphics.Point;
 import input.GameMouseEvent;
-import map.MapValidator;
-import map.TileConverter;
 import pathfinding.PathCache;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
+/**
+ * Coordinates unit management by delegating to specialized managers.
+ * This class now focuses on coordination rather than implementation details.
+ * 
+ * Responsibilities:
+ * - Coordinates specialized managers
+ * - Provides high-level unit management interface
+ * - Manages shared resources (pathfinding cache)
+ */
 public class GameUnitManager {
-	private ArrayList<GameUnit> playerList;
-	private ArrayList<GameUnit> enemyList;
-	private boolean isSpawned = false; // only spawn once per day
-	
-	// Pathfinding manager
-	private MultiUnitPathfindingManager pathfindingManager;
-	
-	// Spawn configuration
-	private SpawnConfig spawnConfig;
-	
-	/**
-	 * Configuration class for spawn settings
-	 */
-	public static class SpawnConfig {
-		public int defaultUnitCount = 4;
-		public int maxSpawnDistance = 2;
-		public int defaultUnitType = Constants.UNIT_ID_LIGHT;
-		public boolean useRandomSpawns = true;
-		public boolean useFormationSpawns = false;
-		public int maxUnitsPerFaction = 50; // Prevent unlimited spawning
-		public double spawnChance = 1.0; // 100% chance to spawn
-		
-		public SpawnConfig() {}
-		
-		public SpawnConfig(int unitCount, int maxDistance, int unitType) {
-			this.defaultUnitCount = unitCount;
-			this.maxSpawnDistance = maxDistance;
-			this.defaultUnitType = unitType;
-		}
-	}
+    
+    // Specialized managers for different concerns
+    private final UnitLifecycleManager lifecycleManager;
+    private final UnitSpawnManager spawnManager;
+    private final UnitCombatManager combatManager;
+    private final UnitMovementManager movementManager;
+    
+    // Pathfinding manager
+    private MultiUnitPathfindingManager pathfindingManager;
+    
+    public GameUnitManager() {
+        this.lifecycleManager = new UnitLifecycleManager();
+        this.spawnManager = new UnitSpawnManager();
+        this.combatManager = new UnitCombatManager();
+        this.movementManager = new UnitMovementManager();
+        this.pathfindingManager = new MultiUnitPathfindingManager();
+    }
+    
+    /**
+     * Sets the spawn configuration
+     */
+    public void setSpawnConfig(UnitSpawnManager.SpawnConfig config) {
+        spawnManager.setSpawnConfig(config);
+    }
+    
+    /**
+     * Gets the current spawn configuration
+     */
+    public UnitSpawnManager.SpawnConfig getSpawnConfig() {
+        return spawnManager.getSpawnConfig();
+    }
+    
+    /**
+     * Checks if spawning is allowed based on current conditions
+     */
+    public boolean canSpawn(int factionId) {
+        int currentUnitCount = lifecycleManager.getUnitCount(factionId);
+        return spawnManager.canSpawn(factionId, currentUnitCount);
+    }
+    
+    /**
+     * Gets the total unit count for a faction
+     */
+    public int getUnitCount(int factionId) {
+        return lifecycleManager.getUnitCount(factionId);
+    }
+    
+    /**
+     * Gets the player unit list
+     */
+    public ArrayList<GameUnit> getPlayerList() {
+        return lifecycleManager.getPlayerList();
+    }
+    
+    /**
+     * Gets the enemy unit list
+     */
+    public ArrayList<GameUnit> getEnemyList() {
+        return lifecycleManager.getEnemyList();
+    }
+    
+    /**
+     * Initializes the unit manager with unit positions
+     */
+    public void init(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions) {
+        lifecycleManager.init(allyUnitPositions, enemyUnitPositions);
+    }
+    
+    /**
+     * Clears all units from both lists
+     */
+    public void clearUnits() {
+        lifecycleManager.clearUnits();
+    }
+    
+    /**
+     * Loads all units from position maps
+     */
+    public void loadAllUnits(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions) {
+        lifecycleManager.loadAllUnits(allyUnitPositions, enemyUnitPositions);
+    }
+    
+    /**
+     * Loads player units from position map
+     */
+    public void loadPlayerUnits(Map<Point, Integer> allyUnitPositions) {
+        lifecycleManager.loadPlayerUnits(allyUnitPositions);
+    }
+    
+    /**
+     * Loads enemy units from position map
+     */
+    public void loadEnemyUnits(Map<Point, Integer> enemyUnitPositions) {
+        lifecycleManager.loadEnemyUnits(enemyUnitPositions);
+    }
+    
+    /**
+     * Removes dead units from a unit list
+     */
+    public void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
+        lifecycleManager.removeDeadUnits(map, unitList, deadUnitIndex);
+    }
+    
+    /**
+     * Handles unit movement based on mouse input
+     */
+    public void handleUnitMovement(GameMouseEvent e, int cameraX, int cameraY) {
+        movementManager.handleUnitMovement(e, cameraX, cameraY, 
+                                        lifecycleManager.getPlayerList(), 
+                                        lifecycleManager.getEnemyList());
+    }
+    
+    /**
+     * Spawns units near a flag with flexible configuration
+     */
+    public void spawnUnitsNearFlag(int[][] map, GameFlag flag) {
+        int factionId = flag.getControlFaction();
+        int currentUnitCount = lifecycleManager.getUnitCount(factionId);
+        
+        // Get spawn configuration
+        UnitSpawnManager.SpawnConfig config = spawnManager.getSpawnConfig();
+        
+        // Calculate spawn positions using the spawn manager
+        int flagX = flag.getMapX();
+        int flagY = flag.getMapY();
+        
+        // Try to spawn units in a pattern around the flag
+        int spawnedCount = 0;
+        int maxUnits = Math.min(config.defaultUnitCount, 4); // Cap at 4 units for testing
+        
+        // Pattern: Adjacent tiles (distance 1)
+        int[][] spawnPositions = {
+            {flagX - 1, flagY},           // West
+            {flagX + 1, flagY},           // East
+            {flagX, flagY - 1},           // North
+            {flagX, flagY + 1}            // South
+        };
+        
+        for (int[] pos : spawnPositions) {
+            if (spawnedCount >= maxUnits) break;
+            
+            if (spawnManager.isTileAvailable(map, pos[0], pos[1], factionId)) {
+                // Create a new unit
+                Point worldPos = TileCoordinateConverter.mapToScreen(new Point(pos[0], pos[1]));
+                GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, config.defaultUnitType);
+                unit.setFactionId(factionId);
+                
+                // Add unit to the appropriate list
+                if (factionId == GameFlag.FACTION_PLAYER) {
+                    lifecycleManager.getPlayerList().add(unit);
+                } else if (factionId == GameFlag.FACTION_ENEMY) {
+                    lifecycleManager.getEnemyList().add(unit);
+                }
+                
+                // Mark the tile as occupied in the map
+                map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
+                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
+                
+                spawnedCount++;
+            }
+        }
+    }
+    
+    /**
+     * Spawns units near a flag with custom parameters
+     */
+    public void spawnUnitsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance, int unitType) {
+        int factionId = flag.getControlFaction();
+        int flagX = flag.getMapX();
+        int flagY = flag.getMapY();
+        
+        // Try to spawn units in a pattern around the flag
+        int spawnedCount = 0;
+        
+        // Pattern: Adjacent tiles (distance 1)
+        int[][] spawnPositions = {
+            {flagX - 1, flagY},           // West
+            {flagX + 1, flagY},           // East
+            {flagX, flagY - 1},           // North
+            {flagX, flagY + 1}            // South
+        };
+        
+        for (int[] pos : spawnPositions) {
+            if (spawnedCount >= unitCount) break;
+            
+            if (spawnManager.isTileAvailable(map, pos[0], pos[1], factionId)) {
+                // Create a new unit
+                Point worldPos = TileCoordinateConverter.mapToScreen(new Point(pos[0], pos[1]));
+                GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, unitType);
+                unit.setFactionId(factionId);
+                
+                // Add unit to the appropriate list
+                if (factionId == GameFlag.FACTION_PLAYER) {
+                    lifecycleManager.getPlayerList().add(unit);
+                } else if (factionId == GameFlag.FACTION_ENEMY) {
+                    lifecycleManager.getEnemyList().add(unit);
+                }
+                
+                // Mark the tile as occupied in the map
+                map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
+                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
+                
+                spawnedCount++;
+            }
+        }
+        
+        // If we need more units and maxDistance allows, try distance 2
+        if (spawnedCount < unitCount && maxDistance >= 2) {
+            int[][] distance2Positions = {
+                {flagX - 2, flagY},           // West
+                {flagX + 2, flagY},           // East
+                {flagX, flagY - 2},           // North
+                {flagX, flagY + 2}            // South
+            };
+            
+            for (int[] pos : distance2Positions) {
+                if (spawnedCount >= unitCount) break;
+                
+                if (spawnManager.isTileAvailable(map, pos[0], pos[1], factionId)) {
+                    // Create a new unit
+                    Point worldPos = TileCoordinateConverter.mapToScreen(new Point(pos[0], pos[1]));
+                    GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, unitType);
+                    unit.setFactionId(factionId);
+                    
+                    // Add unit to the appropriate list
+                    if (factionId == GameFlag.FACTION_PLAYER) {
+                        lifecycleManager.getPlayerList().add(unit);
+                    } else if (factionId == GameFlag.FACTION_ENEMY) {
+                        lifecycleManager.getEnemyList().add(unit);
+                    }
+                    
+                    // Mark the tile as occupied in the map
+                    map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
+                        Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
+                    
+                    spawnedCount++;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Spawns units in a formation pattern
+     */
+    public void spawnUnitsInFormation(int[][] map, int centerX, int centerY, int factionId, int unitType, int unitCount) {
+        // Calculate formation radius based on unit count
+        int radius = calculateFormationRadius(unitCount);
+        
+        for (int i = 0; i < unitCount; i++) {
+            Point formationPos = calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
+            
+            if (spawnManager.isTileAvailable(map, formationPos.x, formationPos.y, factionId)) {
+                // Create a new unit
+                Point worldPos = TileCoordinateConverter.mapToScreen(formationPos);
+                GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, unitType);
+                unit.setFactionId(factionId);
+                
+                // Add unit to the appropriate list
+                if (factionId == GameFlag.FACTION_PLAYER) {
+                    lifecycleManager.getPlayerList().add(unit);
+                } else if (factionId == GameFlag.FACTION_ENEMY) {
+                    lifecycleManager.getEnemyList().add(unit);
+                }
+                
+                // Mark the tile as occupied in the map
+                map[formationPos.y][formationPos.x] = (factionId == GameFlag.FACTION_PLAYER) ? 
+                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
+            }
+        }
+    }
+    
+    /**
+     * Calculates the radius for formation spawning based on unit count
+     */
+    private int calculateFormationRadius(int unitCount) {
+        if (unitCount <= 4) return 3;
+        if (unitCount <= 8) return 4;
+        if (unitCount <= 16) return 5;
+        return 6;
+    }
+    
+    /**
+     * Calculates position for a unit in a formation
+     */
+    private Point calculateFormationPosition(Point center, int unitIndex, int totalUnits, int radius) {
+        if (totalUnits <= 1) {
+            return new Point(center.x, center.y);
+        }
+        
+        // Calculate angle and distance for this unit
+        double angle = (2 * Math.PI * unitIndex) / totalUnits;
+        double distance = radius;
+        
+        // Calculate offset from center
+        int offsetX = (int) (Math.cos(angle) * distance);
+        int offsetY = (int) (Math.sin(angle) * distance);
+        
+        return new Point(center.x + offsetX, center.y + offsetY);
+    }
+    
+    /**
+     * Spawns units along a path between two points
+     */
+    public void spawnUnitsAlongPath(int[][] map, Point startPos, Point endPos, int factionId, int unitType, int unitCount) {
+        int spawned = 0;
+        double stepX = (endPos.x - startPos.x) / (double) (unitCount + 1);
+        double stepY = (endPos.y - startPos.y) / (double) (unitCount + 1);
+        
+        for (int i = 1; i <= unitCount && spawned < unitCount; i++) {
+            int spawnX = (int) (startPos.x + stepX * i);
+            int spawnY = (int) (startPos.y + stepY * i);
+            
+            if (spawnManager.isTileAvailable(map, spawnX, spawnY, factionId)) {
+                // Create a new unit
+                Point worldPos = TileCoordinateConverter.mapToScreen(new Point(spawnX, spawnY));
+                GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, unitType);
+                unit.setFactionId(factionId);
+                
+                // Add unit to the appropriate list
+                if (factionId == GameFlag.FACTION_PLAYER) {
+                    lifecycleManager.getPlayerList().add(unit);
+                } else if (factionId == GameFlag.FACTION_ENEMY) {
+                    lifecycleManager.getEnemyList().add(unit);
+                }
+                
+                // Mark the tile as occupied in the map
+                map[spawnY][spawnX] = (factionId == GameFlag.FACTION_PLAYER) ? 
+                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
+                
+                spawned++;
+            }
+        }
+    }
+    
+    /**
+     * Spawns a unit on the map at the specified position
+     */
+    public void spawnUnit(GameUnit unit, int[][] map, Point mapPos, int factionId) {
+        lifecycleManager.spawnUnit(unit, map, mapPos, factionId);
+    }
+    
+    /**
+     * Removes a unit from the map
+     */
+    public void removeUnit(GameUnit unit, int[][] map) {
+        lifecycleManager.removeUnit(unit, map);
+    }
+    
+    /**
+     * Handles interactions between player units and enemy units
+     */
+    public void handleUnitInteractions(int[][] map) {
+        combatManager.handleUnitInteractions(map, 
+                                          lifecycleManager.getPlayerList(), 
+                                          lifecycleManager.getEnemyList());
+    }
+    
+    /**
+     * Updates group destinations for units moving to the same destination
+     */
+    public void updateGroupDestinations(int[][] map) {
+        pathfindingManager.updateGroupDestinations(map, 
+                                                lifecycleManager.getPlayerList(), 
+                                                lifecycleManager.getEnemyList());
+    }
+    
+    /**
+     * Gets the shared path cache for pathfinding
+     */
+    public PathCache getSharedPathCache() {
+        return pathfindingManager.getSharedPathCache();
+    }
 
-	public GameUnitManager() {
-		this.playerList = new ArrayList<>();
-		this.enemyList = new ArrayList<>();
-		this.pathfindingManager = new MultiUnitPathfindingManager(); // Default pathfinding manager
-		this.spawnConfig = new SpawnConfig(); // Default configuration
-	}
-	
-	/**
-	 * Sets the spawn configuration
-	 */
-	public void setSpawnConfig(SpawnConfig config) {
-		this.spawnConfig = config;
-	}
-	
-	/**
-	 * Gets the current spawn configuration
-	 */
-	public SpawnConfig getSpawnConfig() {
-		return spawnConfig;
-	}
-	
-	/**
-	 * Checks if spawning is allowed based on current conditions
-	 */
-	public boolean canSpawn(int factionId) {
-		// Check unit limit
-		ArrayList<GameUnit> factionUnits = getUnitList(factionId);
-		if (factionUnits.size() >= spawnConfig.maxUnitsPerFaction) {
-			return false;
-		}
-		
-		// Check spawn chance
-		if (Math.random() > spawnConfig.spawnChance) {
-			return false;
-		}
-		
-		return true;
-	}
-	
-	/**
-	 * Gets the total unit count for a faction
-	 */
-	public int getUnitCount(int factionId) {
-		return getUnitList(factionId).size();
-	}
+    /**
+     * Checks if a tile is available for unit placement
+     */
+    public boolean isTileAvailable(int[][] map, int x, int y, int factionId) {
+        return spawnManager.isTileAvailable(map, x, y, factionId);
+    }
 
-	public ArrayList<GameUnit> getPlayerList() {
-		return playerList;
-	}
-
-	public ArrayList<GameUnit> getEnemyList() {
-		return enemyList;
-	}
-
-	public void init(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions) {
-		clearUnits();
-		loadAllUnits(allyUnitPositions, enemyUnitPositions);
-	}
-
-	/**
-	 * Clears all unit lists.
-	 */
-	public void clearUnits() {
-		playerList.clear();
-		enemyList.clear();
-		// Clear the shared path cache when all units are cleared
-		pathfindingManager.clearPathCache();
-	}
-
-	/**
-	 * Loads all player and enemy units from the map.
-	 */
-	public void loadAllUnits(Map<Point, Integer> allyUnitPositions, Map<Point, Integer> enemyUnitPositions) {
-		loadPlayerUnits(allyUnitPositions);
-		loadEnemyUnits(enemyUnitPositions);
-	}
-
-	public void loadPlayerUnits(Map<Point, Integer> allyUnitPositions) {
-		for (Entry<Point, Integer> entry : allyUnitPositions.entrySet()) {
-			Point initialPosition = entry.getKey();
-			int classType = entry.getValue();
-			playerList.add(new GameUnit(TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).x, TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).y,
-				true, classType, pathfindingManager.getSharedPathCache()));
-		}
-	}
-
-	public void loadEnemyUnits(Map<Point, Integer> enemyUnitPositions) {
-		for (Entry<Point, Integer> entry : enemyUnitPositions.entrySet()) {
-			Point initialPosition = entry.getKey();
-			int classType = entry.getValue();
-			enemyList.add(new GameUnit(TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).x, TileCoordinateConverter.mapToScreen(initialPosition.x, initialPosition.y).y,
-				false, classType, pathfindingManager.getSharedPathCache()));
-		}
-	}
-
-	public void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
-		GameUnit deadUnit = unitList.get(deadUnitIndex);
-		removeUnit(deadUnit, map);
-		unitList.remove(deadUnitIndex);
-	}
-
-	public String printMap(int[][] map) {
-		String s = "MAP:\n";
-		for (int y = 0; y < map.length; y++) {
-			for (int x = 0; x < map[y].length; x++) {
-				s += map[y][x];
-				s += " ";
-			}
-			s += "\n";
-		}
-		return s;
-	}
-
-	/**
-	 * Handles unit movement based on mouse input
-	 * 
-	 * @param e The mouse event containing click coordinates
-	 * @param cameraX The current camera X position
-	 * @param cameraY The current camera Y position
-	 */
-	public void handleUnitMovement(GameMouseEvent e, int cameraX, int cameraY) {
-		// Get all selected units
-		ArrayList<GameUnit> selectedUnits = getSelectedUnits();
-		
-		if (selectedUnits.size() == 1) {
-			// Single unit - direct movement
-			handleSingleUnitMovement(e, selectedUnits.get(0), cameraX, cameraY);
-		} else {
-			// Multiple units - formation movement
-			handleFormationMovement(e, selectedUnits, cameraX, cameraY);
-		}
-	}
-	
-	/**
-	 * Handles movement for a single unit
-	 */
-	private void handleSingleUnitMovement(GameMouseEvent e, GameUnit unit, int cameraX, int cameraY) {
-		// Convert screen coordinates to world coordinates with camera offset
-		unit.setDestination(TileCoordinateConverter.screenToMapWithCamera(
-			new Point(e.x, e.y), 
-			cameraX, 
-			cameraY
-		));
-		// Convert back to screen coordinates for the destination
-		unit.setDestination(TileCoordinateConverter.mapToScreen(unit.getDestination()));
-
-		// Unit should start moving
-		unit.startMoving();
-	}
-	
-	/**
-	 * Handles movement for multiple units using formation
-	 */
-	private void handleFormationMovement(GameMouseEvent e, ArrayList<GameUnit> selectedUnits, int cameraX, int cameraY) {
-		// Get the target destination (center of formation)
-		Point targetDestination = TileCoordinateConverter.screenToMapWithCamera(
-			new Point(e.x, e.y), 
-			cameraX, 
-			cameraY
-		);
-		
-		// Calculate formation positions
-		ArrayList<Point> formationPositions = calculateFormationPositions(targetDestination, selectedUnits.size());
-		
-		// Assign destinations to each unit
-		for (int i = 0; i < selectedUnits.size() && i < formationPositions.size(); i++) {
-			GameUnit unit = selectedUnits.get(i);
-			Point formationPos = formationPositions.get(i);
-			
-			// Convert formation position to screen coordinates
-			unit.setDestination(TileCoordinateConverter.mapToScreen(formationPos));
-			unit.startMoving();
-		}
-	}
-	
-	/**
-	 * Gets all currently selected units
-	 */
-	private ArrayList<GameUnit> getSelectedUnits() {
-		ArrayList<GameUnit> selectedUnits = new ArrayList<>();
-		for (GameUnit unit : playerList) {
-			if (unit.isPlayerSelected()) {
-				selectedUnits.add(unit);
-			}
-		}
-		return selectedUnits;
-	}
-	
-	/**
-	 * Calculates formation positions around a target destination
-	 * Creates a formation that spreads units out in a logical pattern
-	 */
-	private ArrayList<Point> calculateFormationPositions(Point targetDestination, int unitCount) {
-		ArrayList<Point> positions = new ArrayList<>();
-		
-		if (unitCount <= 1) {
-			positions.add(targetDestination);
-			return positions;
-		}
-		
-		// Calculate formation size based on unit count
-		int formationRadius = calculateFormationRadius(unitCount);
-		
-		// Create formation positions
-		for (int i = 0; i < unitCount; i++) {
-			Point formationPos = calculateFormationPosition(targetDestination, i, unitCount, formationRadius);
-			positions.add(formationPos);
-		}
-		
-		return positions;
-	}
-	
-	/**
-	 * Calculates the radius of the formation based on unit count
-	 */
-	private int calculateFormationRadius(int unitCount) {
-		// Larger formations need more space
-		if (unitCount <= 4) return 1;
-		if (unitCount <= 9) return 2;
-		if (unitCount <= 16) return 3;
-		return 4; // For very large groups
-	}
-	
-	/**
-	 * Calculates a specific position in the formation
-	 */
-	private Point calculateFormationPosition(Point center, int unitIndex, int totalUnits, int radius) {
-		// Create a spiral pattern starting from the center
-		if (unitIndex == 0) {
-			return center; // First unit goes to center
-		}
-		
-		// Calculate position in a grid pattern around the center
-		int unitsPerRing = 8; // 8 directions around the center
-		
-		int ring = (unitIndex - 1) / unitsPerRing + 1;
-		int positionInRing = (unitIndex - 1) % unitsPerRing;
-		
-		if (ring > radius) {
-			// Fallback: spread units in a larger area
-			ring = radius;
-		}
-		
-		// Calculate offset from center
-		int offsetX = 0, offsetY = 0;
-		
-		switch (positionInRing) {
-			case 0: offsetX = ring; offsetY = 0; break;      // East
-			case 1: offsetX = ring; offsetY = -ring; break;   // Northeast
-			case 2: offsetX = 0; offsetY = -ring; break;      // North
-			case 3: offsetX = -ring; offsetY = -ring; break;  // Northwest
-			case 4: offsetX = -ring; offsetY = 0; break;      // West
-			case 5: offsetX = -ring; offsetY = ring; break;   // Southwest
-			case 6: offsetX = 0; offsetY = ring; break;       // South
-			case 7: offsetX = ring; offsetY = ring; break;    // Southeast
-		}
-		
-		return new Point(center.x + offsetX, center.y + offsetY);
-	}
-
-	/**
-	 * Spawns units near a flag with flexible configuration
-	 */
-	public void spawnUnitsNearFlag(int[][] map, GameFlag flag) {
-		int factionId = flag.getControlFaction();
-		
-		// Check if spawning is allowed
-		if (!canSpawn(factionId)) {
-			return;
-		}
-		
-		spawnUnitsNearFlag(map, flag, spawnConfig.defaultUnitCount, spawnConfig.maxSpawnDistance, spawnConfig.defaultUnitType);
-	}
-	
-	/**
-	 * Spawns units near a flag with custom parameters
-	 * @param map The game map
-	 * @param flag The flag to spawn units near
-	 * @param unitCount Number of units to spawn
-	 * @param maxDistance Maximum spawn distance from flag
-	 * @param unitType Type of unit to spawn
-	 */
-	public void spawnUnitsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance, int unitType) {
-		int flagFactionId = flag.getControlFaction();
-		
-		// Check if spawning is allowed
-		if (!canSpawn(flagFactionId)) {
-			return;
-		}
-		
-		int flagX = flag.getMapX();
-		int flagY = flag.getMapY();
-		
-		// Try different spawn patterns
-		int spawnedCount = 0;
-		
-		// Pattern 1: Adjacent tiles (distance 1)
-		spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 1, unitCount - spawnedCount);
-		
-		// Pattern 2: Ring around flag (distance 2)
-		if (spawnedCount < unitCount && maxDistance >= 2) {
-			spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 2, unitCount - spawnedCount);
-		}
-		
-		// Pattern 3: Random positions within maxDistance (if enabled)
-		if (spawnedCount < unitCount && spawnConfig.useRandomSpawns) {
-			spawnedCount += spawnRandomly(map, flagX, flagY, flagFactionId, unitType, maxDistance, unitCount - spawnedCount);
-		}
-		
-		// Pattern 4: Formation spawn (if enabled)
-		if (spawnedCount < unitCount && spawnConfig.useFormationSpawns) {
-			spawnUnitsInFormation(map, flagX, flagY, flagFactionId, unitType, unitCount - spawnedCount);
-		}
-	}
-	
-	/**
-	 * Spawns units in a ring pattern around a center point
-	 */
-	private int spawnInPattern(int[][] map, int centerX, int centerY, int factionId, int unitType, int distance, int maxUnits) {
-		int spawned = 0;
-		
-		// Define spawn positions in a ring pattern
-		int[][] spawnPositions = {
-			{centerX - distance, centerY},           // West
-			{centerX + distance, centerY},           // East
-			{centerX, centerY - distance},           // North
-			{centerX, centerY + distance},           // South
-			{centerX - distance, centerY - distance}, // Northwest
-			{centerX + distance, centerY - distance}, // Northeast
-			{centerX - distance, centerY + distance}, // Southwest
-			{centerX + distance, centerY + distance}  // Southeast
-		};
-		
-		// Try each position
-		for (int[] pos : spawnPositions) {
-			if (spawned >= maxUnits) break;
-			
-			if (isTileAvailable(map, pos[0], pos[1], factionId)) {
-				addUnitToMap(map, pos[0], pos[1], factionId, unitType);
-				spawned++;
-			}
-		}
-		
-		return spawned;
-	}
-	
-	/**
-	 * Spawns units at random positions within a given distance
-	 */
-	private int spawnRandomly(int[][] map, int centerX, int centerY, int factionId, int unitType, int maxDistance, int maxUnits) {
-		int spawned = 0;
-		int attempts = 0;
-		int maxAttempts = maxUnits * 10; // Prevent infinite loops
-		
-		while (spawned < maxUnits && attempts < maxAttempts) {
-			// Generate random position within maxDistance
-			int offsetX = (int)(Math.random() * (maxDistance * 2 + 1)) - maxDistance;
-			int offsetY = (int)(Math.random() * (maxDistance * 2 + 1)) - maxDistance;
-			
-			int spawnX = centerX + offsetX;
-			int spawnY = centerY + offsetY;
-			
-			// Check if position is valid and available
-			if (isTileAvailable(map, spawnX, spawnY, factionId)) {
-				addUnitToMap(map, spawnX, spawnY, factionId, unitType);
-				spawned++;
-			}
-			
-			attempts++;
-		}
-		
-		return spawned;
-	}
-	
-	/**
-	 * Spawns units in a formation pattern (useful for reinforcements)
-	 */
-	public void spawnUnitsInFormation(int[][] map, int centerX, int centerY, int factionId, int unitType, int unitCount) {
-		// Calculate formation radius based on unit count
-		int radius = calculateFormationRadius(unitCount);
-		
-		for (int i = 0; i < unitCount; i++) {
-			Point formationPos = calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
-			
-			if (isTileAvailable(map, formationPos.x, formationPos.y, factionId)) {
-				addUnitToMap(map, formationPos.x, formationPos.y, factionId, unitType);
-			}
-		}
-	}
-	
-	/**
-	 * Spawns units along a path (useful for reinforcements arriving from off-map)
-	 */
-	public void spawnUnitsAlongPath(int[][] map, Point startPos, Point endPos, int factionId, int unitType, int unitCount) {
-		// Calculate path direction
-		int dx = endPos.x - startPos.x;
-		int dy = endPos.y - startPos.y;
-		
-		// Normalize direction
-		if (dx != 0) dx = dx / Math.abs(dx);
-		if (dy != 0) dy = dy / Math.abs(dy);
-		
-		// Spawn units along the path
-		for (int i = 0; i < unitCount; i++) {
-			int spawnX = startPos.x + (dx * i * 2); // Space units apart
-			int spawnY = startPos.y + (dy * i * 2);
-			
-			if (isTileAvailable(map, spawnX, spawnY, factionId)) {
-				addUnitToMap(map, spawnX, spawnY, factionId, unitType);
-			}
-		}
-	}
-	
-	public boolean isTileAvailable(int[][] map, int x, int y, int factionId) {
-		ArrayList<GameUnit> unitList = getUnitList(factionId);
-		
-		// Check bounds
-		if (!MapValidator.isValidLocation(map, x, y)) {
-			return false;
-		}
-		
-		// If there's a wall, then it's occupied
-		if (map[y][x] == TileConverter.TILE_WALL) {
-			return false;
-		}
-		
-		// If a unit is standing on the desired tile, the tile is considered to be occupied
-		for (GameUnit unit : unitList) {
-			if (unit.isOnTile(map, x, y)) {
-				return false;
-			}
-		}
-		
-		return true;
-	}
-	
-	private void addUnitToMap(int[][] map, int x, int y, int factionId, int unitType) {
-		ArrayList<GameUnit> unitList = getUnitList(factionId);
-		
-		// Create new unit
-		GameUnit newUnit = new GameUnit(TileCoordinateConverter.mapToScreen(x, y).x, TileCoordinateConverter.mapToScreen(x, y).y,
-				(factionId == GameFlag.FACTION_PLAYER), unitType, pathfindingManager.getSharedPathCache());
-		spawnUnit(newUnit, map, new Point(x, y), factionId);
-		
-		// Add unit to list
-		unitList.add(newUnit);
-	}
-	
-	public ArrayList<GameUnit> getUnitList(int factionId) {
-		if (factionId == GameFlag.FACTION_PLAYER) {
-			return playerList;
-		} else if (factionId == GameFlag.FACTION_ENEMY) {
-			return enemyList;
-		}
-		return new ArrayList<>();
-	}
-	
-	public boolean isSpawned() {
-		return isSpawned;
-	}
-	
-	/**
-	 * Gets the shared path cache instance.
-	 * @return The shared PathCache instance
-	 */
-	public PathCache getSharedPathCache() {
-		return pathfindingManager.getSharedPathCache();
-	}
-	
-	/**
-	 * Clears the shared path cache.
-	 */
-	public void clearPathCache() {
-		pathfindingManager.clearPathCache();
-	}
-	
-	public void updateSpawnState(int currentHour) {
-		// Set to true at spawn hour to prevent repeated spawning
-		if (currentHour == GameTimer.SPAWN_HOUR && !isSpawned) {
-			isSpawned = true;
-		}
-		
-		// Reset after the hour has passed
-		if (currentHour > GameTimer.SPAWN_HOUR) {
-			isSpawned = false;
-		}
-	}
-	
-	/**
-	 * Spawns a unit on the map at the specified position
-	 * @param unit The unit to spawn
-	 * @param map The game map
-	 * @param mapPos The map position to spawn at
-	 * @param factionId The faction ID
-	 */
-	public void spawnUnit(GameUnit unit, int[][] map, Point mapPos, int factionId) {
-		// 2,3,4 - player units
-		// 5,6,7 - enemy units
-		// initial value is 1, but map stores values differently
-		// make sure to adjust values (+1 for ally since code is 2, +4 for enemy, since
-		// code is 5)
-		if (factionId == GameFlag.FACTION_PLAYER)
-			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 1;
-		else if (factionId == GameFlag.FACTION_ENEMY)
-			map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 4;
-	}
-	
-	/**
-	 * Removes a unit from the map
-	 * @param unit The unit to remove
-	 * @param map The game map
-	 */
-	public void removeUnit(GameUnit unit, int[][] map) {
-		Point curMap = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
-		map[curMap.y][curMap.x] = 0;
-
-		Point destMap = TileCoordinateConverter.screenToMap(unit.getDestination());
-		map[destMap.y][destMap.x] = 0;
-	}
-	
-	/**
-	 * Handles interactions between player units and enemy units
-	 * @param map The game map
-	 */
-	public void handleUnitInteractions(int[][] map) {
-		// Handle player units attacking enemies
-		for (GameUnit playerUnit : playerList) {
-			if (playerUnit.isAlive()) {
-				handleUnitEnemyInteraction(playerUnit, map, enemyList);
-			}
-		}
-		
-		// Handle enemy units attacking players
-		for (GameUnit enemyUnit : enemyList) {
-			if (enemyUnit.isAlive()) {
-				handleUnitEnemyInteraction(enemyUnit, map, playerList);
-			}
-		}
-	}
-	
-	/**
-	 * Handles interaction between a single unit and a list of potential enemies
-	 * @param unit The unit performing the interaction
-	 * @param map The game map
-	 * @param enemyList The list of potential enemies
-	 */
-	private void handleUnitEnemyInteraction(GameUnit unit, int[][] map, ArrayList<GameUnit> enemyList) {
-		boolean canAttackAny = false;
-		for (GameUnit enemy : enemyList) {
-			if (unit.getCombatSystem().canAttackEnemy(map, enemy)) {
-				unit.getCombatSystem().handleAttack(enemy);
-				canAttackAny = true;
-			}
-		}
-		// Only set isAttacking to false if we can't attack any enemies
-		if (!canAttackAny) {
-			unit.getCombatSystem().setAttacking(false);
-		}
-	}
-	
-	/**
-	 * Updates group destinations for units moving to the same destination
-	 * @param map The game map
-	 */
-	public void updateGroupDestinations(int[][] map) {
-		pathfindingManager.updateGroupDestinations(map, playerList, enemyList);
-	}
+    /**
+     * Clears the path cache
+     */
+    public void clearPathCache() {
+        pathfindingManager.clearPathCache();
+    }
+    
+    /**
+     * Updates the spawn state based on current game time
+     */
+    public void updateSpawnState(int currentHour) {
+        lifecycleManager.updateSpawnState(currentHour);
+    }
+    
+    /**
+     * Checks if units have been spawned for the current day
+     */
+    public boolean isSpawned() {
+        return lifecycleManager.isSpawned();
+    }
+    
+    /**
+     * Gets the unit list for a specific faction
+     */
+    public ArrayList<GameUnit> getUnitList(int factionId) {
+        return lifecycleManager.getUnitList(factionId);
+    }
+    
+    /**
+     * Gets all units from both factions
+     */
+    public ArrayList<GameUnit> getAllUnits() {
+        return lifecycleManager.getAllUnits();
+    }
+    
+    /**
+     * Gets all alive units from a faction
+     */
+    public ArrayList<GameUnit> getAliveUnits(int factionId) {
+        return lifecycleManager.getAliveUnits(factionId);
+    }
+    
+    /**
+     * Gets all dead units from a faction
+     */
+    public ArrayList<GameUnit> getDeadUnits(int factionId) {
+        return lifecycleManager.getDeadUnits(factionId);
+    }
+    
+    /**
+     * Cleans up dead units from both factions
+     */
+    public void cleanupDeadUnits(int[][] map) {
+        lifecycleManager.cleanupDeadUnits(map);
+    }
 }

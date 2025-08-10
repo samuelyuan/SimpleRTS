@@ -186,8 +186,6 @@ public class AwtGraphicsAdapter implements IGraphics {
         }
     }
 
-    // ===== ADDITIONAL UTILITY METHODS IMPLEMENTATION =====
-
     @Override
     public void drawCircle(int x, int y, int radius, boolean fill) {
         Ellipse2D circle = new Ellipse2D.Double(x - radius, y - radius, radius * 2, radius * 2);

@@ -31,6 +31,9 @@ public class GameUnit {
 	// Pathfinding coordination
 	private MovementController movementController;
 
+	// Unit information
+	private int factionId;
+
 	public Point getMapPoint(Point screenPoint) {
 		return TileCoordinateConverter.screenToMap(screenPoint);
 	}
@@ -312,5 +315,17 @@ public class GameUnit {
 	
 	public void handleAttack(GameUnit target) {
 		combatSystem.handleAttack(target);
+	}
+
+	public int getFactionId() {
+		return factionId;
+	}
+
+	public void setFactionId(int factionId) {
+		this.factionId = factionId;
+	}
+
+	public boolean isSelected() {
+		return isPlayerSelected;
 	}
 }

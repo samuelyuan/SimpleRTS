@@ -9,6 +9,18 @@ public class Constants {
     // map data
     public static final int MAX_LVL = 2;
 
+    // Mouse event types
+    public static final int MOUSE_CLICKED = 1;
+    public static final int MOUSE_PRESSED = 2;
+    public static final int MOUSE_RELEASED = 3;
+    public static final int MOUSE_MOVED = 4;
+    public static final int MOUSE_DRAGGED = 5;
+
+    // Faction IDs
+    public static final int PLAYER_FACTION_ID = 1;
+    public static final int ENEMY_FACTION_ID = -1;
+    public static final int NEUTRAL_FACTION_ID = 0;
+
     /**
      * Unit class types:
      *

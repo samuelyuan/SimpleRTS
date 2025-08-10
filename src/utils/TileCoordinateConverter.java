@@ -129,4 +129,24 @@ public class TileCoordinateConverter {
         Point mapPoint2 = screenToMap(screenPoint2);
         return manhattanDistance(mapPoint1, mapPoint2);
     }
+
+    /**
+     * Converts map coordinates to world coordinates.
+     * World coordinates are typically the same as map coordinates for this game.
+     * @param mapPoint The point in map coordinates
+     * @return The corresponding world coordinates
+     */
+    public static Point mapToWorld(Point mapPoint) {
+        return new Point(mapPoint.x, mapPoint.y);
+    }
+
+    /**
+     * Converts individual map coordinates to world coordinates.
+     * @param mapX The X coordinate in map space
+     * @param mapY The Y coordinate in map space
+     * @return The corresponding world coordinates
+     */
+    public static Point mapToWorld(int mapX, int mapY) {
+        return new Point(mapX, mapY);
+    }
 } 

@@ -75,14 +75,7 @@ public class GameUnitManagerTest {
         assertEquals(0, unitManager.getPlayerList().size());
     }
 
-    @Test
-    public void testPrintMap() {
-        int[][] map = {{1, 2}, {3, 4}};
-        String result = unitManager.printMap(map);
-        assertTrue(result.contains("MAP:"));
-        assertTrue(result.contains("1 2"));
-        assertTrue(result.contains("3 4"));
-    }
+
 
     // ==================== UNIT MOVEMENT TESTS ====================
 

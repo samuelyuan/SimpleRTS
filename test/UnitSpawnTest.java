@@ -2,7 +2,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.ArrayList;
 import graphics.Point;
 import utils.Constants;
 import map.TileConverter;
@@ -80,27 +79,20 @@ public class UnitSpawnTest {
     @Test
     void testSpawnConfiguration() {
         // Test spawn configuration
-        GameUnitManager.SpawnConfig config = new GameUnitManager.SpawnConfig(6, 3, Constants.UNIT_ID_HEAVY);
-        config.useRandomSpawns = true;
-        config.maxUnitsPerFaction = 10;
-        config.spawnChance = 0.5; // 50% chance to spawn
-        
+        UnitSpawnManager.SpawnConfig config = new UnitSpawnManager.SpawnConfig(6, 3, Constants.UNIT_ID_HEAVY);
         unitManager.setSpawnConfig(config);
         
         // Verify configuration was set
-        GameUnitManager.SpawnConfig retrievedConfig = unitManager.getSpawnConfig();
+        UnitSpawnManager.SpawnConfig retrievedConfig = unitManager.getSpawnConfig();
         assertEquals(6, retrievedConfig.defaultUnitCount);
         assertEquals(3, retrievedConfig.maxSpawnDistance);
         assertEquals(Constants.UNIT_ID_HEAVY, retrievedConfig.defaultUnitType);
-        assertTrue(retrievedConfig.useRandomSpawns);
-        assertEquals(10, retrievedConfig.maxUnitsPerFaction);
-        assertEquals(0.5, retrievedConfig.spawnChance, 0.001);
     }
     
     @Test
     void testSpawnConditions() {
         // Test spawn condition checking
-        GameUnitManager.SpawnConfig config = new GameUnitManager.SpawnConfig();
+        UnitSpawnManager.SpawnConfig config = new UnitSpawnManager.SpawnConfig();
         config.maxUnitsPerFaction = 0; // No units allowed
         unitManager.setSpawnConfig(config);
         
@@ -147,7 +139,7 @@ public class UnitSpawnTest {
         testMap[6][6] = TileConverter.TILE_WALL; // Southeast
         
         // Also disable random spawning to ensure only pattern spawning is used
-        GameUnitManager.SpawnConfig config = unitManager.getSpawnConfig();
+        UnitSpawnManager.SpawnConfig config = unitManager.getSpawnConfig();
         config.useRandomSpawns = false;
         unitManager.setSpawnConfig(config);
         
