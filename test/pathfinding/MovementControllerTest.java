@@ -426,48 +426,4 @@ public class MovementControllerTest {
         assertNotNull(nextPos, "Should be able to move along path");
     }
 
-    @Test
-    @DisplayName("Path smoothing strategy should be configurable")
-    void testPathSmoothingStrategy() {
-        // Test default strategy
-        assertEquals(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION, 
-                    movementController.getSmoothingStrategy(), 
-                    "Default strategy should be LINEAR_INTERPOLATION");
-        
-        // Test setting different strategies
-        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE);
-        assertEquals(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE, 
-                    movementController.getSmoothingStrategy(), 
-                    "Strategy should be updated to OBSTACLE_AWARE");
-        
-        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION);
-        assertEquals(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION, 
-                    movementController.getSmoothingStrategy(), 
-                    "Strategy should be updated back to LINEAR_INTERPOLATION");
-    }
-
-    @Test
-    @DisplayName("Movement with different smoothing strategies should work")
-    void testMovementWithDifferentSmoothingStrategies() {
-        // Create a simple path
-        ArrayList<PathNode> testPath = new ArrayList<>();
-        testPath.add(new PathNode(1, 1, 0, 0, null));
-        testPath.add(new PathNode(2, 2, 10, 10, testPath.get(0)));
-        testPath.add(new PathNode(3, 3, 20, 20, testPath.get(1)));
-        
-        movementController.setPath(testPath);
-        
-        // Update map reference for obstacle detection
-        movementController.updateMap(simpleMap);
-        
-        // Test with linear interpolation
-        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.LINEAR_INTERPOLATION);
-        Point pos1 = movementController.run();
-        assertNotNull(pos1, "Movement should work with linear interpolation");
-        
-        // Test with obstacle-aware smoothing
-        movementController.setSmoothingStrategy(PathSmoother.SmoothingStrategy.OBSTACLE_AWARE);
-        Point pos2 = movementController.run();
-        assertNotNull(pos2, "Movement should work with obstacle-aware smoothing");
-    }
 }

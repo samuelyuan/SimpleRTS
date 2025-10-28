@@ -171,10 +171,6 @@ public class GameUnitManager {
                     lifecycleManager.getEnemyList().add(unit);
                 }
                 
-                // Mark the tile as occupied in the map
-                map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
-                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
-                
                 spawnedCount++;
             }
         }
@@ -214,11 +210,7 @@ public class GameUnitManager {
                 } else if (factionId == GameFlag.FACTION_ENEMY) {
                     lifecycleManager.getEnemyList().add(unit);
                 }
-                
-                // Mark the tile as occupied in the map
-                map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
-                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
-                
+
                 spawnedCount++;
             }
         }
@@ -247,12 +239,8 @@ public class GameUnitManager {
                     } else if (factionId == GameFlag.FACTION_ENEMY) {
                         lifecycleManager.getEnemyList().add(unit);
                     }
-                    
-                    // Mark the tile as occupied in the map
-                    map[pos[1]][pos[0]] = (factionId == GameFlag.FACTION_PLAYER) ? 
-                        Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
-                    
-                    spawnedCount++;
+
+                spawnedCount++;
                 }
             }
         }
@@ -280,10 +268,6 @@ public class GameUnitManager {
                 } else if (factionId == GameFlag.FACTION_ENEMY) {
                     lifecycleManager.getEnemyList().add(unit);
                 }
-                
-                // Mark the tile as occupied in the map
-                map[formationPos.y][formationPos.x] = (factionId == GameFlag.FACTION_PLAYER) ? 
-                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
             }
         }
     }
@@ -341,11 +325,7 @@ public class GameUnitManager {
                 } else if (factionId == GameFlag.FACTION_ENEMY) {
                     lifecycleManager.getEnemyList().add(unit);
                 }
-                
-                // Mark the tile as occupied in the map
-                map[spawnY][spawnX] = (factionId == GameFlag.FACTION_PLAYER) ? 
-                    Constants.UNIT_ID_LIGHT + 1 : Constants.UNIT_ID_LIGHT + 4;
-                
+
                 spawned++;
             }
         }
@@ -358,12 +338,6 @@ public class GameUnitManager {
         lifecycleManager.spawnUnit(unit, map, mapPos, factionId);
     }
     
-    /**
-     * Removes a unit from the map
-     */
-    public void removeUnit(GameUnit unit, int[][] map) {
-        lifecycleManager.removeUnit(unit, map);
-    }
     
     /**
      * Handles interactions between player units and enemy units

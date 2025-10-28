@@ -77,6 +77,9 @@ public class StateGameMain extends StateMachine {
 	private void runFaction(int[][] map, int factionId) {
 		ArrayList<GameUnit> unitList = unitManager.getUnitList(factionId);
 
+		// Update group destinations to handle collisions (runs once per faction)
+		unitManager.updateGroupDestinations(map);
+
 		// Loop through all units
 		for (int i = 0; i < unitList.size(); i++) {
 			GameUnit unit = unitList.get(i);

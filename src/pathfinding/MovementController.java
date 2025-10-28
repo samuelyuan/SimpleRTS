@@ -16,10 +16,7 @@ public class MovementController {
 	private ArrayList<PathNode> movePath = null;
 	private ArrayList<PathNode> exploredNodes = null;
 	
-	// Path smoothing strategy
-	private PathSmoother.SmoothingStrategy smoothingStrategy = PathSmoother.getDefaultStrategy();
-	
-	// Current map reference for obstacle detection
+	// Current map reference
 	private int[][] currentMap = null;
 	private int nodeCounter;
 	private boolean isPathCreated = false;
@@ -33,15 +30,11 @@ public class MovementController {
 	// Pathfinding state management
 	private int currentMapEndX = 0;
 	private int currentMapEndY = 0;
-	private int pathfindingCooldown = 0;
 	private boolean pathfindingFailed = false;
 	private int pathfindingFailureTimer = 0;
-	private int pathfindingFailureCount = 0;
 	
 	// Constants
-	private static final int PATHFINDING_COOLDOWN_FRAMES = 10; // Only recalculate every 10 frames
 	private static final int PATHFINDING_FAILURE_DISPLAY_FRAMES = 60; // Show failure indicator for 1 second (60 frames)
-	private static final int MAX_PATHFINDING_RETRIES = 5; // Maximum consecutive failures before giving up
 
 	public boolean getIsPathCreated() {
 		return isPathCreated;
@@ -167,6 +160,7 @@ public class MovementController {
 		
 		return null;
 	}
+	
 
 	public boolean findPath(int map[][], Point start, Point end) {
 		if (isPathCreated == true)
@@ -192,23 +186,7 @@ public class MovementController {
 	}
 	
 	/**
-	 * Sets the path smoothing strategy
-	 * @param strategy The smoothing strategy to use
-	 */
-	public void setSmoothingStrategy(PathSmoother.SmoothingStrategy strategy) {
-		this.smoothingStrategy = strategy;
-	}
-	
-	/**
-	 * Gets the current path smoothing strategy
-	 * @return The current smoothing strategy
-	 */
-	public PathSmoother.SmoothingStrategy getSmoothingStrategy() {
-		return smoothingStrategy;
-	}
-	
-	/**
-	 * Updates the current map reference for obstacle detection
+	 * Updates the current map reference
 	 * @param map The current game map
 	 */
 	public void updateMap(int[][] map) {
@@ -278,63 +256,26 @@ public class MovementController {
 			return physics.getCurrentPosition();
 		}
 
-		// Get location of next waypoint with optimized path smoothing
+		// Get location of next waypoint with path smoothing
 		PathNode currentNode = movePath.get(nodeCounter);
 		PathNode nextNode = (nodeCounter + 1 < movePath.size()) ? movePath.get(nodeCounter + 1) : null;
 		
 		// Use PathSmoother to calculate target position
-		PathSmoother.SmoothingResult result = PathSmoother.calculateTargetPosition(
-			currentNode, nextNode, smoothingStrategy, currentMap);
-		
-		if (result.isValid) {
-			targetX = result.targetX;
-			targetY = result.targetY;
-			physics.updatePosition(targetX, targetY);
-		}
+		double[] coords = new double[2];
+		PathSmoother.calculateTargetPosition(currentNode, nextNode, coords);
+		targetX = coords[0];
+		targetY = coords[1];
+		physics.updatePosition(targetX, targetY);
 
-		// Increased waypoint threshold for smoother movement
-		if (MovementPhysics.getDistance(physics.getCurrentX(), physics.getCurrentY(), targetX, targetY) < 15) {
+		// Check distance to waypoint and advance when reached
+		double distanceToTarget = MovementPhysics.getDistance(physics.getCurrentX(), physics.getCurrentY(), targetX, targetY);
+		
+		if (distanceToTarget < 15) {
+			// Waypoint reached
 			nodeCounter++;
 		}
 
 		return physics.getCurrentPosition();
-	}
-
-	/**
-	 * Checks if pathfinding should be skipped due to cooldown
-	 */
-	public boolean isOnCooldown() {
-		return pathfindingCooldown > 0;
-	}
-	
-	/**
-	 * Decrements the cooldown timer
-	 */
-	public void decrementCooldown() {
-		if (pathfindingCooldown > 0) {
-			pathfindingCooldown--;
-		}
-	}
-	
-	/**
-	 * Sets the cooldown timer to the maximum value
-	 */
-	public void setCooldown() {
-		pathfindingCooldown = PATHFINDING_COOLDOWN_FRAMES;
-	}
-	
-	/**
-	 * Resets the cooldown timer to allow immediate pathfinding
-	 */
-	public void resetCooldown() {
-		pathfindingCooldown = 0;
-	}
-	
-	/**
-	 * Checks if pathfinding has failed too many times consecutively
-	 */
-	public boolean hasExceededMaxRetries() {
-		return pathfindingFailureCount >= MAX_PATHFINDING_RETRIES;
 	}
 	
 	/**
@@ -343,7 +284,6 @@ public class MovementController {
 	public void recordFailure() {
 		pathfindingFailed = true;
 		pathfindingFailureTimer = PATHFINDING_FAILURE_DISPLAY_FRAMES;
-		pathfindingFailureCount++;
 	}
 	
 	/**
@@ -351,7 +291,7 @@ public class MovementController {
 	 */
 	public void recordSuccess() {
 		pathfindingFailed = false;
-		pathfindingFailureCount = 0;
+		pathfindingFailureTimer = 0;
 	}
 	
 	/**
@@ -380,12 +320,6 @@ public class MovementController {
 		return pathfindingFailureTimer;
 	}
 	
-	/**
-	 * Gets the current failure count
-	 */
-	public int getFailureCount() {
-		return pathfindingFailureCount;
-	}
 	
 	/**
 	 * Checks if destination coordinates have changed
@@ -430,13 +364,6 @@ public class MovementController {
 	public void setCurrentMapEnd(Point p) {
 		this.currentMapEndX = p.x;
 		this.currentMapEndY = p.y;
-	}
-	
-	/**
-	 * Gets the maximum number of pathfinding retries
-	 */
-	public static int getMaxPathfindingRetries() {
-		return MAX_PATHFINDING_RETRIES;
 	}
 	
 	/**

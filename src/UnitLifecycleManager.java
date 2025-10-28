@@ -67,8 +67,7 @@ public class UnitLifecycleManager {
      */
     public void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
         if (deadUnitIndex >= 0 && deadUnitIndex < unitList.size()) {
-            GameUnit deadUnit = unitList.get(deadUnitIndex);
-            removeUnit(deadUnit, map);
+            // Simply remove from list - units are not stored on map
             unitList.remove(deadUnitIndex);
         }
     }
@@ -135,25 +134,7 @@ public class UnitLifecycleManager {
         Point worldPos = TileCoordinateConverter.mapToWorld(mapPos);
         unit.setFactionId(factionId);
 
-        // Update the map array with the unit
-        if (factionId == GameFlag.FACTION_PLAYER) {
-            map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 1;
-        } else if (factionId == GameFlag.FACTION_ENEMY) {
-            map[mapPos.y][mapPos.x] = Constants.UNIT_ID_LIGHT + 4;
-        }
-
         addUnit(unit); // Add to the appropriate faction list
-    }
-
-    /**
-     * Removes a unit from the map
-     */
-    public void removeUnit(GameUnit unit, int[][] map) {
-        Point curMap = TileCoordinateConverter.screenToMap(unit.getCurrentPosition());
-        map[curMap.y][curMap.x] = 0;
-
-        Point destMap = TileCoordinateConverter.screenToMap(unit.getDestination());
-        map[destMap.y][destMap.x] = 0;
     }
 
     /**

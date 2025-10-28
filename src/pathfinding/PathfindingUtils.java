@@ -11,6 +11,16 @@ import utils.TileCoordinateConverter;
  * Contains methods extracted from GameUnit to improve separation of concerns.
  */
 public class PathfindingUtils {
+    
+    // Constants for alternative destination search
+    private static final int MAX_ALTERNATIVE_RADIUS = 4;
+    private static final int MAX_ALTERNATIVE_DISTANCE = 3;
+    private static final int EARLY_EXIT_DISTANCE = 2;
+    
+    // Constants for fallback destination search  
+    private static final int MAX_FALLBACK_RADIUS = 6;
+    private static final int MAX_FALLBACK_DISTANCE = 6;
+    private static final int FALLBACK_EARLY_EXIT_DISTANCE = 4;
 
     /**
      * Finds an alternative destination when pathfinding fails.
@@ -27,7 +37,7 @@ public class PathfindingUtils {
         int closestDistance = Integer.MAX_VALUE;
         Point closestTile = null;
 
-        for (int radius = 1; radius <= 4; radius++) { // Reduced max radius
+        for (int radius = 1; radius <= MAX_ALTERNATIVE_RADIUS; radius++) {
             boolean foundInThisRadius = false;
 
             for (int dy = -radius; dy <= radius; dy++) {
@@ -45,7 +55,7 @@ public class PathfindingUtils {
                         int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
 
                         // Only consider tiles within reasonable distance
-                        if (distance <= 3 && distance < closestDistance) {
+                        if (distance <= MAX_ALTERNATIVE_DISTANCE && distance < closestDistance) {
                             closestDistance = distance;
                             closestTile = new Point(newX, newY);
                             foundInThisRadius = true;
@@ -55,13 +65,13 @@ public class PathfindingUtils {
             }
 
             // If we found a reasonably close tile, use it immediately
-            if (foundInThisRadius && closestDistance <= 2) {
+            if (foundInThisRadius && closestDistance <= EARLY_EXIT_DISTANCE) {
                 break;
             }
         }
 
         // If we found a tile within reasonable distance, use it
-        if (closestTile != null && closestDistance <= 3) {
+        if (closestTile != null && closestDistance <= MAX_ALTERNATIVE_DISTANCE) {
             return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
         }
 
@@ -97,28 +107,6 @@ public class PathfindingUtils {
         return currentEndX != mapEnd.x || currentEndY != mapEnd.y;
     }
 
-    /**
-     * Updates map tiles after pathfinding operations.
-     * Clears the start tile and marks the end tile with the unit's class type.
-     * 
-     * @param map       The game map
-     * @param mapStart  The start point in map coordinates
-     * @param mapEnd    The end point in map coordinates
-     * @param classType The unit's class type
-     */
-    public static void updateMapAfterPathfinding(int[][] map, Point mapStart, Point mapEnd, int classType) {
-        int startTile = MapValidator.getTileSafely(map, mapStart.x, mapStart.y);
-        int endTile = MapValidator.getTileSafely(map, mapEnd.x, mapEnd.y);
-        
-        // Only update if tiles are valid and not special types
-        if (startTile != -1 && startTile != TileConverter.TILE_WALL && startTile != 8 && startTile != 9) {
-            map[mapStart.y][mapStart.x] = 0;
-        }
-
-        if (endTile != -1 && endTile != TileConverter.TILE_WALL && endTile != 8 && endTile != 9) {
-            map[mapEnd.y][mapEnd.x] = classType + 1;
-        }
-    }
 
     /**
      * Finds a fallback destination when recalculateDest fails.
@@ -134,7 +122,7 @@ public class PathfindingUtils {
         int closestDistance = Integer.MAX_VALUE;
         Point closestTile = null;
 
-        for (int radius = 1; radius <= 6; radius++) {
+        for (int radius = 1; radius <= MAX_FALLBACK_RADIUS; radius++) {
             boolean foundInThisRadius = false;
 
             for (int dy = -radius; dy <= radius; dy++) {
@@ -160,13 +148,13 @@ public class PathfindingUtils {
             }
 
             // If we found a reasonably close tile, use it
-            if (foundInThisRadius && closestDistance <= 4) {
+            if (foundInThisRadius && closestDistance <= FALLBACK_EARLY_EXIT_DISTANCE) {
                 break;
             }
         }
 
         // If we found a tile within reasonable distance, use it
-        if (closestTile != null && closestDistance <= 6) {
+        if (closestTile != null && closestDistance <= MAX_FALLBACK_DISTANCE) {
             return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
         }
 

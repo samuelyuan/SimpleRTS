@@ -145,7 +145,6 @@ public class UnitSpawnManager {
             if (spawned >= maxUnits) break;
             
             if (isTileAvailable(map, pos[0], pos[1], factionId)) {
-                addUnitToMap(map, pos[0], pos[1], factionId, unitType);
                 spawned++;
             }
         }
@@ -170,7 +169,6 @@ public class UnitSpawnManager {
             int spawnY = centerY + offsetY;
             
             if (isTileAvailable(map, spawnX, spawnY, factionId)) {
-                addUnitToMap(map, spawnX, spawnY, factionId, unitType);
                 spawned++;
             }
             
@@ -191,7 +189,6 @@ public class UnitSpawnManager {
             Point formationPos = calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
             
             if (isTileAvailable(map, formationPos.x, formationPos.y, factionId)) {
-                addUnitToMap(map, formationPos.x, formationPos.y, factionId, unitType);
                 spawned++;
             }
         }
@@ -212,7 +209,6 @@ public class UnitSpawnManager {
             int spawnY = (int) (startPos.y + stepY * i);
             
             if (isTileAvailable(map, spawnX, spawnY, factionId)) {
-                addUnitToMap(map, spawnX, spawnY, factionId, unitType);
                 spawned++;
             }
         }
@@ -238,20 +234,7 @@ public class UnitSpawnManager {
         // For now, assume all empty tiles are accessible
         return true;
     }
-    
-    /**
-     * Adds a unit to the map at the specified position
-     */
-    private void addUnitToMap(int[][] map, int x, int y, int factionId, int unitType) {
-        // 2,3,4 - player units
-        // 5,6,7 - enemy units
-        if (factionId == GameFlag.FACTION_PLAYER) {
-            map[y][x] = Constants.UNIT_ID_LIGHT + 1;
-        } else if (factionId == GameFlag.FACTION_ENEMY) {
-            map[y][x] = Constants.UNIT_ID_LIGHT + 4;
-        }
-    }
-    
+
     /**
      * Calculates the radius for formation spawning based on unit count
      */

@@ -59,8 +59,11 @@ public class GameUnitTest {
         // Spawn player unit using GameUnitManager
         unitManager.spawnUnit(playerUnit, map, new Point(2, 2), GameFlag.FACTION_PLAYER);
 
-        // Verify that the map has been updated correctly for the player faction
-        assertEquals(Constants.UNIT_ID_LIGHT + 1, map[2][2], "The unit should be spawned with the correct faction ID");
+        // Verify unit was added to player list (units are not written to map anymore)
+        assertTrue(unitManager.getPlayerList().contains(playerUnit), "Unit should be in player list");
+        assertEquals(GameFlag.FACTION_PLAYER, playerUnit.getFactionId(), "Unit should have correct faction ID");
+        // Map should remain unchanged (terrain/walls only, no unit markers)
+        assertEquals(0, map[2][2], "Map tile should remain empty (units don't write to map)");
     }
 
     @Test
@@ -161,15 +164,4 @@ public class GameUnitTest {
         assertTrue(PathfindingUtils.destinationChanged(0, 0, mapEnd), "Should detect change if different");
     }
 
-    @Test
-    public void testUpdateMapAfterPathfinding() {
-        int[][] testMap = new int[7][7];
-        Point start = new Point(1, 1);
-        Point end = new Point(2, 2);
-        testMap[start.y][start.x] = 5;
-        testMap[end.y][end.x] = 0;
-        PathfindingUtils.updateMapAfterPathfinding(testMap, start, end, playerUnit.getClassType());
-        assertEquals(0, testMap[start.y][start.x], "Start tile should be cleared");
-        assertEquals(playerUnit.getClassType() + 1, testMap[end.y][end.x], "End tile should be set to classType+1");
-    }
 }
