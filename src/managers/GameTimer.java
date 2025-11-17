@@ -1,3 +1,7 @@
+package managers;
+
+import entities.GameFlagManager;
+
 /**
  * Handles game time management and day progression.
  */
@@ -84,4 +88,5 @@ public class GameTimer {
     public boolean isEnemyAttackTime() {
         return getHour() == ENEMY_ATTACK_HOUR;
     }
-} 
+}
+

@@ -2,6 +2,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import entities.GameFlag;
+import entities.GameUnit;
+import entities.GameUnitManager;
 import java.util.ArrayList;
 import java.util.List;
 

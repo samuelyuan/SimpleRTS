@@ -3,6 +3,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import entities.GameUnit;
 import graphics.Color;
 import graphics.IGraphics;
 import graphics.Point;

@@ -1,5 +1,4 @@
-import graphics.Color;
-import graphics.Rect;
+package graphics;
 
 public class DrawingInstruction {
     public final Rect rect;
@@ -12,3 +11,4 @@ public class DrawingInstruction {
         this.fill = fill;
     }
 }
+

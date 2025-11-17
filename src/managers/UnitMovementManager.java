@@ -1,4 +1,7 @@
+package managers;
+
 import java.util.ArrayList;
+import entities.GameUnit;
 import graphics.Point;
 import input.GameMouseEvent;
 import utils.Constants;
@@ -179,3 +182,4 @@ public class UnitMovementManager {
         return true;
     }
 }
+

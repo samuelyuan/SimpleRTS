@@ -2,9 +2,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import entities.GameFlag;
+import entities.GameFlagManager;
+import entities.GameUnitManager;
 import java.util.ArrayList;
 
 import graphics.Color;
+import graphics.DrawingInstruction;
 import graphics.Point;
 import graphics.Rect;
 import utils.Constants;

@@ -1,6 +1,13 @@
+package entities;
+
 import java.util.ArrayList;
 import java.util.Map;
 
+import managers.UnitLifecycleManager;
+import managers.UnitSpawnManager;
+import managers.UnitCombatManager;
+import managers.UnitMovementManager;
+import managers.MultiUnitPathfindingManager;
 import graphics.Point;
 import input.GameMouseEvent;
 import pathfinding.PathCache;
@@ -427,3 +434,4 @@ public class GameUnitManager {
         lifecycleManager.cleanupDeadUnits(map);
     }
 }
+

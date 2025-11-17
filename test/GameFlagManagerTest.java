@@ -1,6 +1,8 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import entities.GameFlag;
+import entities.GameFlagManager;
 import java.util.Iterator;
 
 public class GameFlagManagerTest {

@@ -1,3 +1,5 @@
+import entities.GameUnitManager;
+import managers.GameTimer;
 import graphics.GameFont;
 import graphics.Color;
 import graphics.IGraphics;

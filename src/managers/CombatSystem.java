@@ -1,3 +1,6 @@
+package managers;
+
+import entities.GameUnit;
 import graphics.Point;
 import utils.Constants;
 import utils.TileCoordinateConverter;

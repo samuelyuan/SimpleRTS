@@ -1,4 +1,7 @@
+package managers;
+
 import java.util.ArrayList;
+import entities.GameUnit;
 import graphics.Point;
 
 /**
@@ -113,5 +116,4 @@ public class UnitCombatManager {
         unit.getCombatSystem().setAttacking(false);
     }
 }
-
 

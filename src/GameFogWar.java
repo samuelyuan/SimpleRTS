@@ -1,5 +1,6 @@
 import java.util.List;
 
+import entities.GameUnit;
 import graphics.Point;
 
 public class GameFogWar {

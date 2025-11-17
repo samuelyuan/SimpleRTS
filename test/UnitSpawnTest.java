@@ -2,6 +2,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import entities.GameFlag;
+import entities.GameUnit;
+import entities.GameUnitManager;
+import managers.UnitSpawnManager;
 import graphics.Point;
 import utils.Constants;
 import map.TileConverter;

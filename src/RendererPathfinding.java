@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import entities.GameUnit;
 import graphics.Color;
 import graphics.Point;
 import graphics.IGraphics;

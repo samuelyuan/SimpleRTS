@@ -1,4 +1,7 @@
+package managers;
+
 import java.util.ArrayList;
+import entities.GameUnit;
 import graphics.Point;
 import pathfinding.PathCache;
 import pathfinding.PathfindingUtils;
@@ -134,3 +137,4 @@ public class MultiUnitPathfindingManager {
         return false;
     }
 }
+

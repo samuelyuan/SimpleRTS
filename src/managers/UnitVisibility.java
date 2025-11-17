@@ -1,3 +1,6 @@
+package managers;
+
+import entities.GameUnit;
 import graphics.Point;
 import map.TileConverter;
 import map.MapValidator;
@@ -237,4 +240,5 @@ public class UnitVisibility {
         Point pos2 = unit2.getMapPoint(unit2.getCurrentPosition());
         return calculateManhattanDistance(pos1, pos2) <= maxRange;
     }
-} 
+}
+

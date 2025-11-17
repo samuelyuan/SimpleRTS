@@ -1,3 +1,6 @@
+package managers;
+
+import entities.GameFlag;
 import graphics.Point;
 import utils.Constants;
 
@@ -264,3 +267,4 @@ public class UnitSpawnManager {
         return new Point(center.x + offsetX, center.y + offsetY);
     }
 }
+

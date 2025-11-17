@@ -1,5 +1,8 @@
+package entities;
+
 import java.util.ArrayList;
 
+import managers.CombatSystem;
 import graphics.Point;
 import pathfinding.PathNode;
 import pathfinding.MovementController;
@@ -243,12 +246,12 @@ public class GameUnit {
 		setCurrentPosition(movementController.getCurrentPosition());
 	}
 
-	// Package-private setters for testing
-	void setCurrentMapEnd(Point p) {
+	// Public setters for testing
+	public void setCurrentMapEnd(Point p) {
 		movementController.setCurrentMapEnd(p);
 	}
 
-	void setCurrentMapEnd(int x, int y) {
+	public void setCurrentMapEnd(int x, int y) {
 		movementController.setCurrentMapEnd(x, y);
 	}
 	
@@ -329,3 +332,4 @@ public class GameUnit {
 		return isPlayerSelected;
 	}
 }
+

@@ -1,5 +1,9 @@
 import java.util.Map;
 
+import entities.GameFlag;
+import entities.GameFlagManager;
+import entities.GameUnit;
+import entities.GameUnitManager;
 import graphics.Point;
 import utils.TileCoordinateConverter;
 

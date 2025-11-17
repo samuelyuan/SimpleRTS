@@ -1,6 +1,10 @@
+package managers;
+
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
+import entities.GameFlag;
+import entities.GameUnit;
 import graphics.Point;
 import utils.TileCoordinateConverter;
 import utils.Constants;
@@ -220,3 +224,4 @@ public class UnitLifecycleManager {
         }
     }
 }
+

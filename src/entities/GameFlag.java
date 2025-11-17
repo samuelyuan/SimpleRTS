@@ -1,4 +1,7 @@
+package entities;
+
 import graphics.Color;
+import graphics.DrawingInstruction;
 import graphics.Rect;
 import utils.Constants;
 import utils.TileCoordinateConverter;
@@ -10,9 +13,9 @@ public class GameFlag {
     private Color flagColor; // Color for the flag
     private Rect boundingBox; // Bounding box for health bar display
 
-    static final int FACTION_ENEMY = -1;
-    static final int FACTION_NEUTRAL = 0;
-    static final int FACTION_PLAYER = 1;
+    public static final int FACTION_ENEMY = -1;
+    public static final int FACTION_NEUTRAL = 0;
+    public static final int FACTION_PLAYER = 1;
     private int controlFaction = FACTION_NEUTRAL;
 
     public static final int FLAG_RADIUS = 3;
@@ -174,3 +177,4 @@ public class GameFlag {
         return new DrawingInstruction(boundingBox, flagColor, true); // Fill the flag
     }
 }
+

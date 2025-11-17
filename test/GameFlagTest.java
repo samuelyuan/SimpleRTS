@@ -1,7 +1,9 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import entities.GameFlag;
 import graphics.Color;
+import graphics.DrawingInstruction;
 import graphics.Rect;
 
 public class GameFlagTest {

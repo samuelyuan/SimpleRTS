@@ -2,6 +2,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
+import entities.GameUnit;
 import graphics.GameImage;
 import graphics.Color;
 import graphics.Point;
