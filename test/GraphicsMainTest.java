@@ -5,6 +5,9 @@ import static org.mockito.Mockito.*;
 import entities.GameFlag;
 import entities.GameFlagManager;
 import entities.GameUnitManager;
+import managers.CameraManager;
+import managers.GameFogWar;
+import managers.SelectionManager;
 import java.util.ArrayList;
 
 import graphics.Color;

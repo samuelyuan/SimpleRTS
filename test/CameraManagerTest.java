@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.awt.Cursor;
+import managers.CameraManager;
 import input.MouseListenerRegistrar;
 import utils.Constants;
 

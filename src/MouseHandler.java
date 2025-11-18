@@ -4,6 +4,7 @@ import java.awt.event.MouseMotionListener;
 import java.util.List;
 
 import entities.GameUnit;
+import managers.CameraManager;
 import input.GameMouseEvent;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;

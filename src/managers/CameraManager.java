@@ -1,3 +1,5 @@
+package managers;
+
 import java.awt.Cursor;
 
 import input.MouseListenerRegistrar;
@@ -265,4 +267,5 @@ public class CameraManager {
     public void setKeyUp(boolean pressed) {
         keyUp = pressed;
     }
-} 
+}
+

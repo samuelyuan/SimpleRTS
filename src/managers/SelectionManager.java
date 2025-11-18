@@ -1,3 +1,5 @@
+package managers;
+
 import graphics.Point;
 import input.GameMouseEvent;
 import utils.Constants;
@@ -147,4 +149,5 @@ public class SelectionManager {
             return y2 - y1;
         }
     }
-} 
+}
+

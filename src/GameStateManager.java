@@ -4,6 +4,10 @@ import entities.GameFlag;
 import entities.GameFlagManager;
 import entities.GameUnit;
 import entities.GameUnitManager;
+import managers.CameraManager;
+import managers.CombatEffectManager;
+import managers.GameFogWar;
+import managers.SelectionManager;
 import graphics.Point;
 import utils.TileCoordinateConverter;
 

@@ -1,5 +1,6 @@
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import managers.CameraManager;
 import utils.GameConfig;
 import utils.Logger;
 

@@ -3,6 +3,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import input.GameMouseListener;
 import input.MouseListenerRegistrar;
+import managers.CameraManager;
 import utils.PathResolver;
 import utils.Constants;
 

@@ -1,3 +1,5 @@
+package managers;
+
 import java.util.List;
 
 import entities.GameUnit;
@@ -77,3 +79,4 @@ public class GameFogWar {
         }
     }
 }
+
