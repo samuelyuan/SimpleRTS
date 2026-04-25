@@ -16,13 +16,8 @@ public class MovementController {
 	private ArrayList<PathNode> movePath = null;
 	private ArrayList<PathNode> exploredNodes = null;
 	
-	// Current map reference
-	private int[][] currentMap = null;
 	private int nodeCounter;
 	private boolean isPathCreated = false;
-
-	// Path cache instance
-	private PathCache pathCache;
 
 	// physical state
 	private boolean isMoving = false;
@@ -110,12 +105,7 @@ public class MovementController {
 	}
 
 	public MovementController(int playerX, int playerY) {
-		this(playerX, playerY, new PathCache());
-	}
-	
-	public MovementController(int playerX, int playerY, PathCache pathCache) {
 		physics = new MovementPhysics(playerX, playerY);
-		this.pathCache = pathCache;
 		nodeCounter = 1;
 	}
 
@@ -124,7 +114,7 @@ public class MovementController {
 	 * Simplified version that focuses on core functionality.
 	 * @return Alternative destination if pathfinding failed, null otherwise
 	 */
-	public Point coordinatePathfinding(int[][] map, Point currentPosition, Point destination, int unitClassType) {
+	public Point coordinatePathfinding(int[][] map, Point currentPosition, Point destination) {
 		Point mapStart = TileCoordinateConverter.screenToMap(currentPosition);
 		Point mapEnd = TileCoordinateConverter.screenToMap(destination);
 		
@@ -134,7 +124,7 @@ public class MovementController {
 		updateFailureTimer();
 		
 		// Simple pathfinding: if we don't have a path or destination changed, find a new path
-		if (!isPathCreated || destinationChanged(mapEnd)) {
+		if (!isPathCreated || PathfindingUtils.destinationChanged(currentMapEndX, currentMapEndY, mapEnd)) {
 			if (findPath(map, mapStart, mapEnd)) {
 				// Path found successfully
 				updateDestination(mapEnd);
@@ -144,7 +134,7 @@ public class MovementController {
 				Point alternativeDest = PathfindingUtils.findAlternativeDestination(map, mapEnd);
 				if (alternativeDest != null) {
 					setIsPathCreated(false);
-					return TileCoordinateConverter.mapToScreen(alternativeDest);
+					return alternativeDest;
 				} else {
 					// No alternative found, record failure for visual feedback
 					recordFailure();
@@ -166,9 +156,6 @@ public class MovementController {
 		if (isPathCreated == true)
 			return false;
 
-		// Store map reference for obstacle detection
-		this.currentMap = map;
-
 		// Create new path using A* algorithm
 		PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, start.x, start.y, end.x, end.y);
 		
@@ -179,18 +166,6 @@ public class MovementController {
 		}
 		
 		return false;
-	}
-
-	public void clearPathCache() {
-		pathCache.clear();
-	}
-	
-	/**
-	 * Updates the current map reference
-	 * @param map The current game map
-	 */
-	public void updateMap(int[][] map) {
-		this.currentMap = map;
 	}
 
 	public Point recalculateDest(int map[][], Point playerMapDest) {
@@ -320,13 +295,6 @@ public class MovementController {
 		return pathfindingFailureTimer;
 	}
 	
-	
-	/**
-	 * Checks if destination coordinates have changed
-	 */
-	public boolean destinationChanged(Point mapEnd) {
-		return currentMapEndX != mapEnd.x || currentMapEndY != mapEnd.y;
-	}
 	
 	/**
 	 * Updates the current destination coordinates

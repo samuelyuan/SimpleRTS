@@ -3,40 +3,15 @@ package managers;
 import java.util.ArrayList;
 import entities.GameUnit;
 import graphics.Point;
-import pathfinding.PathCache;
 import pathfinding.PathfindingUtils;
 import utils.TileCoordinateConverter;
 
 /**
  * Manages pathfinding and group destination logic for multiple units.
- * Handles collision avoidance, shared path caching, and group destination coordination.
+ * Handles collision avoidance and group destination coordination.
  */
 public class MultiUnitPathfindingManager {
-    private PathCache sharedPathCache;
-    
-    public MultiUnitPathfindingManager() {
-        this.sharedPathCache = new PathCache();
-    }
-    
-    public MultiUnitPathfindingManager(PathCache sharedPathCache) {
-        this.sharedPathCache = sharedPathCache;
-    }
-    
-    /**
-     * Gets the shared path cache instance.
-     * @return The shared PathCache instance
-     */
-    public PathCache getSharedPathCache() {
-        return sharedPathCache;
-    }
-    
-    /**
-     * Clears the shared path cache.
-     */
-    public void clearPathCache() {
-        sharedPathCache.clear();
-    }
-    
+
     /**
      * Updates group destinations for units moving to the same destination
      * @param map The game map

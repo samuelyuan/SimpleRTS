@@ -1,7 +1,6 @@
 package pathfinding;
 
 import graphics.Point;
-import map.TileConverter;
 import map.MapValidator;
 import utils.TileCoordinateConverter;
 
@@ -32,51 +31,14 @@ public class PathfindingUtils {
      * @return An alternative destination, or null if none found
      */
     public static Point findAlternativeDestination(int[][] map, Point originalDest) {
-        // Search in expanding circles around the original destination
-        // Use simple distance-based approach instead of expensive pathfinding tests
-        int closestDistance = Integer.MAX_VALUE;
-        Point closestTile = null;
-
-        for (int radius = 1; radius <= MAX_ALTERNATIVE_RADIUS; radius++) {
-            boolean foundInThisRadius = false;
-
-            for (int dy = -radius; dy <= radius; dy++) {
-                for (int dx = -radius; dx <= radius; dx++) {
-                    // Skip corners for efficiency
-                    if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
-                        continue;
-                    }
-
-                    int newX = originalDest.x + dx;
-                    int newY = originalDest.y + dy;
-
-                    // Check if tile is walkable (simple check, no pathfinding test)
-                    if (MapValidator.isWalkable(map, newX, newY)) {
-                        int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-
-                        // Only consider tiles within reasonable distance
-                        if (distance <= MAX_ALTERNATIVE_DISTANCE && distance < closestDistance) {
-                            closestDistance = distance;
-                            closestTile = new Point(newX, newY);
-                            foundInThisRadius = true;
-                        }
-                    }
-                }
-            }
-
-            // If we found a reasonably close tile, use it immediately
-            if (foundInThisRadius && closestDistance <= EARLY_EXIT_DISTANCE) {
-                break;
-            }
-        }
-
-        // If we found a tile within reasonable distance, use it
-        if (closestTile != null && closestDistance <= MAX_ALTERNATIVE_DISTANCE) {
-            return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-        }
-
-        // If no alternative found, return null
-        return null;
+        Point closestTile = findClosestWalkableDestination(
+            map,
+            originalDest,
+            MAX_ALTERNATIVE_RADIUS,
+            MAX_ALTERNATIVE_DISTANCE,
+            EARLY_EXIT_DISTANCE
+        );
+        return closestTile != null ? TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y) : null;
     }
 
     /**
@@ -117,12 +79,27 @@ public class PathfindingUtils {
      * @return A fallback destination, or null if none found
      */
     public static Point findFallbackDestination(int[][] map, Point currentPos) {
-        // Search in expanding circles around the unit's current position
-        // but prioritize closer destinations to avoid long travel distances
+        Point closestTile = findClosestWalkableDestination(
+            map,
+            currentPos,
+            MAX_FALLBACK_RADIUS,
+            MAX_FALLBACK_DISTANCE,
+            FALLBACK_EARLY_EXIT_DISTANCE
+        );
+        return closestTile != null ? TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y) : null;
+    }
+
+    private static Point findClosestWalkableDestination(
+        int[][] map,
+        Point center,
+        int maxRadius,
+        int maxDistance,
+        int earlyExitDistance
+    ) {
         int closestDistance = Integer.MAX_VALUE;
         Point closestTile = null;
 
-        for (int radius = 1; radius <= MAX_FALLBACK_RADIUS; radius++) {
+        for (int radius = 1; radius <= maxRadius; radius++) {
             boolean foundInThisRadius = false;
 
             for (int dy = -radius; dy <= radius; dy++) {
@@ -132,33 +109,26 @@ public class PathfindingUtils {
                         continue;
                     }
 
-                    int newX = currentPos.x + dx;
-                    int newY = currentPos.y + dy;
+                    int newX = center.x + dx;
+                    int newY = center.y + dy;
+                    if (!MapValidator.isWalkable(map, newX, newY)) {
+                        continue;
+                    }
 
-                    // Check if tile is walkable
-                    if (MapValidator.isWalkable(map, newX, newY)) {
-                        int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-                        if (distance < closestDistance) {
-                            closestDistance = distance;
-                            closestTile = new Point(newX, newY);
-                            foundInThisRadius = true;
-                        }
+                    int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
+                    if (distance <= maxDistance && distance < closestDistance) {
+                        closestDistance = distance;
+                        closestTile = new Point(newX, newY);
+                        foundInThisRadius = true;
                     }
                 }
             }
 
-            // If we found a reasonably close tile, use it
-            if (foundInThisRadius && closestDistance <= FALLBACK_EARLY_EXIT_DISTANCE) {
+            if (foundInThisRadius && closestDistance <= earlyExitDistance) {
                 break;
             }
         }
 
-        // If we found a tile within reasonable distance, use it
-        if (closestTile != null && closestDistance <= MAX_FALLBACK_DISTANCE) {
-            return TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y);
-        }
-
-        // If no fallback found, return null (unit will stay in place)
-        return null;
+        return closestTile;
     }
 }

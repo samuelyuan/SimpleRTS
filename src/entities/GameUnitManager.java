@@ -10,7 +10,6 @@ import managers.UnitMovementManager;
 import managers.MultiUnitPathfindingManager;
 import graphics.Point;
 import input.GameMouseEvent;
-import pathfinding.PathCache;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
@@ -21,7 +20,6 @@ import utils.TileCoordinateConverter;
  * Responsibilities:
  * - Coordinates specialized managers
  * - Provides high-level unit management interface
- * - Manages shared resources (pathfinding cache)
  */
 public class GameUnitManager {
     
@@ -365,26 +363,12 @@ public class GameUnitManager {
     }
     
     /**
-     * Gets the shared path cache for pathfinding
-     */
-    public PathCache getSharedPathCache() {
-        return pathfindingManager.getSharedPathCache();
-    }
-
-    /**
      * Checks if a tile is available for unit placement
      */
     public boolean isTileAvailable(int[][] map, int x, int y, int factionId) {
         return spawnManager.isTileAvailable(map, x, y, factionId);
     }
 
-    /**
-     * Clears the path cache
-     */
-    public void clearPathCache() {
-        pathfindingManager.clearPathCache();
-    }
-    
     /**
      * Updates the spawn state based on current game time
      */

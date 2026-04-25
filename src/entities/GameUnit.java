@@ -6,7 +6,6 @@ import managers.CombatSystem;
 import graphics.Point;
 import pathfinding.PathNode;
 import pathfinding.MovementController;
-import pathfinding.PathCache;
 import utils.Constants;
 import utils.TileCoordinateConverter;
 
@@ -193,14 +192,10 @@ public class GameUnit {
 	}
 
 	public GameUnit(int positionX, int positionY, boolean isPlayerUnit, int classType) {
-		this(positionX, positionY, isPlayerUnit, classType, new PathCache());
-	}
-	
-	public GameUnit(int positionX, int positionY, boolean isPlayerUnit, int classType, PathCache pathCache) {
 		this.currentPosition = new Point(positionX, positionY);
 		this.destination = new Point();
 		
-		this.movementController = new MovementController(positionX, positionY, pathCache);
+		this.movementController = new MovementController(positionX, positionY);
 		
 		this.combatSystem = new CombatSystem(this);
 
@@ -223,7 +218,7 @@ public class GameUnit {
 	 * Delegates pathfinding coordination to the movement controller
 	 */
 	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
-		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination, classType);
+		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination);
 		if (alternativeDest != null) {
 			setDestination(alternativeDest);
 		}
@@ -238,7 +233,7 @@ public class GameUnit {
 	public void moveToDestination(int[][] map, ArrayList<GameUnit> unitList) {
 		// This method now just delegates to the movement controller
 		// The actual movement is handled within coordinatePathfinding
-		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination, classType);
+		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination);
 		if (alternativeDest != null) {
 			setDestination(alternativeDest);
 		}
