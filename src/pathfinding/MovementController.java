@@ -159,7 +159,7 @@ public class MovementController {
 		// Create new path using A* algorithm
 		PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, start.x, start.y, end.x, end.y);
 		
-		if (result != null && result.path != null && result.path.size() > 0) {
+		if (result != null && result.hasPath()) {
 			setPath(result.path);
 			setExploredNodes(result.exploredNodes);
 			return true;
@@ -187,30 +187,21 @@ public class MovementController {
 		Point currentPos = physics.getCurrentPosition();
 		Point mapPos = TileCoordinateConverter.screenToMap(currentPos);
 		
-		// Search in expanding circles around the original destination
-		for (int radius = 1; radius <= 3; radius++) {
-			for (int dy = -radius; dy <= radius; dy++) {
-				for (int dx = -radius; dx <= radius; dx++) {
-					// Skip corners for efficiency
-					if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
-						continue;
-					}
-					
-					int newX = playerMapDest.x + dx;
-					int newY = playerMapDest.y + dy;
-					
-					// Check if tile is walkable
-					if (MapValidator.isWalkable(map, newX, newY)) {
-						// Try to find a path to this location
-						PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, mapPos.x, mapPos.y, newX, newY);
-						
-						if (result != null && result.path != null && result.path.size() > 0) {
-							// Found a valid path, update our path and return the new destination
-							setPath(result.path);
-							setExploredNodes(result.exploredNodes);
-							return TileCoordinateConverter.mapToScreen(newX, newY);
-						}
-					}
+		// Search around the original destination using shared offset generation
+		for (Point offset : PathfindingUtils.getSearchOffsets(3)) {
+			int newX = playerMapDest.x + offset.x;
+			int newY = playerMapDest.y + offset.y;
+			
+			// Check if tile is walkable
+			if (MapValidator.isWalkable(map, newX, newY)) {
+				// Try to find a path to this location
+				PathAStar.PathfindingResult result = PathAStar.generatePathWithExploredNodes(map, mapPos.x, mapPos.y, newX, newY);
+				
+				if (result != null && result.hasPath()) {
+					// Found a valid path, update our path and return the new destination
+					setPath(result.path);
+					setExploredNodes(result.exploredNodes);
+					return TileCoordinateConverter.mapToScreen(newX, newY);
 				}
 			}
 		}

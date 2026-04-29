@@ -6,7 +6,6 @@ import entities.GameFlag;
 import entities.GameUnit;
 import entities.GameUnitManager;
 import java.util.ArrayList;
-import java.util.List;
 
 import graphics.Point;
 import map.TileConverter;
@@ -60,7 +59,7 @@ public class GameUnitTest {
     @Test
     public void testSpawn() {
         // Spawn player unit using GameUnitManager
-        unitManager.spawnUnit(playerUnit, map, new Point(2, 2), GameFlag.FACTION_PLAYER);
+        unitManager.spawnUnit(playerUnit, GameFlag.FACTION_PLAYER);
 
         // Verify unit was added to player list (units are not written to map anymore)
         assertTrue(unitManager.getPlayerList().contains(playerUnit), "Unit should be in player list");
@@ -94,9 +93,7 @@ public class GameUnitTest {
 
         // Test if the unit starts moving
         playerUnit.startMoving();
-        ArrayList<GameUnit> playerList = new ArrayList<>();
-        playerList.add(playerUnit);
-        playerUnit.findPath(map, playerList);
+        playerUnit.findPath(map);
 
         // Check if the unit's destination is updated and it's moving
         assertEquals(new Point(6, 6), playerUnit.getDestination(), "Player should be moving towards the correct destination");
@@ -111,9 +108,7 @@ public class GameUnitTest {
         playerUnit.setDestination(new Point(6, 6));
 
         // Try to find a path
-        ArrayList<GameUnit> playerList = new ArrayList<>();
-        playerList.add(playerUnit);
-        playerUnit.findPath(map, playerList);
+        playerUnit.findPath(map);
 
         // The unit shouldn't be able to find a valid path due to the wall
         assertFalse(playerUnit.isPathCreated(), "Pathfinding should fail due to a wall blocking the path");
@@ -158,7 +153,7 @@ public class GameUnitTest {
     public void testDestinationChanged() {
         // Set up currentMapEndX/Y to match mapEnd
         Point mapEnd = new Point(3, 3);
-        playerUnit.moveToDestination(map, new ArrayList<>(List.of(playerUnit)));
+        playerUnit.moveToDestination(map);
         // Simulate no change
         playerUnit.setCurrentMapEnd(mapEnd);
         assertFalse(PathfindingUtils.destinationChanged(3, 3, mapEnd), "Should not detect change if same");

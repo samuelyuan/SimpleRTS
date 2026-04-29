@@ -153,7 +153,7 @@ public class GameFlag {
         return health != 0 && health != 100 && health != -100;
     }
 
-    public Rect getBoundingBoxForState(int cameraX, int cameraY) {
+    public Rect getBoundingBoxForState() {
         // Calculate the bounding box for the health bar
         int width = (int) ((double) (Constants.TILE_WIDTH - 2) / 100.0 * Math.abs(health));
         int height = Constants.TILE_HEIGHT / 8;
@@ -167,12 +167,10 @@ public class GameFlag {
      * Returns a DrawingInstruction for rendering this flag.
      * This method encapsulates the drawing logic and makes it testable.
      * 
-     * @param cameraX The camera X offset
-     * @param cameraY The camera Y offset
      * @return A DrawingInstruction for rendering the flag
      */
-    public DrawingInstruction getDrawingInstruction(int cameraX, int cameraY) {
-        Rect boundingBox = getBoundingBoxForState(cameraX, cameraY);
+    public DrawingInstruction getDrawingInstruction() {
+        Rect boundingBox = getBoundingBoxForState();
         Color flagColor = getColorForFaction();
         return new DrawingInstruction(boundingBox, flagColor, true); // Fill the flag
     }

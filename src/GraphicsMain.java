@@ -102,7 +102,7 @@ public class GraphicsMain {
 		renderAllUnits(g, unitManager);
 
 		// Draw the flags
-		renderAllFlags(g, unitManager);
+		renderAllFlags(g);
 
 		// Draw combat effects (on top of units)
 		renderCombatEffects(g);
@@ -127,7 +127,7 @@ public class GraphicsMain {
 		}
 	}
 
-	private void renderAllFlags(IGraphics g, GameUnitManager unitManager) {
+	private void renderAllFlags(IGraphics g) {
 		java.util.Iterator<GameFlag> flagIter = stateManager.getFlagManager().getFlagList();
 		while (flagIter.hasNext()) {
 			GameFlag flag = flagIter.next();
@@ -418,7 +418,7 @@ public class GraphicsMain {
 		drawFlagRadius(g, flag);
 		
 		// Get drawing instruction from flag and execute it
-		DrawingInstruction instr = flag.getDrawingInstruction(getCameraX(), getCameraY());
+		DrawingInstruction instr = flag.getDrawingInstruction();
 		drawInstruction(g, instr);
 	}
 	

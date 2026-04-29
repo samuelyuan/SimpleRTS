@@ -214,20 +214,6 @@ public class UnitVisibility {
     }
     
     /**
-     * Calculates the Euclidean distance between two points.
-     * Euclidean distance is the straight-line distance between points.
-     * 
-     * @param point1 First point
-     * @param point2 Second point
-     * @return Euclidean distance between the points
-     */
-    public static double calculateEuclideanDistance(Point point1, Point point2) {
-        double deltaX = point1.x - point2.x;
-        double deltaY = point1.y - point2.y;
-        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    }
-    
-    /**
      * Checks if two units are within a specified range of each other.
      * 
      * @param unit1 First unit

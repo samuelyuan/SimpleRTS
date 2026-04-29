@@ -5,6 +5,8 @@ import entities.GameUnit;
 import graphics.Point;
 import input.GameMouseEvent;
 import utils.Constants;
+import utils.DistanceUtils;
+import utils.FormationUtils;
 
 /**
  * Manages unit movement, formations, and movement-related logic.
@@ -94,43 +96,14 @@ public class UnitMovementManager {
             return positions;
         }
         
-        int radius = calculateFormationRadius(unitCount);
+        int radius = FormationUtils.calculateFormationRadius(unitCount, 2);
         
         for (int i = 0; i < unitCount; i++) {
-            Point formationPos = calculateFormationPosition(targetDestination, i, unitCount, radius);
+            Point formationPos = FormationUtils.calculateFormationPosition(targetDestination, i, unitCount, radius);
             positions.add(formationPos);
         }
         
         return positions;
-    }
-    
-    /**
-     * Calculates the radius for formation movement based on unit count
-     */
-    private int calculateFormationRadius(int unitCount) {
-        if (unitCount <= 4) return 3;  // Increased from 1 to 3
-        if (unitCount <= 8) return 4;  // Increased from 2 to 4
-        if (unitCount <= 16) return 5; // Increased from 3 to 5
-        return 6; // Increased from 4 to 6
-    }
-    
-    /**
-     * Calculates position for a unit in a formation
-     */
-    private Point calculateFormationPosition(Point center, int unitIndex, int totalUnits, int radius) {
-        if (totalUnits <= 1) {
-            return new Point(center.x, center.y);
-        }
-        
-        // Calculate angle and distance for this unit
-        double angle = (2 * Math.PI * unitIndex) / totalUnits;
-        double distance = radius;
-        
-        // Calculate offset from center
-        int offsetX = (int) (Math.cos(angle) * distance);
-        int offsetY = (int) (Math.sin(angle) * distance);
-        
-        return new Point(center.x + offsetX, center.y + offsetY);
     }
     
     /**
@@ -142,9 +115,7 @@ public class UnitMovementManager {
     public boolean hasReachedDestination(GameUnit unit, double tolerance) {
         Point current = unit.getCurrentPosition();
         Point destination = unit.getDestination();
-        
-        double distance = Math.sqrt(Math.pow(destination.x - current.x, 2) + Math.pow(destination.y - current.y, 2));
-        return distance <= tolerance;
+        return DistanceUtils.isWithinEuclidean(current, destination, tolerance);
     }
     
     /**
@@ -156,8 +127,7 @@ public class UnitMovementManager {
     public double getDistanceBetweenUnits(GameUnit unit1, GameUnit unit2) {
         Point pos1 = unit1.getCurrentPosition();
         Point pos2 = unit2.getCurrentPosition();
-        
-        return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
+        return DistanceUtils.euclidean(pos1, pos2);
     }
     
     /**

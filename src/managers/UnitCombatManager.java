@@ -2,7 +2,7 @@ package managers;
 
 import java.util.ArrayList;
 import entities.GameUnit;
-import graphics.Point;
+import utils.DistanceUtils;
 
 /**
  * Manages unit combat interactions and combat-related logic.
@@ -71,13 +71,8 @@ public class UnitCombatManager {
         }
         
         // Units must be within combat range
-        Point pos1 = unit1.getCurrentPosition();
-        Point pos2 = unit2.getCurrentPosition();
-        
-        double distance = Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
-        
         // Assuming combat range is 1 tile (could be made configurable)
-        return distance <= 1.0;
+        return DistanceUtils.isWithinEuclidean(unit1.getCurrentPosition(), unit2.getCurrentPosition(), 1.0);
     }
     
     /**

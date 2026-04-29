@@ -1,5 +1,7 @@
 package pathfinding;
 
+import java.util.ArrayList;
+
 import graphics.Point;
 import map.MapValidator;
 import utils.TileCoordinateConverter;
@@ -89,6 +91,25 @@ public class PathfindingUtils {
         return closestTile != null ? TileCoordinateConverter.mapToScreen(closestTile.x, closestTile.y) : null;
     }
 
+    /**
+     * Returns nearby search offsets in expanding-radius order.
+     * Offsets skip corners to reduce search noise and match existing behavior.
+     */
+    public static ArrayList<Point> getSearchOffsets(int maxRadius) {
+        ArrayList<Point> offsets = new ArrayList<>();
+        for (int radius = 1; radius <= maxRadius; radius++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
+                        continue;
+                    }
+                    offsets.add(new Point(dx, dy));
+                }
+            }
+        }
+        return offsets;
+    }
+
     private static Point findClosestWalkableDestination(
         int[][] map,
         Point center,
@@ -99,32 +120,20 @@ public class PathfindingUtils {
         int closestDistance = Integer.MAX_VALUE;
         Point closestTile = null;
 
-        for (int radius = 1; radius <= maxRadius; radius++) {
-            boolean foundInThisRadius = false;
-
-            for (int dy = -radius; dy <= radius; dy++) {
-                for (int dx = -radius; dx <= radius; dx++) {
-                    // Skip corners for efficiency
-                    if (Math.abs(dx) == radius && Math.abs(dy) == radius) {
-                        continue;
-                    }
-
-                    int newX = center.x + dx;
-                    int newY = center.y + dy;
-                    if (!MapValidator.isWalkable(map, newX, newY)) {
-                        continue;
-                    }
-
-                    int distance = Math.abs(dx) + Math.abs(dy); // Manhattan distance
-                    if (distance <= maxDistance && distance < closestDistance) {
-                        closestDistance = distance;
-                        closestTile = new Point(newX, newY);
-                        foundInThisRadius = true;
-                    }
-                }
+        for (Point offset : getSearchOffsets(maxRadius)) {
+            int newX = center.x + offset.x;
+            int newY = center.y + offset.y;
+            if (!MapValidator.isWalkable(map, newX, newY)) {
+                continue;
             }
 
-            if (foundInThisRadius && closestDistance <= earlyExitDistance) {
+            int distance = Math.abs(offset.x) + Math.abs(offset.y); // Manhattan distance
+            if (distance <= maxDistance && distance < closestDistance) {
+                closestDistance = distance;
+                closestTile = new Point(newX, newY);
+            }
+
+            if (closestDistance <= earlyExitDistance) {
                 break;
             }
         }

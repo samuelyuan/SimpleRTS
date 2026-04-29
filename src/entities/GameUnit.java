@@ -217,7 +217,7 @@ public class GameUnit {
 	/**
 	 * Delegates pathfinding coordination to the movement controller
 	 */
-	public void findPath(int[][] map, ArrayList<GameUnit> unitList) {
+	public void findPath(int[][] map) {
 		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination);
 		if (alternativeDest != null) {
 			setDestination(alternativeDest);
@@ -230,7 +230,7 @@ public class GameUnit {
 	 * Moves the unit to its destination along the calculated path.
 	 * This method is kept for backward compatibility with tests.
 	 */
-	public void moveToDestination(int[][] map, ArrayList<GameUnit> unitList) {
+	public void moveToDestination(int[][] map) {
 		// This method now just delegates to the movement controller
 		// The actual movement is handled within coordinatePathfinding
 		Point alternativeDest = movementController.coordinatePathfinding(map, currentPosition, destination);

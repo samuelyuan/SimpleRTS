@@ -72,8 +72,6 @@ public class CameraManager {
         int screenHeight = Constants.SCREEN_HEIGHT;
         
         // Update scrolling input state
-        boolean wasScrolling = scrollingRight || scrollingLeft || scrollingDown || scrollingUp;
-        
         scrollingRight = gameX > screenWidth - SCROLL_MARGIN;
         scrollingLeft = gameX < SCROLL_MARGIN;
         scrollingDown = gameY > screenHeight - SCROLL_MARGIN;
@@ -91,41 +89,41 @@ public class CameraManager {
      * Updates camera velocity based on current input state
      */
     private void updateVelocity(float deltaTime) {
-        // Horizontal velocity
-        if (scrollingRight || keyRight) {
-            velocityX += ACCELERATION * deltaTime;
-            if (velocityX > MAX_SPEED) velocityX = MAX_SPEED;
-        } else if (scrollingLeft || keyLeft) {
-            velocityX -= ACCELERATION * deltaTime;
-            if (velocityX < -MAX_SPEED) velocityX = -MAX_SPEED;
-        } else {
-            // Decelerate when no input
-            if (velocityX > 0) {
-                velocityX -= DECELERATION * deltaTime;
-                if (velocityX < 0) velocityX = 0;
-            } else if (velocityX < 0) {
-                velocityX += DECELERATION * deltaTime;
-                if (velocityX > 0) velocityX = 0;
+        velocityX = resolveAxisVelocity(velocityX, scrollingRight || keyRight, scrollingLeft || keyLeft, deltaTime);
+        velocityY = resolveAxisVelocity(velocityY, scrollingDown || keyDown, scrollingUp || keyUp, deltaTime);
+    }
+
+    private float resolveAxisVelocity(float currentVelocity, boolean positiveInput, boolean negativeInput, float deltaTime) {
+        if (positiveInput) {
+            currentVelocity += ACCELERATION * deltaTime;
+            if (currentVelocity > MAX_SPEED) {
+                currentVelocity = MAX_SPEED;
+            }
+            return currentVelocity;
+        }
+
+        if (negativeInput) {
+            currentVelocity -= ACCELERATION * deltaTime;
+            if (currentVelocity < -MAX_SPEED) {
+                currentVelocity = -MAX_SPEED;
+            }
+            return currentVelocity;
+        }
+
+        // Decelerate when no input.
+        if (currentVelocity > 0) {
+            currentVelocity -= DECELERATION * deltaTime;
+            if (currentVelocity < 0) {
+                currentVelocity = 0;
+            }
+        } else if (currentVelocity < 0) {
+            currentVelocity += DECELERATION * deltaTime;
+            if (currentVelocity > 0) {
+                currentVelocity = 0;
             }
         }
-        
-        // Vertical velocity
-        if (scrollingDown || keyDown) {
-            velocityY += ACCELERATION * deltaTime;
-            if (velocityY > MAX_SPEED) velocityY = MAX_SPEED;
-        } else if (scrollingUp || keyUp) {
-            velocityY -= ACCELERATION * deltaTime;
-            if (velocityY < -MAX_SPEED) velocityY = -MAX_SPEED;
-        } else {
-            // Decelerate when no input
-            if (velocityY > 0) {
-                velocityY -= DECELERATION * deltaTime;
-                if (velocityY < 0) velocityY = 0;
-            } else if (velocityY < 0) {
-                velocityY += DECELERATION * deltaTime;
-                if (velocityY > 0) velocityY = 0;
-            }
-        }
+
+        return currentVelocity;
     }
     
     /**

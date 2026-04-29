@@ -74,8 +74,7 @@ public class GameUnitManagerTest {
         assertEquals(1, unitManager.getPlayerList().size());
         
         // Remove the unit
-        int[][] map = new int[10][10];
-        unitManager.removeDeadUnits(map, unitManager.getPlayerList(), 0);
+        unitManager.removeDeadUnits(unitManager.getPlayerList(), 0);
         assertEquals(0, unitManager.getPlayerList().size());
     }
 
@@ -220,13 +219,13 @@ public class GameUnitManagerTest {
 		int[][] map = new int[10][10];
 		
 		// Test available tile
-		assertTrue(unitManager.isTileAvailable(map, 5, 5, GameFlag.FACTION_PLAYER), "Empty tile should be available");
+		assertTrue(unitManager.isTileAvailable(map, 5, 5), "Empty tile should be available");
 		
 		// Test out of bounds
-		assertFalse(unitManager.isTileAvailable(map, -1, 5, GameFlag.FACTION_PLAYER), "Out of bounds should not be available");
-		assertFalse(unitManager.isTileAvailable(map, 5, -1, GameFlag.FACTION_PLAYER), "Out of bounds should not be available");
-		assertFalse(unitManager.isTileAvailable(map, 10, 5, GameFlag.FACTION_PLAYER), "Out of bounds should not be available");
-		assertFalse(unitManager.isTileAvailable(map, 5, 10, GameFlag.FACTION_PLAYER), "Out of bounds should not be available");
+		assertFalse(unitManager.isTileAvailable(map, -1, 5), "Out of bounds should not be available");
+		assertFalse(unitManager.isTileAvailable(map, 5, -1), "Out of bounds should not be available");
+		assertFalse(unitManager.isTileAvailable(map, 10, 5), "Out of bounds should not be available");
+		assertFalse(unitManager.isTileAvailable(map, 5, 10), "Out of bounds should not be available");
 	}
 	
 	@Test

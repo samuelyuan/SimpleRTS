@@ -54,6 +54,10 @@ public class PathAStar {
 			this.path = path;
 			this.exploredNodes = exploredNodes;
 		}
+
+		public boolean hasPath() {
+			return path != null && !path.isEmpty();
+		}
 	}
 
 	/**
@@ -68,7 +72,7 @@ public class PathAStar {
 	 */
 	public static ArrayList<PathNode> generatePath(int[][] map, int startX, int startY, int finalX, int finalY) {
 		PathfindingResult result = generatePathWithExploredNodes(map, startX, startY, finalX, finalY);
-		return result != null ? result.path : null;
+		return (result != null && result.hasPath()) ? result.path : null;
 	}
 
 	/**
@@ -79,8 +83,7 @@ public class PathAStar {
 	 * @param startY Starting Y coordinate
 	 * @param finalX Destination X coordinate
 	 * @param finalY Destination Y coordinate
-	 * @return PathfindingResult containing path and explored nodes, or null if no
-	 *         path found
+	 * @return PathfindingResult containing path and explored nodes, or null for invalid input
 	 */
 	public static PathfindingResult generatePathWithExploredNodes(int[][] map, int startX, int startY, int finalX,
 			int finalY) {
@@ -119,7 +122,7 @@ public class PathAStar {
 		}
 
 		// No path found (either due to no path or performance limits)
-		return new PathfindingResult(null, exploredNodes);
+		return new PathfindingResult(new ArrayList<>(), exploredNodes);
 	}
 
 	/**

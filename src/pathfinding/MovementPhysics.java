@@ -1,6 +1,7 @@
 package pathfinding;
 
 import graphics.Point;
+import utils.DistanceUtils;
 
 /**
  * Handles movement physics calculations including steering behavior,
@@ -56,7 +57,7 @@ public class MovementPhysics {
         double desiredY = targetY - currentY;
         
         // Limit desired velocity
-        double desiredMagnitude = Math.sqrt(desiredX * desiredX + desiredY * desiredY);
+        double desiredMagnitude = DistanceUtils.euclidean(0.0, 0.0, desiredX, desiredY);
         if (desiredMagnitude > maxVelocity) {
             desiredX = (desiredX / desiredMagnitude) * maxVelocity;
             desiredY = (desiredY / desiredMagnitude) * maxVelocity;
@@ -67,7 +68,7 @@ public class MovementPhysics {
         double steeringY = desiredY - velocityY;
         
         // Limit steering force
-        double steeringMagnitude = Math.sqrt(steeringX * steeringX + steeringY * steeringY);
+        double steeringMagnitude = DistanceUtils.euclidean(0.0, 0.0, steeringX, steeringY);
         if (steeringMagnitude > maxForce) {
             steeringX = (steeringX / steeringMagnitude) * maxForce;
             steeringY = (steeringY / steeringMagnitude) * maxForce;
@@ -82,7 +83,7 @@ public class MovementPhysics {
         velocityY += accelerationY;
         
         // Limit velocity
-        double velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+        double velocityMagnitude = DistanceUtils.euclidean(0.0, 0.0, velocityX, velocityY);
         if (velocityMagnitude > maxVelocity) {
             velocityX = (velocityX / velocityMagnitude) * maxVelocity;
             velocityY = (velocityY / velocityMagnitude) * maxVelocity;
@@ -174,8 +175,6 @@ public class MovementPhysics {
      * @return Distance between the points
      */
     public static double getDistance(double x1, double y1, double x2, double y2) {
-        double dx = x1 - x2;
-        double dy = y1 - y2;
-        return Math.sqrt(dx * dx + dy * dy);
+        return DistanceUtils.euclidean(x1, y1, x2, y2);
     }
 }

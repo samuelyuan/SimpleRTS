@@ -1,8 +1,11 @@
 package managers;
 
+import java.util.ArrayList;
+
 import entities.GameFlag;
 import graphics.Point;
 import utils.Constants;
+import utils.FormationUtils;
 
 /**
  * Manages unit spawning logic including patterns, formations, and configuration.
@@ -64,7 +67,7 @@ public class UnitSpawnManager {
     /**
      * Checks if spawning is allowed based on current conditions
      */
-    public boolean canSpawn(int factionId, int currentUnitCount) {
+    public boolean canSpawn(int currentUnitCount) {
         // Check unit limit
         if (currentUnitCount >= spawnConfig.maxUnitsPerFaction) {
             return false;
@@ -82,55 +85,63 @@ public class UnitSpawnManager {
      * Spawns units near a flag with flexible configuration
      */
     public int spawnUnitsNearFlag(int[][] map, GameFlag flag, int currentUnitCount) {
-        int factionId = flag.getControlFaction();
-        
-        // Check if spawning is allowed
-        if (!canSpawn(factionId, currentUnitCount)) {
-            return 0;
-        }
-        
-        return spawnUnitsNearFlag(map, flag, spawnConfig.defaultUnitCount, 
-                                spawnConfig.maxSpawnDistance, spawnConfig.defaultUnitType);
+        return getSpawnPositionsNearFlag(map, flag, currentUnitCount).size();
     }
     
     /**
      * Spawns units near a flag with custom parameters
      */
-    public int spawnUnitsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance, int unitType) {
-        int flagFactionId = flag.getControlFaction();
+    public int spawnUnitsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance) {
+        return getSpawnPositionsNearFlag(map, flag, unitCount, maxDistance).size();
+    }
+
+    /**
+     * Gets spawn positions near a flag using current configuration.
+     */
+    public ArrayList<Point> getSpawnPositionsNearFlag(int[][] map, GameFlag flag, int currentUnitCount) {
+        ArrayList<Point> positions = new ArrayList<>();
+
+        if (!canSpawn(currentUnitCount)) {
+            return positions;
+        }
+
+        return getSpawnPositionsNearFlag(map, flag, spawnConfig.defaultUnitCount, spawnConfig.maxSpawnDistance);
+    }
+
+    /**
+     * Gets spawn positions near a flag with custom parameters.
+     */
+    public ArrayList<Point> getSpawnPositionsNearFlag(int[][] map, GameFlag flag, int unitCount, int maxDistance) {
         int flagX = flag.getMapX();
         int flagY = flag.getMapY();
-        
-        // Try different spawn patterns
-        int spawnedCount = 0;
-        
-        // Pattern 1: Adjacent tiles (distance 1)
-        spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 1, unitCount - spawnedCount);
-        
-        // Pattern 2: Ring around flag (distance 2)
-        if (spawnedCount < unitCount && maxDistance >= 2) {
-            spawnedCount += spawnInPattern(map, flagX, flagY, flagFactionId, unitType, 2, unitCount - spawnedCount);
+
+        ArrayList<Point> positions = new ArrayList<>();
+        addPatternPositions(positions, map, flagX, flagY, 1, unitCount - positions.size());
+
+        if (positions.size() < unitCount && maxDistance >= 2) {
+            addPatternPositions(positions, map, flagX, flagY, 2, unitCount - positions.size());
         }
-        
-        // Pattern 3: Random positions within maxDistance (if enabled)
-        if (spawnedCount < unitCount && spawnConfig.useRandomSpawns) {
-            spawnedCount += spawnRandomly(map, flagX, flagY, flagFactionId, unitType, maxDistance, unitCount - spawnedCount);
+
+        if (positions.size() < unitCount && spawnConfig.useRandomSpawns) {
+            addRandomPositions(positions, map, flagX, flagY, maxDistance, unitCount - positions.size());
         }
-        
-        // Pattern 4: Formation spawn (if enabled)
-        if (spawnedCount < unitCount && spawnConfig.useFormationSpawns) {
-            spawnedCount += spawnUnitsInFormation(map, flagX, flagY, flagFactionId, unitType, unitCount - spawnedCount);
+
+        if (positions.size() < unitCount && spawnConfig.useFormationSpawns) {
+            positions.addAll(getSpawnPositionsInFormation(
+                    map,
+                    flagX,
+                    flagY,
+                    unitCount - positions.size()));
         }
-        
-        return spawnedCount;
+
+        return positions;
     }
     
     /**
      * Spawns units in a ring pattern around a center point
      */
-    private int spawnInPattern(int[][] map, int centerX, int centerY, int factionId, int unitType, int distance, int maxUnits) {
-        int spawned = 0;
-        
+    private void addPatternPositions(ArrayList<Point> positions, int[][] map, int centerX, int centerY, int distance, int maxUnits) {
+        int added = 0;
         // Define spawn positions in a ring pattern
         int[][] spawnPositions = {
             {centerX - distance, centerY},           // West
@@ -145,20 +156,18 @@ public class UnitSpawnManager {
         
         // Try each position
         for (int[] pos : spawnPositions) {
-            if (spawned >= maxUnits) break;
-            
-            if (isTileAvailable(map, pos[0], pos[1], factionId)) {
-                spawned++;
+            if (added >= maxUnits) break;
+            if (isTileAvailable(map, pos[0], pos[1])) {
+                positions.add(new Point(pos[0], pos[1]));
+                added++;
             }
         }
-        
-        return spawned;
     }
     
     /**
      * Spawns units at random positions within a given distance
      */
-    private int spawnRandomly(int[][] map, int centerX, int centerY, int factionId, int unitType, int maxDistance, int maxUnits) {
+    private void addRandomPositions(ArrayList<Point> positions, int[][] map, int centerX, int centerY, int maxDistance, int maxUnits) {
         int spawned = 0;
         int attempts = 0;
         int maxAttempts = maxUnits * 10; // Prevent infinite loops
@@ -171,58 +180,70 @@ public class UnitSpawnManager {
             int spawnX = centerX + offsetX;
             int spawnY = centerY + offsetY;
             
-            if (isTileAvailable(map, spawnX, spawnY, factionId)) {
+            if (isTileAvailable(map, spawnX, spawnY)) {
+                positions.add(new Point(spawnX, spawnY));
                 spawned++;
             }
             
             attempts++;
         }
-        
-        return spawned;
     }
     
     /**
      * Spawns units in a formation pattern
      */
-    public int spawnUnitsInFormation(int[][] map, int centerX, int centerY, int factionId, int unitType, int unitCount) {
-        int spawned = 0;
-        int radius = calculateFormationRadius(unitCount);
-        
-        for (int i = 0; i < unitCount && spawned < unitCount; i++) {
-            Point formationPos = calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
-            
-            if (isTileAvailable(map, formationPos.x, formationPos.y, factionId)) {
-                spawned++;
+    public int spawnUnitsInFormation(int[][] map, int centerX, int centerY, int unitCount) {
+        return getSpawnPositionsInFormation(map, centerX, centerY, unitCount).size();
+    }
+
+    /**
+     * Gets formation spawn positions.
+     */
+    public ArrayList<Point> getSpawnPositionsInFormation(int[][] map, int centerX, int centerY, int unitCount) {
+        ArrayList<Point> positions = new ArrayList<>();
+        int radius = FormationUtils.calculateBaseFormationRadius(unitCount);
+
+        for (int i = 0; i < unitCount && positions.size() < unitCount; i++) {
+            Point formationPos = FormationUtils.calculateFormationPosition(new Point(centerX, centerY), i, unitCount, radius);
+            if (isTileAvailable(map, formationPos.x, formationPos.y)) {
+                positions.add(new Point(formationPos.x, formationPos.y));
             }
         }
-        
-        return spawned;
+
+        return positions;
     }
     
     /**
      * Spawns units along a path between two points
      */
-    public int spawnUnitsAlongPath(int[][] map, Point startPos, Point endPos, int factionId, int unitType, int unitCount) {
-        int spawned = 0;
+    public int spawnUnitsAlongPath(int[][] map, Point startPos, Point endPos, int unitCount) {
+        return getSpawnPositionsAlongPath(map, startPos, endPos, unitCount).size();
+    }
+
+    /**
+     * Gets spawn positions along a path.
+     */
+    public ArrayList<Point> getSpawnPositionsAlongPath(int[][] map, Point startPos, Point endPos, int unitCount) {
+        ArrayList<Point> positions = new ArrayList<>();
         double stepX = (endPos.x - startPos.x) / (double) (unitCount + 1);
         double stepY = (endPos.y - startPos.y) / (double) (unitCount + 1);
-        
-        for (int i = 1; i <= unitCount && spawned < unitCount; i++) {
+
+        for (int i = 1; i <= unitCount && positions.size() < unitCount; i++) {
             int spawnX = (int) (startPos.x + stepX * i);
             int spawnY = (int) (startPos.y + stepY * i);
-            
-            if (isTileAvailable(map, spawnX, spawnY, factionId)) {
-                spawned++;
+
+            if (isTileAvailable(map, spawnX, spawnY)) {
+                positions.add(new Point(spawnX, spawnY));
             }
         }
-        
-        return spawned;
+
+        return positions;
     }
     
     /**
      * Checks if a tile is available for unit placement
      */
-    public boolean isTileAvailable(int[][] map, int x, int y, int factionId) {
+    public boolean isTileAvailable(int[][] map, int x, int y) {
         // Check bounds
         if (x < 0 || y < 0 || y >= map.length || x >= map[0].length) {
             return false;
@@ -238,33 +259,5 @@ public class UnitSpawnManager {
         return true;
     }
 
-    /**
-     * Calculates the radius for formation spawning based on unit count
-     */
-    private int calculateFormationRadius(int unitCount) {
-        if (unitCount <= 4) return 1;
-        if (unitCount <= 8) return 2;
-        if (unitCount <= 16) return 3;
-        return 4; // Cap at reasonable radius
-    }
-    
-    /**
-     * Calculates position for a unit in a formation
-     */
-    private Point calculateFormationPosition(Point center, int unitIndex, int totalUnits, int radius) {
-        if (totalUnits <= 1) {
-            return new Point(center.x, center.y);
-        }
-        
-        // Calculate angle and distance for this unit
-        double angle = (2 * Math.PI * unitIndex) / totalUnits;
-        double distance = radius;
-        
-        // Calculate offset from center
-        int offsetX = (int) (Math.cos(angle) * distance);
-        int offsetY = (int) (Math.sin(angle) * distance);
-        
-        return new Point(center.x + offsetX, center.y + offsetY);
-    }
 }
 

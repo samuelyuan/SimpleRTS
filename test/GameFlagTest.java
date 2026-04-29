@@ -127,32 +127,32 @@ public class GameFlagTest {
 
     @Test
     public void testGetBoundingBoxForState() {
-        assertEquals(new Rect(2, 6, 48, 6), playerFlag.getBoundingBoxForState(0, 0),
+        assertEquals(new Rect(2, 6, 48, 6), playerFlag.getBoundingBoxForState(),
                 "Player flag bounding box should be correct");
 
-        assertEquals(new Rect(52, 56, 48, 6), enemyFlag.getBoundingBoxForState(0, 0),
+        assertEquals(new Rect(52, 56, 48, 6), enemyFlag.getBoundingBoxForState(),
                 "Enemy flag bounding box should be correct");
 
-        assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(0, 0),
+        assertEquals(new Rect(102, 106, 0, 6), neutralFlag.getBoundingBoxForState(),
                 "Neutral flag bounding box should be correct");
     }
 
     @Test
     public void testGetDrawingInstruction() {
         // Test that the drawing instruction is created correctly
-        DrawingInstruction playerInstr = playerFlag.getDrawingInstruction(0, 0);
+        DrawingInstruction playerInstr = playerFlag.getDrawingInstruction();
         assertNotNull(playerInstr, "Drawing instruction should not be null");
         assertEquals(Color.BLUE, playerInstr.color, "Player flag should be blue");
         assertTrue(playerInstr.fill, "Flag should be filled");
         assertEquals(new Rect(2, 6, 48, 6), playerInstr.rect, "Player flag rect should be correct");
 
-        DrawingInstruction enemyInstr = enemyFlag.getDrawingInstruction(0, 0);
+        DrawingInstruction enemyInstr = enemyFlag.getDrawingInstruction();
         assertNotNull(enemyInstr, "Drawing instruction should not be null");
         assertEquals(Color.RED, enemyInstr.color, "Enemy flag should be red");
         assertTrue(enemyInstr.fill, "Flag should be filled");
         assertEquals(new Rect(52, 56, 48, 6), enemyInstr.rect, "Enemy flag rect should be correct");
 
-        DrawingInstruction neutralInstr = neutralFlag.getDrawingInstruction(0, 0);
+        DrawingInstruction neutralInstr = neutralFlag.getDrawingInstruction();
         assertNotNull(neutralInstr, "Drawing instruction should not be null");
         assertEquals(Color.GRAY, neutralInstr.color, "Neutral flag should be gray");
         assertTrue(neutralInstr.fill, "Flag should be filled");

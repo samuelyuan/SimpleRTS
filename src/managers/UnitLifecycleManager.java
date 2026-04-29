@@ -6,8 +6,8 @@ import java.util.Map.Entry;
 import entities.GameFlag;
 import entities.GameUnit;
 import graphics.Point;
-import utils.TileCoordinateConverter;
 import utils.Constants;
+import utils.TileCoordinateConverter;
 
 /**
  * Manages unit lifecycle operations including creation, loading, removal, and
@@ -49,27 +49,49 @@ public class UnitLifecycleManager {
     }
 
     public void loadPlayerUnits(Map<Point, Integer> allyUnitPositions) {
-        for (Entry<Point, Integer> entry : allyUnitPositions.entrySet()) {
-            Point worldPos = TileCoordinateConverter.mapToScreen(entry.getKey());
-            GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, entry.getValue());
-            unit.setFactionId(Constants.PLAYER_FACTION_ID);
-            playerList.add(unit);
-        }
+        loadUnits(allyUnitPositions, true, Constants.PLAYER_FACTION_ID);
     }
 
     public void loadEnemyUnits(Map<Point, Integer> enemyUnitPositions) {
-        for (Entry<Point, Integer> entry : enemyUnitPositions.entrySet()) {
-            Point worldPos = TileCoordinateConverter.mapToScreen(entry.getKey());
-            GameUnit unit = new GameUnit(worldPos.x, worldPos.y, false, entry.getValue());
-            unit.setFactionId(Constants.ENEMY_FACTION_ID);
-            enemyList.add(unit);
+        loadUnits(enemyUnitPositions, false, Constants.ENEMY_FACTION_ID);
+    }
+
+    private void loadUnits(Map<Point, Integer> unitPositions, boolean isPlayerUnit, int factionId) {
+        ArrayList<GameUnit> unitList = listForFaction(factionId);
+        if (unitList == null) {
+            return;
         }
+
+        for (Entry<Point, Integer> entry : unitPositions.entrySet()) {
+            Point worldPos = TileCoordinateConverter.mapToScreen(entry.getKey());
+            GameUnit unit = new GameUnit(worldPos.x, worldPos.y, isPlayerUnit, entry.getValue());
+            unit.setFactionId(factionId);
+            unitList.add(unit);
+        }
+    }
+
+    private ArrayList<GameUnit> listForFaction(int factionId) {
+        if (factionId == GameFlag.FACTION_PLAYER) {
+            return playerList;
+        }
+        if (factionId == GameFlag.FACTION_ENEMY) {
+            return enemyList;
+        }
+        return null;
+    }
+
+    private ArrayList<GameUnit> getUnitListOrEmpty(int factionId) {
+        ArrayList<GameUnit> unitList = listForFaction(factionId);
+        if (unitList == null) {
+            return new ArrayList<>();
+        }
+        return unitList;
     }
 
     /**
      * Removes dead units from a unit list
      */
-    public void removeDeadUnits(int map[][], ArrayList<GameUnit> unitList, int deadUnitIndex) {
+    public void removeDeadUnits(ArrayList<GameUnit> unitList, int deadUnitIndex) {
         if (deadUnitIndex >= 0 && deadUnitIndex < unitList.size()) {
             // Simply remove from list - units are not stored on map
             unitList.remove(deadUnitIndex);
@@ -87,12 +109,7 @@ public class UnitLifecycleManager {
      * Gets the unit list for a specific faction
      */
     public ArrayList<GameUnit> getUnitList(int factionId) {
-        if (factionId == GameFlag.FACTION_PLAYER) {
-            return playerList;
-        } else if (factionId == GameFlag.FACTION_ENEMY) {
-            return enemyList;
-        }
-        return new ArrayList<>(); // Return empty list for unknown factions
+        return getUnitListOrEmpty(factionId);
     }
 
     /**
@@ -134,21 +151,29 @@ public class UnitLifecycleManager {
     /**
      * Spawns a unit on the map at the specified position
      */
-    public void spawnUnit(GameUnit unit, int[][] map, Point mapPos, int factionId) {
-        Point worldPos = TileCoordinateConverter.mapToWorld(mapPos);
+    public void spawnUnit(GameUnit unit, int factionId) {
         unit.setFactionId(factionId);
 
         addUnit(unit); // Add to the appropriate faction list
     }
 
     /**
+     * Creates and adds a unit at a map position for the given faction.
+     */
+    public void createAndAddUnitAtMapPosition(Point mapPos, int factionId, int unitType) {
+        Point worldPos = TileCoordinateConverter.mapToScreen(mapPos);
+        GameUnit unit = new GameUnit(worldPos.x, worldPos.y, true, unitType);
+        unit.setFactionId(factionId);
+        addUnit(unit);
+    }
+
+    /**
      * Adds a unit to the appropriate faction list
      */
     public void addUnit(GameUnit unit) {
-        if (unit.getFactionId() == GameFlag.FACTION_PLAYER) {
-            playerList.add(unit);
-        } else if (unit.getFactionId() == GameFlag.FACTION_ENEMY) {
-            enemyList.add(unit);
+        ArrayList<GameUnit> unitList = listForFaction(unit.getFactionId());
+        if (unitList != null) {
+            unitList.add(unit);
         }
     }
 
@@ -156,10 +181,9 @@ public class UnitLifecycleManager {
      * Removes a unit from its faction list
      */
     public void removeUnitFromList(GameUnit unit) {
-        if (unit.getFactionId() == GameFlag.FACTION_PLAYER) {
-            playerList.remove(unit);
-        } else if (unit.getFactionId() == GameFlag.FACTION_ENEMY) {
-            enemyList.remove(unit);
+        ArrayList<GameUnit> unitList = listForFaction(unit.getFactionId());
+        if (unitList != null) {
+            unitList.remove(unit);
         }
     }
 
@@ -208,18 +232,18 @@ public class UnitLifecycleManager {
     /**
      * Cleans up dead units from both factions
      */
-    public void cleanupDeadUnits(int[][] map) {
+    public void cleanupDeadUnits() {
         // Remove dead player units
         for (int i = playerList.size() - 1; i >= 0; i--) {
             if (!playerList.get(i).isAlive()) {
-                removeDeadUnits(map, playerList, i);
+                removeDeadUnits(playerList, i);
             }
         }
 
         // Remove dead enemy units
         for (int i = enemyList.size() - 1; i >= 0; i--) {
             if (!enemyList.get(i).isAlive()) {
-                removeDeadUnits(map, enemyList, i);
+                removeDeadUnits(enemyList, i);
             }
         }
     }

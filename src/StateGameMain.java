@@ -101,7 +101,7 @@ public class StateGameMain extends StateMachine {
 
 			// Remove dead units
 			if (!unit.isAlive()) {
-				unitManager.removeDeadUnits(map, unitList, i);
+				unitManager.removeDeadUnits(unitList, i);
 			}
 		}
 
@@ -118,7 +118,7 @@ public class StateGameMain extends StateMachine {
 			graphicsMain.getCameraY()
 		));
 
-		playerUnit.findPath(map, unitManager.getPlayerList());
+		playerUnit.findPath(map);
 		
 		// Update pathfinding failure timer
 		playerUnit.updatePathfindingFailureTimer();
@@ -146,7 +146,7 @@ public class StateGameMain extends StateMachine {
 		}
 
 		// Follow the path towards the flag
-		enemyUnit.findPath(map, unitManager.getEnemyList());
+		enemyUnit.findPath(map);
 		
 		// Update pathfinding failure timer
 		enemyUnit.updatePathfindingFailureTimer();

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import entities.GameUnit;
 import graphics.Point;
 import pathfinding.PathfindingUtils;
+import utils.DistanceUtils;
 import utils.TileCoordinateConverter;
 
 /**
@@ -99,13 +100,8 @@ public class MultiUnitPathfindingManager {
             
             // Check if unit is at or very close to the destination
             Point unitPos = unit.getCurrentPosition();
-            double distance = Math.sqrt(
-                Math.pow(dest.x - unitPos.x, 2) + 
-                Math.pow(dest.y - unitPos.y, 2)
-            );
-            
             // If unit is within 25 pixels (half a tile), consider it occupied
-            if (distance < 25) {
+            if (DistanceUtils.euclidean(dest, unitPos) < 25) {
                 return true;
             }
         }
